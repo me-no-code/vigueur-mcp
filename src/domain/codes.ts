@@ -24,6 +24,11 @@ const CODES: Readonly<Record<string, readonly string[]>> = {
   "Code de l'entrée et du séjour des étrangers et du droit d'asile": ['CESEDA'],
 };
 
+/** Every spelling `resolveCodeName` knows (titles and abbreviations), for scanning free text. */
+export const CODE_NAMES: readonly string[] = Object.entries(CODES).flatMap(
+  ([title, abbreviations]) => [title, ...abbreviations],
+);
+
 const BY_KEY: ReadonlyMap<string, string> = new Map(
   Object.entries(CODES).flatMap(([title, abbreviations]) =>
     [title, ...abbreviations].map((name) => [foldKey(name), title] as const),
