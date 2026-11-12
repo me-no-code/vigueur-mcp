@@ -11,6 +11,7 @@ import type {
 import type { ArticleHit, ArticleRecord, CallContext } from '../../services/legislation/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import {
+  endCell,
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   paginateText,
@@ -107,7 +108,7 @@ function detailedBlocks(record: ArticleRecord): string[] {
   if (record.versions.length > 0) {
     const rows = record.versions.map((v) => {
       const version = `${v.version || '?'}${v.id === record.version.id ? ' (shown)' : ''}`;
-      return `| ${version} | ${statusLabel(v)} | ${v.validFrom ?? 'unknown'} | ${v.validTo ?? 'no end'} |`;
+      return `| ${version} | ${statusLabel(v)} | ${v.validFrom ?? 'unknown'} | ${endCell(v)} |`;
     });
     blocks.push(
       [
@@ -134,9 +135,12 @@ function headerOf(a: ArticleView): string {
   const { record } = a;
   const { version } = record;
   const num = version.number || '?';
+  const status = renderStatusAt(a.statusAt, a.asOf, {
+    validToUndetermined: version.validToUndetermined,
+  });
   const lines = [
     record.codeTitle === null ? `### Art. ${num}` : `### ${record.codeTitle} — art. ${num}`,
-    `${renderStatusAt(a.statusAt, a.asOf)}${version.rawStatus ? ` (${version.rawStatus})` : ''}`,
+    `${status}${version.rawStatus ? ` (${version.rawStatus})` : ''}`,
   ];
   if (record.sectionPath.length > 0) lines.push(record.sectionPath.join(' › '));
   return lines.join('\n');
@@ -226,7 +230,7 @@ function renderNotInForce(r: Extract<GetArticleResult, { kind: 'not_in_force_at_
     `Art. ${r.num}${r.codeTitle === null ? '' : ` of ${r.codeTitle}`} exists but was not in force on ${r.asOf}:`,
     ...r.periods.map(
       (p) =>
-        `- ${statusLabel(p)} ${p.validFrom ?? 'unknown'} → ${p.validTo ?? 'no end'}${r.codeTitle === null ? ` (${p.codeTitle})` : ''}`,
+        `- ${statusLabel(p)} ${p.validFrom ?? 'unknown'} → ${endCell(p, 'date not yet determined')}${r.codeTitle === null ? ` (${p.codeTitle})` : ''}`,
     ),
     'Call again with an "at_date" inside one of these periods to read that version.',
   ];
@@ -243,30 +247,38 @@ export function renderGetArticle(
     return { text, output: foundOutput(result.article, textPage) };
   }
   // Lists of at most a page of hits, periods or suggestions: well under MAX_TOOL_TEXT.
-  return { text: renderOther(result, opts), output: result };
+  return { text: renderLookupMiss(result, opts.requestedId), output: result };
 }
 
-function renderOther(
+/**
+ * The answer when no single article was found: candidates, not-in-force periods or a miss.
+ * Shared with the history tool so both answer a bad citation identically.
+ */
+export function renderLookupMiss(
   result: Exclude<GetArticleResult, { kind: 'found' }>,
-  opts: RenderOptions,
+  requestedId: string | null,
 ): string {
   switch (result.kind) {
     case 'ambiguous':
       return renderAmbiguous(result.num, result.candidates, result.possiblyIncomplete === true);
     case 'not_in_force_at_date':
       return renderNotInForce(result);
-    case 'not_found': {
-      if (result.num === null) return `No Légifrance article with id ${opts.requestedId ?? '?'}.`;
-      const lines = [
-        `No article ${result.num} in ${result.codeTitle ?? 'any code'} on Légifrance.`,
-      ];
-      if (result.didYouMean.length > 0) {
-        lines.push(
-          `Did you mean: ${result.didYouMean.join('; ')}? (suggestions only — call again with the exact code title)`,
-        );
+    case 'not_found':
+      switch (result.reason) {
+        case 'unknown_id':
+          return `No Légifrance article with id ${requestedId ?? '?'}.`;
+        case 'no_article':
+          return `No article ${result.num} in ${result.codeTitle ?? 'any code'} on Légifrance.`;
+        case 'unknown_code':
+          return [
+            `Unknown code "${result.codeTitle}": no Légifrance code has this title. Use the full title (e.g. "Code de la route") or omit the code.`,
+            ...(result.didYouMean.length > 0
+              ? [
+                  `Did you mean: ${result.didYouMean.join('; ')}? (suggestions only — call again with the exact code title)`,
+                ]
+              : []),
+          ].join('\n');
       }
-      return lines.join('\n');
-    }
   }
 }
 

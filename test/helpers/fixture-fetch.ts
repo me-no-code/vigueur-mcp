@@ -87,6 +87,15 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     when: bodyField('articleId', 'LEGIARTI000032041571'),
     fixture: '14-concordanceLinks-1240',
   },
+  // Article history (Code civil 1382 lineage) and the Code civil change log 2025-2026.
+  { path: '/chrono/textCidAndElementCid', fixture: '16-chrono-textCidAndElementCid-1382' },
+  { path: '/chrono/textCid', fixture: '24-chrono-textCid-civil-2025-2026' },
+  // Current version of 1382 (same concordance: its content moved to 1240).
+  {
+    path: '/consult/concordanceLinksArticle',
+    when: bodyField('articleId', 'LEGIARTI000032042379'),
+    fixture: '11-concordanceLinks-1382-old',
+  },
   // L1234-1: Code du travail and Code de la santé publique.
   {
     path: '/search',

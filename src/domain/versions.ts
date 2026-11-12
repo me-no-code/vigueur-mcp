@@ -24,7 +24,10 @@ export interface ArticleVersion {
   /** Status label as sent by the source, kept for display. */
   rawStatus?: string;
   validFrom: IsoDate;
+  /** `null` = no end date, or an end whose date is not determined yet (see below). */
   validTo: IsoDate | null;
+  /** The source records an end (a scheduled repeal) whose date it has not set yet. */
+  validToUndetermined?: boolean;
 }
 
 /** Version in force on `date` (validFrom <= date < validTo); latest validFrom wins. */

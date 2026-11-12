@@ -113,7 +113,8 @@ describe('listCodes', () => {
 describe('findArticleAt', () => {
   it('searches CODE_DATE by number, code and date (fixture 03)', async () => {
     const { repo, calls } = client([serve('/search', '03-search-code-date-1382-2015')]);
-    const hits = await repo.findArticleAt('Code civil', '1382', '2015-01-01');
+    const { hits, truncated } = await repo.findArticleAt('Code civil', '1382', '2015-01-01');
+    expect(truncated).toBe(false);
     expect(calls.map((c) => c.req)).toEqual([
       {
         method: 'POST',
@@ -151,13 +152,14 @@ describe('findArticleAt', () => {
         rawStatus: 'MODIFIE',
         validFrom: '1804-03-21',
         validTo: '2016-10-01',
+        validToUndetermined: false,
       },
     ]);
   });
 
   it('searches every code when no code is given (fixture 74)', async () => {
     const { repo, calls } = client([serve('/search', '74-search-code-date-L1234-1-all-codes')]);
-    const hits = await repo.findArticleAt(null, 'L1234-1', '2026-11-12');
+    const { hits } = await repo.findArticleAt(null, 'L1234-1', '2026-11-12');
     const body = calls[0]?.req.body as { recherche: { filtres: unknown[] } };
     expect(body.recherche.filtres).toEqual([{ facette: 'DATE_VERSION', singleDate: '2026-11-12' }]);
     expect(hits.map((h) => h.codeTitle)).toEqual(['Code du travail', 'Code de la santé publique']);
@@ -167,12 +169,30 @@ describe('findArticleAt', () => {
 
   it('keeps only extracts with exactly that number', async () => {
     const { repo } = client([serve('/search', '03-search-code-date-1382-2015')]);
-    expect(await repo.findArticleAt('Code civil', '1382-1', '2015-01-01')).toEqual([]);
+    expect(await repo.findArticleAt('Code civil', '1382-1', '2015-01-01')).toEqual({
+      hits: [],
+      truncated: false,
+    });
+  });
+
+  it('says the page was truncated when it holds a full page of extracts, matching or not', async () => {
+    // 20 extracts (the page size), only one of them numbered 1: more versions may follow.
+    const extracts = Array.from({ length: 20 }, (_, i) => ({
+      id: `LEGIARTI0000000000${String(i).padStart(2, '0')}`,
+      num: i === 0 ? '1' : `1-${i}`,
+      legalStatus: 'VIGUEUR',
+      dateDebut: '2016-10-01T00:00:00.000+0000',
+      dateFin: '2999-01-01T00:00:00.000+0000',
+    }));
+    const { repo } = client([reply('/search', searchPage(extracts))]);
+    const page = await repo.findArticleAt(null, '1', '2026-11-12');
+    expect(page.hits.map((h) => h.id)).toEqual(['LEGIARTI000000000000']);
+    expect(page.truncated).toBe(true);
   });
 
   it('matches a number typed with other case or spacing, returning the official one', async () => {
     const { repo, calls } = client([reply('/search', cgiSearch('VIGUEUR'))]);
-    const hits = await repo.findArticleAt(
+    const { hits } = await repo.findArticleAt(
       'Code général des impôts',
       '199 UNDECIES  b',
       '2026-11-12',
@@ -196,10 +216,38 @@ describe('findArticleAt', () => {
         rawStatus: 'VIGUEUR',
         validFrom: '2026-01-01',
         validTo: null,
+        validToUndetermined: false,
       },
     ]);
   });
+
+  it('flags a hit whose end date Légifrance has not determined', async () => {
+    const extract = {
+      id: 'LEGIARTI000000000001',
+      num: '1',
+      legalStatus: 'ABROGE_DIFF',
+      dateDebut: '2005-01-28T00:00:00.000+0000',
+      dateFin: '2222-02-22T00:00:00.000+0000',
+    };
+    const { repo } = client([reply('/search', searchPage([extract]))]);
+    const { hits } = await repo.findArticleAt(null, '1', '2026-11-12');
+    expect(hits[0]).toMatchObject({ validTo: null, validToUndetermined: true });
+  });
 });
+
+/** A by-number search response in one code (shaped like fixture 03) holding `extracts`. */
+function searchPage(extracts: unknown[]) {
+  return {
+    results: [
+      {
+        titles: [{ id: 'LEGITEXT000006070721_01-11-2026', title: 'Code civil' }],
+        sections: [{ id: 'LEGISCTA000000000001', extracts }],
+      },
+    ],
+    totalResultNumber: 1,
+    typePagination: 'ARTICLE',
+  };
+}
 
 /** A search response shaped like fixtures 03 and 74, for CGI art. 199 undecies B. */
 function cgiSearch(legalStatus: string) {
@@ -239,7 +287,8 @@ describe('findArticleAllVersions', () => {
     const { repo, calls } = client([
       serve('/search', '110-search-code-etat-num-1382-all-versions'),
     ]);
-    const hits = await repo.findArticleAllVersions('Code civil', '1382');
+    const { hits, truncated } = await repo.findArticleAllVersions('Code civil', '1382');
+    expect(truncated).toBe(false);
     const body = calls[0]?.req.body as {
       fond: string;
       recherche: { filtres: Array<{ facette: string }>; champs: unknown };
@@ -262,7 +311,7 @@ describe('findArticleAllVersions', () => {
 
   it('reports a repealed article with its end date (fixture 108)', async () => {
     const { repo } = client([serve('/search', '108-search-code-etat-num-abroge-R4217-2')]);
-    expect(await repo.findArticleAllVersions('Code du travail', 'R4217-2')).toEqual([
+    expect((await repo.findArticleAllVersions('Code du travail', 'R4217-2')).hits).toEqual([
       {
         id: 'LEGIARTI000018532352',
         num: 'R4217-2',
@@ -272,8 +321,30 @@ describe('findArticleAllVersions', () => {
         rawStatus: 'ABROGE',
         validFrom: '2008-05-01',
         validTo: '2026-10-01',
+        validToUndetermined: false,
       },
     ]);
+  });
+
+  it('reads up to 100 extracts and says when the page was full', async () => {
+    const extract = (i: number) => ({
+      id: `LEGIARTI000000000${String(i).padStart(3, '0')}`,
+      num: '1',
+      legalStatus: 'MODIFIE',
+      dateDebut: '2000-01-01T00:00:00.000+0000',
+      dateFin: '2001-01-01T00:00:00.000+0000',
+    });
+    const full = client([
+      reply('/search', searchPage(Array.from({ length: 100 }, (_, i) => extract(i)))),
+    ]);
+    const page = await full.repo.findArticleAllVersions(null, '1');
+    expect(full.calls[0]?.req.body).toMatchObject({ recherche: { pageSize: 100 } });
+    expect(page).toMatchObject({ truncated: true });
+    expect(page.hits).toHaveLength(100);
+    const short = client([
+      reply('/search', searchPage(Array.from({ length: 99 }, (_, i) => extract(i)))),
+    ]);
+    expect((await short.repo.findArticleAllVersions(null, '1')).truncated).toBe(false);
   });
 
   it('sends no code filter when no code is given', async () => {
@@ -285,7 +356,7 @@ describe('findArticleAllVersions', () => {
 
   it('matches a number typed in lower case, returning the official one', async () => {
     const { repo } = client([reply('/search', cgiSearch('MODIFIE'))]);
-    const hits = await repo.findArticleAllVersions(null, ' 199 undecies b ');
+    const { hits } = await repo.findArticleAllVersions(null, ' 199 undecies b ');
     expect(hits.map((h) => [h.num, h.status])).toEqual([['199 undecies B', 'amended']]);
   });
 });
@@ -329,6 +400,7 @@ describe('getArticle', () => {
         rawStatus: 'MODIFIE',
         validFrom: '1804-03-21',
         validTo: '2016-10-01',
+        validToUndetermined: false,
       },
       {
         id: 'LEGIARTI000032042379',
@@ -337,8 +409,10 @@ describe('getArticle', () => {
         rawStatus: 'VIGUEUR',
         validFrom: '2016-10-01',
         validTo: null,
+        validToUndetermined: false,
       },
     ]);
+    expect(record.version).not.toHaveProperty('validToUndetermined');
     expect(record.modifications).toEqual([
       { kind: 'codification', textTitle: 'Loi 1804-02-09', effectiveDate: null },
       {
@@ -366,6 +440,7 @@ describe('getArticle', () => {
       rawStatus: 'MODIFIE_MORT_NE',
       validFrom: '2022-01-01',
       validTo: '2017-12-22',
+      validToUndetermined: false,
     });
     expect(record?.versions).toHaveLength(8);
   });
@@ -450,12 +525,46 @@ describe('getArticle', () => {
     expect((await open.repo.getArticle('x', '2026-11-12'))?.version.validTo).toBeNull();
   });
 
-  it('maps an undetermined end date to null', async () => {
+  it('maps an undetermined end date to null, flagged as undetermined', async () => {
+    const versions = [
+      {
+        id: 'LEGIARTI000000000001',
+        etat: 'ABROGE_DIFF',
+        version: '1.0',
+        dateDebut: ms('2008-05-01'),
+        dateFin: ms('2222-02-22'),
+      },
+    ];
     const { repo } = client([
-      reply('/consult/getArticle', article({ etat: 'ABROGE_DIFF', dateFin: ms('2222-02-22') })),
+      reply(
+        '/consult/getArticle',
+        article({ etat: 'ABROGE_DIFF', dateFin: ms('2222-02-22'), articleVersions: versions }),
+      ),
     ]);
     const record = await repo.getArticle('LEGIARTI000000000001', '2026-11-12');
-    expect(record?.version).toMatchObject({ status: 'repeal_pending', validTo: null });
+    expect(record?.version).toMatchObject({
+      status: 'repeal_pending',
+      validTo: null,
+      validToUndetermined: true,
+    });
+    expect(record?.versions[0]).toMatchObject({ validTo: null, validToUndetermined: true });
+  });
+
+  it('takes the undetermined end from the version list when the article has no end', async () => {
+    const versions = [
+      {
+        id: 'LEGIARTI000000000001',
+        etat: 'ABROGE_DIFF',
+        version: '1.0',
+        dateDebut: ms('2008-05-01'),
+        dateFin: ms('2222-02-22'),
+      },
+    ];
+    const { repo } = client([
+      reply('/consult/getArticle', article({ dateFin: null, articleVersions: versions })),
+    ]);
+    const record = await repo.getArticle('LEGIARTI000000000001', '2026-11-12');
+    expect(record?.version).toMatchObject({ validTo: null, validToUndetermined: true });
   });
 
   it('takes the start date from the version list when the article has none', async () => {

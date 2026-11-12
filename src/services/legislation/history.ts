@@ -1,7 +1,6 @@
 import type { IsoDate } from '../../domain/dates.js';
 import type { ArticleRef } from '../../domain/relocation.js';
 import { VigueurError } from '../../shared/errors.js';
-import type { GetArticleResult } from './get-article.js';
 import type {
   ArticleHit,
   ArticleRecord,
@@ -12,11 +11,15 @@ import type {
   VersionSummary,
 } from './ports.js';
 import {
+  type Ambiguous,
   ARTICLE_ID,
   blankToNull,
-  cleanArticleNumber,
+  byStart,
+  dedupeById,
+  fetchListed,
   invalid,
-  resolveCode,
+  type NotFound,
+  resolveCitation,
   targetOf,
   todayInParis,
 } from './resolve.js';
@@ -37,26 +40,12 @@ export interface ArticleHistoryView {
   concordance: Concordance;
 }
 
-export type ArticleHistoryResult =
-  | ArticleHistoryView
-  | Extract<GetArticleResult, { kind: 'ambiguous' | 'not_found' }>;
+export type ArticleHistoryResult = ArticleHistoryView | Ambiguous | NotFound;
 
 export interface GetArticleHistoryInput {
   code?: string;
   number?: string;
   id?: string;
-}
-
-const HITS_PAGE_SIZE = 20;
-
-const startKey = (v: { validFrom: IsoDate | null }) => v.validFrom ?? '9999-12-31';
-const byStart = (a: { validFrom: IsoDate | null }, b: { validFrom: IsoDate | null }) =>
-  startKey(a).localeCompare(startKey(b));
-
-function dedupeById<T extends { id: string }>(items: readonly T[]): T[] {
-  const byId = new Map<string, T>();
-  for (const i of items) if (!byId.has(i.id)) byId.set(i.id, i);
-  return [...byId.values()];
 }
 
 function inForceOn(v: VersionSummary, date: IsoDate): boolean {
@@ -79,26 +68,7 @@ function latestHit(hits: readonly ArticleHit[]): ArticleHit | undefined {
   return [...(real.length > 0 ? real : hits)].sort(byStart).at(-1);
 }
 
-type Resolved =
-  | { record: ArticleRecord }
-  | { result: Extract<GetArticleResult, { kind: 'ambiguous' | 'not_found' }> };
-
-async function fetchRecord(
-  repo: LegislationRepository,
-  hit: ArticleHit,
-  asOf: IsoDate,
-  ctx: CallContext | undefined,
-): Promise<ArticleRecord> {
-  const record = await repo.getArticle(hit.id, asOf, ctx);
-  if (record === null) {
-    throw new VigueurError(
-      'upstream_unavailable',
-      `Légifrance lists article ${hit.num} (${hit.id}) but did not return it. Try again later.`,
-      { source: 'legifrance' },
-    );
-  }
-  return record;
-}
+type Resolved = { record: ArticleRecord } | { result: Ambiguous | NotFound };
 
 async function resolve(
   repo: LegislationRepository,
@@ -115,55 +85,48 @@ async function resolve(
     }
     const record = await repo.getArticle(target.id, today, ctx);
     if (record === null) {
-      return { result: { kind: 'not_found', num: null, codeTitle: null, didYouMean: [] } };
+      return {
+        result: {
+          kind: 'not_found',
+          reason: 'unknown_id',
+          num: null,
+          codeTitle: null,
+          didYouMean: [],
+        },
+      };
     }
     return { record };
   }
 
-  const num = cleanArticleNumber(target.number);
-  const rawCode = blankToNull(input.code);
-  let codeTitle: string | null = null;
-  if (rawCode !== null) {
-    const resolved = await resolveCode(repo, rawCode, ctx);
-    if (resolved.code === null) {
-      return {
-        result: { kind: 'not_found', num, codeTitle: rawCode, didYouMean: resolved.didYouMean },
-      };
+  const lookup = await resolveCitation(repo, target.number, blankToNull(input.code), today, ctx);
+  switch (lookup.kind) {
+    case 'in_force':
+      return { record: await fetchListed(repo, lookup.hit, today, ctx) };
+    case 'periods': {
+      // Not in force today (repealed, or not yet in force): history of the latest period,
+      // unless the periods span several codes.
+      const { num, codeTitle, periods, truncated } = lookup;
+      if (codeTitle === null) {
+        return {
+          result: {
+            kind: 'ambiguous',
+            num,
+            candidates: periods,
+            ...(truncated && { possiblyIncomplete: true }),
+          },
+        };
+      }
+      const latest = latestHit(periods);
+      if (latest === undefined) {
+        return {
+          result: { kind: 'not_found', reason: 'no_article', num, codeTitle, didYouMean: [] },
+        };
+      }
+      return { record: await fetchListed(repo, latest, latest.validFrom ?? today, ctx) };
     }
-    codeTitle = resolved.code.title;
+    default:
+      return { result: lookup };
   }
-
-  const page = await repo.findArticleAt(codeTitle, num, today, ctx);
-  const inForce = dedupeById(page);
-  const ambiguous = (candidates: ArticleHit[], possiblyIncomplete: boolean) => ({
-    result: {
-      kind: 'ambiguous' as const,
-      num,
-      candidates,
-      ...(possiblyIncomplete && { possiblyIncomplete: true as const }),
-    },
-  });
-  if (inForce.length > 1) {
-    const codes = new Set(inForce.map((h) => h.codeTitle));
-    // Several in-force versions inside one code share a lineage only when they are the same
-    // article; otherwise list them, never pick one.
-    if (codes.size > 1 || new Set(inForce.map((h) => h.id)).size > 1) {
-      return ambiguous(inForce, page.length >= HITS_PAGE_SIZE);
-    }
-  }
-  const [hit] = inForce;
-  if (hit !== undefined) return { record: await fetchRecord(repo, hit, today, ctx) };
-
-  // Not in force today (repealed, or not yet in force): history of the latest period.
-  const all = dedupeById(await repo.findArticleAllVersions(codeTitle, num, ctx));
-  if (all.length === 0) return { result: { kind: 'not_found', num, codeTitle, didYouMean: [] } };
-  if (new Set(all.map((h) => h.codeTitle)).size > 1) {
-    return ambiguous([...all].sort(byStart), all.length >= HITS_PAGE_SIZE);
-  }
-  const latest = latestHit(all);
-  if (latest === undefined)
-    return { result: { kind: 'not_found', num, codeTitle, didYouMean: [] } };
-  return { record: await fetchRecord(repo, latest, latest.validFrom ?? today, ctx) };
 }
 
 /**

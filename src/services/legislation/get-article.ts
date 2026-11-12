@@ -11,12 +11,14 @@ import type {
   VersionSummary,
 } from './ports.js';
 import {
+  type Ambiguous,
   ARTICLE_ID,
   blankToNull,
-  cleanArticleNumber,
+  fetchListed,
   invalid,
+  type NotFound,
   requireIsoDate,
-  resolveCode,
+  resolveCitation,
   targetOf,
   todayInParis,
 } from './resolve.js';
@@ -48,45 +50,30 @@ export interface ArticleView {
 
 export type GetArticleResult =
   | { kind: 'found'; article: ArticleView }
-  | {
-      kind: 'ambiguous';
-      num: string;
-      candidates: ArticleHit[];
-      /** The lookup reads one page of hits; when it is full, more candidates may exist. */
-      possiblyIncomplete?: boolean;
-    }
+  | Ambiguous
   | {
       kind: 'not_in_force_at_date';
       num: string;
       codeTitle: string | null;
       asOf: IsoDate;
+      /** Oldest first, unknown starts last. */
       periods: ArticleHit[];
     }
-  | { kind: 'not_found'; num: string | null; codeTitle: string | null; didYouMean: string[] };
-
-/** Hits per by-number lookup: the client reads the first page of `/search` only. */
-const HITS_PAGE_SIZE = 20;
-
-function dedupeById(hits: readonly ArticleHit[]): ArticleHit[] {
-  const byId = new Map<string, ArticleHit>();
-  for (const h of hits) if (!byId.has(h.id)) byId.set(h.id, h);
-  return [...byId.values()];
-}
-
-/** The code every hit belongs to, when they share one. */
-function sharedCodeTitle(hits: readonly ArticleHit[]): string | null {
-  const titles = new Set(hits.map((h) => h.codeTitle));
-  return titles.size === 1 ? (hits[0]?.codeTitle ?? null) : null;
-}
-
-const byValidFrom = (a: ArticleHit, b: ArticleHit) =>
-  (a.validFrom ?? '').localeCompare(b.validFrom ?? '');
+  | NotFound;
 
 function ownSummary(record: ArticleRecord): VersionSummary {
   const listed = record.versions.find((v) => v.id === record.version.id);
   if (listed) return listed;
-  const { id, status, rawStatus, validFrom, validTo } = record.version;
-  return { id, version: '', status, rawStatus: rawStatus ?? '', validFrom, validTo };
+  const { id, status, rawStatus, validFrom, validTo, validToUndetermined } = record.version;
+  return {
+    id,
+    version: '',
+    status,
+    rawStatus: rawStatus ?? '',
+    validFrom,
+    validTo,
+    validToUndetermined: validToUndetermined === true,
+  };
 }
 
 type DatedVersion = VersionSummary & { validFrom: IsoDate };
@@ -148,6 +135,9 @@ async function found(
   ctx: CallContext | undefined,
 ): Promise<GetArticleResult> {
   const warnings = consistencyWarnings(record.version, record.modifications, asOf);
+  if (record.version.validToUndetermined === true) {
+    warnings.push('Repeal scheduled; Légifrance has not set its date.');
+  }
   // The relocation is extra information: its failure must not hide the article itself.
   let relocation: RelocationView | null = null;
   try {
@@ -179,7 +169,9 @@ async function byId(
     );
   }
   const record = await repo.getArticle(id, asOf, ctx);
-  if (record === null) return { kind: 'not_found', num: null, codeTitle: null, didYouMean: [] };
+  if (record === null) {
+    return { kind: 'not_found', reason: 'unknown_id', num: null, codeTitle: null, didYouMean: [] };
+  }
   return found(repo, record, asOf, ctx);
 }
 
@@ -190,50 +182,18 @@ async function byCitation(
   asOf: IsoDate,
   ctx: CallContext | undefined,
 ): Promise<GetArticleResult> {
-  const num = cleanArticleNumber(rawNumber);
-  let codeTitle: string | null = null;
-  if (rawCode !== null) {
-    const resolved = await resolveCode(repo, rawCode, ctx);
-    if (resolved.code === null) {
-      return { kind: 'not_found', num, codeTitle: rawCode, didYouMean: resolved.didYouMean };
+  const lookup = await resolveCitation(repo, rawNumber, rawCode, asOf, ctx);
+  switch (lookup.kind) {
+    case 'in_force':
+      return found(repo, await fetchListed(repo, lookup.hit, asOf, ctx), asOf, ctx);
+    case 'periods': {
+      // Nothing in force on that date, but versions on record: repealed, or not yet in force.
+      const { num, codeTitle, periods } = lookup;
+      return { kind: 'not_in_force_at_date', num, codeTitle, asOf, periods };
     }
-    codeTitle = resolved.code.title;
+    default:
+      return lookup;
   }
-
-  const page = await repo.findArticleAt(codeTitle, num, asOf, ctx);
-  const hits = dedupeById(page);
-  if (hits.length > 1) {
-    // Several codes, or several versions in one code: list them, never pick one.
-    return {
-      kind: 'ambiguous',
-      num,
-      candidates: hits,
-      ...(page.length >= HITS_PAGE_SIZE && { possiblyIncomplete: true }),
-    };
-  }
-  const [hit] = hits;
-  if (hit !== undefined) {
-    const record = await repo.getArticle(hit.id, asOf, ctx);
-    if (record === null) {
-      throw new VigueurError(
-        'upstream_unavailable',
-        `Légifrance lists article ${hit.num} (${hit.id}) but did not return it. Try again later.`,
-        { source: 'legifrance' },
-      );
-    }
-    return found(repo, record, asOf, ctx);
-  }
-
-  // Nothing in force on that date: repealed, not yet in force, or never existed?
-  const periods = await repo.findArticleAllVersions(codeTitle, num, ctx);
-  if (periods.length === 0) return { kind: 'not_found', num, codeTitle, didYouMean: [] };
-  return {
-    kind: 'not_in_force_at_date',
-    num,
-    codeTitle: codeTitle ?? sharedCodeTitle(periods),
-    asOf,
-    periods: [...periods].sort(byValidFrom),
-  };
 }
 
 /**

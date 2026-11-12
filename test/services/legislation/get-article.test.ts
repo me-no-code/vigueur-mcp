@@ -166,16 +166,35 @@ describe('createGetArticle — resolution outcomes', () => {
       codeId: `LEGITEXT0000000000${String(i).padStart(2, '0')}`,
       codeTitle: `Code n° ${i}`,
     }));
-    const { getArticle } = setup({ overrides: { findArticleAt: async () => hits } });
+    const { getArticle } = setup({
+      overrides: { findArticleAt: async () => ({ hits, truncated: true }) },
+    });
     const result = await getArticle({ number: 'L1234-1' });
     expect(result).toMatchObject({ kind: 'ambiguous', possiblyIncomplete: true });
     expect(result.kind === 'ambiguous' && result.candidates).toHaveLength(20);
   });
 
+  it('decides "possibly incomplete" from the page the client read, not from the hit count', async () => {
+    // 20 matching hits on a page that was not full: the list is complete.
+    const hits: ArticleHit[] = Array.from({ length: 20 }, (_, i) => ({
+      ...hitOf(L1234_1_CSP),
+      id: `LEGIARTI0000000000${String(i).padStart(2, '0')}`,
+      codeTitle: `Code n° ${i}`,
+    }));
+    const { getArticle } = setup({
+      overrides: { findArticleAt: async () => ({ hits, truncated: false }) },
+    });
+    const result = await getArticle({ number: 'L1234-1' });
+    expect(result.kind).toBe('ambiguous');
+    expect(result).not.toHaveProperty('possiblyIncomplete');
+  });
+
   it('never picks between two versions found in the same code', async () => {
     const twin = { ...hitOf(L1234_1_TRAVAIL), id: 'LEGIARTI000099999999' };
     const { getArticle, calls } = setup({
-      overrides: { findArticleAt: async () => [hitOf(L1234_1_TRAVAIL), twin] },
+      overrides: {
+        findArticleAt: async () => ({ hits: [hitOf(L1234_1_TRAVAIL), twin], truncated: false }),
+      },
     });
     const result = await getArticle({ code: 'Code du travail', number: 'L1234-1' });
     expect(result).toEqual({
@@ -188,7 +207,9 @@ describe('createGetArticle — resolution outcomes', () => {
 
   it('a hit listed twice is one article', async () => {
     const hit = hitOf(L1234_1_TRAVAIL);
-    const { getArticle, calls } = setup({ overrides: { findArticleAt: async () => [hit, hit] } });
+    const { getArticle, calls } = setup({
+      overrides: { findArticleAt: async () => ({ hits: [hit, hit], truncated: false }) },
+    });
     const result = await getArticle({ number: 'L1234-1' });
     expect(result.kind).toBe('found');
     expect(calls.getArticle.map((c) => c.args)).toEqual([[L1234_1_TRAVAIL.version.id, TODAY]]);
@@ -224,7 +245,12 @@ describe('createGetArticle — resolution outcomes', () => {
 
   it('lists the periods oldest first', async () => {
     const { getArticle } = setup({
-      overrides: { findArticleAllVersions: async () => [hitOf(NEW_1382), hitOf(OLD_1382)] },
+      overrides: {
+        findArticleAllVersions: async () => ({
+          hits: [hitOf(NEW_1382), hitOf(OLD_1382)],
+          truncated: false,
+        }),
+      },
     });
     const result = await getArticle({ code: 'Code civil', number: '1382', atDate: '1700-01-01' });
     expect(result.kind === 'not_in_force_at_date' && result.periods.map((p) => p.id)).toEqual([
@@ -233,15 +259,48 @@ describe('createGetArticle — resolution outcomes', () => {
     ]);
   });
 
+  it('lists periods with an unknown start last, and a period listed twice once', async () => {
+    const undated = { ...hitOf(OLD_1382), id: 'LEGIARTI000000000777', validFrom: null };
+    const { getArticle } = setup({
+      overrides: {
+        findArticleAllVersions: async () => ({
+          hits: [undated, hitOf(NEW_1382), hitOf(OLD_1382), hitOf(NEW_1382)],
+          truncated: false,
+        }),
+      },
+    });
+    const result = await getArticle({ code: 'Code civil', number: '1382', atDate: '1700-01-01' });
+    expect(result.kind === 'not_in_force_at_date' && result.periods.map((p) => p.id)).toEqual([
+      OLD_1382.version.id,
+      NEW_1382.version.id,
+      'LEGIARTI000000000777',
+    ]);
+  });
+
   it('reports not_found when no version ever had the number', async () => {
     const { getArticle } = setup();
     const result = await getArticle({ code: 'Code civil', number: '99999' });
     expect(result).toEqual({
       kind: 'not_found',
+      reason: 'no_article',
       num: '99999',
       codeTitle: 'Code civil',
       didYouMean: [],
     });
+  });
+
+  it('reports an unknown code as such, without searching (never "no article")', async () => {
+    const { getArticle, calls } = setup();
+    const result = await getArticle({ code: 'C. route', number: 'R413-17' });
+    expect(result).toEqual({
+      kind: 'not_found',
+      reason: 'unknown_code',
+      num: 'R413-17',
+      codeTitle: 'C. route',
+      didYouMean: [],
+    });
+    expect(calls.findArticleAt).toEqual([]);
+    expect(calls.findArticleAllVersions).toEqual([]);
   });
 
   it('reports not_found without searching when the code is unknown', async () => {
@@ -249,6 +308,7 @@ describe('createGetArticle — resolution outcomes', () => {
     const result = await getArticle({ code: 'Code des pirates', number: '1240' });
     expect(result).toEqual({
       kind: 'not_found',
+      reason: 'unknown_code',
       num: '1240',
       codeTitle: 'Code des pirates',
       didYouMean: [],
@@ -262,6 +322,7 @@ describe('createGetArticle — resolution outcomes', () => {
     const result = await getArticle({ code: 'travail', number: 'L1234-1' });
     expect(result).toEqual({
       kind: 'not_found',
+      reason: 'unknown_code',
       num: 'L1234-1',
       codeTitle: 'travail',
       didYouMean: [
@@ -411,6 +472,36 @@ describe('createGetArticle — found article', () => {
   });
 });
 
+describe('createGetArticle — repeal with an undetermined date', () => {
+  it('is in force, with a warning that the repeal date is not set', async () => {
+    const pending = makeArticle({
+      id: 'LEGIARTI000000000300',
+      num: 'L800-5',
+      codeTitle: 'Code du travail',
+      status: 'repeal_pending',
+      validFrom: '2005-01-28',
+      validToUndetermined: true,
+    });
+    const { getArticle } = setup({ articles: [pending] });
+    const result = await getArticle({ code: 'Code du travail', number: 'L800-5' });
+    if (result.kind !== 'found') throw new Error(`expected found, got ${result.kind}`);
+    expect(result.article.statusAt).toEqual({
+      inForce: true,
+      reason: 'in_force',
+      from: '2005-01-28',
+      until: null,
+    });
+    expect(result.article.record.version.validToUndetermined).toBe(true);
+    expect(result.article.warnings).toEqual(['Repeal scheduled; Légifrance has not set its date.']);
+  });
+
+  it('an open-ended version gets no such warning', async () => {
+    const { getArticle } = setup();
+    const result = await getArticle({ code: 'Code civil', number: '1240' });
+    expect(result.kind === 'found' && result.article.warnings).toEqual([]);
+  });
+});
+
 describe('createGetArticle — relocation is best effort', () => {
   const ABROGATION = {
     kind: 'abrogation' as const,
@@ -543,7 +634,13 @@ describe('createGetArticle — by id', () => {
   it('reports an unknown id as not_found', async () => {
     const { getArticle } = setup();
     const result = await getArticle({ id: 'LEGIARTI000000000999' });
-    expect(result).toEqual({ kind: 'not_found', num: null, codeTitle: null, didYouMean: [] });
+    expect(result).toEqual({
+      kind: 'not_found',
+      reason: 'unknown_id',
+      num: null,
+      codeTitle: null,
+      didYouMean: [],
+    });
   });
 
   it.each([

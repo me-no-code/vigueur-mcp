@@ -82,13 +82,41 @@ describe('responseFormatSchema', () => {
 });
 
 describe('renderStatusAt', () => {
-  it('in force', () => {
-    const s = { inForce: true, reason: 'in_force', from: '2016-10-01', until: null } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe('✅ In force on 2026-11-12 (since 2016-10-01)');
+  it('in force until a known date: both bounds', () => {
+    const s = {
+      inForce: true,
+      reason: 'in_force',
+      from: '2016-10-01',
+      until: '2027-01-01',
+    } as const;
+    expect(renderStatusAt(s, '2026-11-12')).toBe(
+      '✅ In force on 2026-11-12 (since 2016-10-01, until 2027-01-01)',
+    );
   });
 
-  it('ended', () => {
+  it('in force with no end date says so', () => {
+    const s = { inForce: true, reason: 'in_force', from: '2016-10-01', until: null } as const;
+    expect(renderStatusAt(s, '2026-11-12')).toBe(
+      '✅ In force on 2026-11-12 (since 2016-10-01, no end date)',
+    );
+  });
+
+  it('in force with an end Légifrance has not dated yet', () => {
+    const s = { inForce: true, reason: 'in_force', from: '2016-10-01', until: null } as const;
+    expect(renderStatusAt(s, '2026-11-12', { validToUndetermined: true })).toBe(
+      '✅ In force on 2026-11-12 (since 2016-10-01, until a date not yet determined)',
+    );
+  });
+
+  it('ended: both bounds', () => {
     const s = { inForce: false, reason: 'ended', from: '2008-05-01', until: '2026-10-01' } as const;
+    expect(renderStatusAt(s, '2026-11-12')).toBe(
+      '⛔ Not in force on 2026-11-12: in force 2008-05-01 → 2026-10-01',
+    );
+  });
+
+  it('ended with an unknown start', () => {
+    const s = { inForce: false, reason: 'ended', from: null, until: '2026-10-01' } as const;
     expect(renderStatusAt(s, '2026-11-12')).toBe('⛔ Not in force on 2026-11-12: ended 2026-10-01');
   });
 
@@ -97,6 +125,14 @@ describe('renderStatusAt', () => {
     expect(renderStatusAt({ ...s, reason: 'not_yet_in_force' }, '2026-11-12')).toBe(
       '⏳ Not yet in force on 2026-11-12: from 2027-01-01',
     );
+    expect(
+      renderStatusAt({ ...s, reason: 'not_yet_in_force', until: '2028-01-01' }, '2026-11-12'),
+    ).toBe('⏳ Not yet in force on 2026-11-12: from 2027-01-01 until 2028-01-01');
+    expect(
+      renderStatusAt({ ...s, reason: 'not_yet_in_force' }, '2026-11-12', {
+        validToUndetermined: true,
+      }),
+    ).toBe('⏳ Not yet in force on 2026-11-12: from 2027-01-01 until a date not yet determined');
   });
 
   it('never applied', () => {
@@ -108,6 +144,9 @@ describe('renderStatusAt', () => {
 
   it('in force with an unknown start omits "since"', () => {
     const s = { inForce: true, reason: 'in_force', from: null, until: null } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe('✅ In force on 2026-11-12');
+    expect(renderStatusAt(s, '2026-11-12')).toBe('✅ In force on 2026-11-12 (no end date)');
+    expect(renderStatusAt({ ...s, until: '2030-01-01' }, '2026-11-12')).toBe(
+      '✅ In force on 2026-11-12 (until 2030-01-01)',
+    );
   });
 });

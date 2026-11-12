@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createGetArticleHistory } from '../../../src/services/legislation/history.js';
 import type { HistoryEntry } from '../../../src/services/legislation/ports.js';
 import { VigueurError } from '../../../src/shared/errors.js';
-import { fakeLegislation, lineage, makeArticle } from '../../helpers/fake-legislation.js';
+import { fakeLegislation, hitOf, lineage, makeArticle } from '../../helpers/fake-legislation.js';
 
 const TODAY = '2026-11-12';
 const today = () => TODAY;
@@ -118,19 +118,29 @@ describe('createGetArticleHistory', () => {
     expect(kindOf(res)).toBe('ambiguous');
   });
 
-  it('returns not_found for an unknown number and an unknown code', async () => {
-    const { repo } = fakeLegislation();
+  it('returns not_found for an unknown number and an unknown code, saying which', async () => {
+    const { repo, calls } = fakeLegislation();
     const run = createGetArticleHistory(repo, { today });
-    expect(kindOf(await run({ code: 'Code civil', number: '99999' }))).toBe('not_found');
-    const res = await run({ code: 'travail', number: '1' });
-    expect(res).toMatchObject({
+    expect(await run({ code: 'Code civil', number: '99999' })).toEqual({
       kind: 'not_found',
+      reason: 'no_article',
+      num: '99999',
+      codeTitle: 'Code civil',
+      didYouMean: [],
+    });
+    const res = await run({ code: 'travail', number: '1' });
+    expect(res).toEqual({
+      kind: 'not_found',
+      reason: 'unknown_code',
+      num: '1',
+      codeTitle: 'travail',
       didYouMean: [
         'Code du travail',
         'Code du travail applicable à Mayotte',
         'Code du travail maritime',
       ],
     });
+    expect(calls.findArticleAt).toHaveLength(1); // the unknown code was never searched
   });
 
   it('resolves by id', async () => {
@@ -138,7 +148,40 @@ describe('createGetArticleHistory', () => {
     const res = await createGetArticleHistory(repo, { today })({ id: NEW?.version.id });
     expect('versions' in res).toBe(true);
     const none = await createGetArticleHistory(repo, { today })({ id: 'LEGIARTI000099999999' });
-    expect(kindOf(none)).toBe('not_found');
+    expect(none).toEqual({
+      kind: 'not_found',
+      reason: 'unknown_id',
+      num: null,
+      codeTitle: null,
+      didYouMean: [],
+    });
+  });
+
+  describe('all-versions candidates across codes', () => {
+    const repealed = (i: number) =>
+      makeArticle({
+        id: `LEGIARTI0000000001${String(i).padStart(2, '0')}`,
+        num: 'L1',
+        codeTitle: `Code n° ${i}`,
+        codeId: `LEGITEXT0000000001${String(i).padStart(2, '0')}`,
+        status: 'repealed',
+        validTo: '2005-01-01',
+      });
+    const hits = Array.from({ length: 25 }, (_, i) => hitOf(repealed(i)));
+
+    it.each([
+      [false, undefined],
+      [true, true],
+    ])('a page read in full (truncated %s) decides possiblyIncomplete', async (truncated, flag) => {
+      const { repo } = fakeLegislation({
+        overrides: { findArticleAllVersions: async () => ({ hits, truncated }) },
+      });
+      const res = await createGetArticleHistory(repo, { today })({ number: 'L1' });
+      expect(kindOf(res)).toBe('ambiguous');
+      expect('kind' in res && res.kind === 'ambiguous' && res.possiblyIncomplete).toBe(
+        flag ?? undefined,
+      );
+    });
   });
 
   it('rejects missing target and bad id', async () => {

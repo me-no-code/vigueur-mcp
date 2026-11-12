@@ -45,6 +45,8 @@ export interface ArticleSeed {
   rawStatus?: string;
   validFrom?: IsoDate;
   validTo?: IsoDate | null;
+  /** Légifrance records an end whose date is not determined yet (`validTo` stays null). */
+  validToUndetermined?: boolean;
   /** Version label shown in `versions` (default `1.0`). */
   version?: string;
   cid?: string;
@@ -63,6 +65,7 @@ export function makeArticle(seed: ArticleSeed): ArticleRecord {
   const rawStatus = seed.rawStatus ?? RAW_STATUS[status] ?? status.toUpperCase();
   const validFrom = seed.validFrom ?? '2000-01-01';
   const validTo = seed.validTo ?? null;
+  const validToUndetermined = seed.validToUndetermined ?? false;
   const codeTitle = seed.codeTitle === undefined ? 'Code civil' : seed.codeTitle;
   const codeId =
     seed.codeId === undefined
@@ -75,6 +78,7 @@ export function makeArticle(seed: ArticleSeed): ArticleRecord {
     rawStatus,
     validFrom,
     validTo,
+    validToUndetermined,
   };
   return {
     version: {
@@ -85,6 +89,7 @@ export function makeArticle(seed: ArticleSeed): ArticleRecord {
       rawStatus,
       validFrom,
       validTo,
+      ...(validToUndetermined && { validToUndetermined }),
     },
     cid: seed.cid ?? seed.id,
     codeId,
@@ -102,8 +107,16 @@ export function makeArticle(seed: ArticleSeed): ArticleRecord {
 export function summaryOf(record: ArticleRecord): VersionSummary {
   const listed = record.versions.find((v) => v.id === record.version.id);
   if (listed) return listed;
-  const { id, status, rawStatus, validFrom, validTo } = record.version;
-  return { id, version: '', status, rawStatus: rawStatus ?? '', validFrom, validTo };
+  const { id, status, rawStatus, validFrom, validTo, validToUndetermined } = record.version;
+  return {
+    id,
+    version: '',
+    status,
+    rawStatus: rawStatus ?? '',
+    validFrom,
+    validTo,
+    validToUndetermined: validToUndetermined ?? false,
+  };
 }
 
 /** The given versions of one article, each carrying the whole stack in `versions`. */
@@ -116,7 +129,7 @@ export function lineage<T extends ArticleRecord[]>(
 
 /** The by-number search hit for a seeded article version. */
 export function hitOf(record: ArticleRecord): ArticleHit {
-  const { id, number, status, rawStatus, validFrom, validTo } = record.version;
+  const { id, number, status, rawStatus, validFrom, validTo, validToUndetermined } = record.version;
   return {
     id,
     num: number,
@@ -126,6 +139,7 @@ export function hitOf(record: ArticleRecord): ArticleHit {
     rawStatus: rawStatus ?? '',
     validFrom,
     validTo,
+    validToUndetermined: validToUndetermined ?? false,
   };
 }
 
@@ -155,7 +169,7 @@ export interface FakeLegislationSeed {
    * Article versions: `getArticle` serves them by version id (`null` otherwise);
    * `findArticleAt` / `findArticleAllVersions` derive hits from them (number compared
    * case- and space-insensitively like the real client, code by exact title, date by the
-   * in-force rule).
+   * in-force rule), on a page never truncated.
    */
   articles?: readonly ArticleRecord[];
   /** `getConcordance` result by article version id (default: no links). */
@@ -187,12 +201,13 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
       return codes.map((c) => ({ ...c }));
     },
     async findArticleAt(codeTitle, num, date) {
-      return byNumber(codeTitle, num)
+      const hits = byNumber(codeTitle, num)
         .filter((a) => statusAt(a.version, date).inForce)
         .map(hitOf);
+      return { hits, truncated: false };
     },
     async findArticleAllVersions(codeTitle, num) {
-      return byNumber(codeTitle, num).map(hitOf);
+      return { hits: byNumber(codeTitle, num).map(hitOf), truncated: false };
     },
     async getArticle(id) {
       const found = articles.find((a) => a.version.id === id);

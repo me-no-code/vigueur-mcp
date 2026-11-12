@@ -9,6 +9,9 @@ import { todayInParis } from '../../services/legislation/resolve.js';
 import type { SearchLegislationInput } from '../../services/legislation/search.js';
 import type { SourceModule } from '../../sources.js';
 import { type GetArticle, registerGetArticleTool } from './get-article.js';
+import { registerGetArticleHistoryTool } from './get-article-history.js';
+import { registerListChangesTool } from './list-changes.js';
+import { registerSearchLegislationTool } from './search-legislation.js';
 
 /** The Légifrance services the tools call (see `services/legislation/`). */
 export interface LegifranceServices {
@@ -37,6 +40,9 @@ export function createLegifranceSource(
     id: 'legifrance',
     register(server) {
       registerGetArticleTool(server, services.getArticle, today);
+      registerGetArticleHistoryTool(server, services.getArticleHistory, today);
+      registerSearchLegislationTool(server, services.searchLegislation, today);
+      registerListChangesTool(server, services.listChanges, today);
     },
   };
 }

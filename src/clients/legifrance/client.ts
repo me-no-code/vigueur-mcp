@@ -4,6 +4,7 @@ import type { ModificationLink } from '../../domain/status-at.js';
 import type { ArticleVersion } from '../../domain/versions.js';
 import type {
   ArticleHit,
+  ArticleHitPage,
   ArticleRecord,
   CallContext,
   CodeInfo,
@@ -100,16 +101,20 @@ function codeOf(result: Obj): { id: string; title: string } {
   throw shape('search result without a code title');
 }
 
-function mapArticleHits(body: unknown, num: string): ArticleHit[] {
+/** The hits numbered exactly `num`; the page counts every extract, matching or not. */
+function mapArticleHits(body: unknown, num: string, pageSize: number): ArticleHitPage {
   const wanted = numKey(num);
   const hits: ArticleHit[] = [];
+  let extracts = 0;
   for (const result of list(asObj(body, 'body'), 'results', true)) {
     for (const section of list(result, 'sections')) {
       for (const extract of list(section, 'extracts')) {
+        extracts += 1;
         const extractNum = cleanNum(optStr(extract, 'num') ?? '');
         if (numKey(extractNum) !== wanted) continue;
         const code = codeOf(result);
         const rawStatus = optStr(extract, 'legalStatus') ?? '';
+        const end = parseApiDate(extract.dateFin);
         hits.push({
           id: stripIdSuffix(str(extract, 'id')),
           num: extractNum,
@@ -118,12 +123,13 @@ function mapArticleHits(body: unknown, num: string): ArticleHit[] {
           status: mapPisteStatus(rawStatus),
           rawStatus,
           validFrom: parseApiDate(extract.dateDebut).date,
-          validTo: parseApiDate(extract.dateFin).date,
+          validTo: end.date,
+          validToUndetermined: end.sentinel === 'undetermined',
         });
       }
     }
   }
-  return hits;
+  return { hits, truncated: extracts >= pageSize };
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -140,13 +146,15 @@ const LINK_KINDS: Readonly<Record<string, ModificationLink['kind']>> = {
 
 function mapVersionSummary(v: Obj): VersionSummary {
   const rawStatus = optStr(v, 'etat') ?? '';
+  const end = parseApiDate(v.dateFin);
   return {
     id: str(v, 'id'),
     version: optStr(v, 'version') ?? '',
     status: mapPisteStatus(rawStatus),
     rawStatus,
     validFrom: parseApiDate(v.dateDebut).date,
-    validTo: parseApiDate(v.dateFin).date,
+    validTo: end.date,
+    validToUndetermined: end.sentinel === 'undetermined',
   };
 }
 
@@ -221,7 +229,11 @@ function mapArticle(a: Obj, asOf: IsoDate): ArticleRecord {
     });
   }
   // A sentinel end (open-ended, undetermined) is null; only a missing end falls back to the list.
-  const validTo = end.date ?? (end.sentinel === 'none' ? (listed?.validTo ?? null) : null);
+  const endFromList = end.date === null && end.sentinel === 'none';
+  const validTo = endFromList ? (listed?.validTo ?? null) : end.date;
+  const validToUndetermined = endFromList
+    ? listed?.validToUndetermined === true
+    : end.sentinel === 'undetermined';
   const rawStatus = optStr(a, 'etat');
   const version: ArticleVersion = {
     id,
@@ -231,6 +243,7 @@ function mapArticle(a: Obj, asOf: IsoDate): ArticleRecord {
     ...(rawStatus !== null && { rawStatus }),
     validFrom,
     validTo,
+    ...(validToUndetermined && { validToUndetermined }),
   };
 
   const parentText = list(a, 'textTitles')[0];
@@ -353,14 +366,14 @@ export function createLegifranceClient(
         { facette: 'DATE_VERSION', singleDate: date },
       ];
       const body = articleNumberSearch('CODE_DATE', num, filtres, AT_DATE_PAGE_SIZE);
-      return post('/search', body, ctx, (raw) => mapArticleHits(raw, num));
+      return post('/search', body, ctx, (raw) => mapArticleHits(raw, num, AT_DATE_PAGE_SIZE));
     },
 
     findArticleAllVersions(codeTitle, num, ctx) {
       const filtres: SearchFilter[] =
         codeTitle !== null ? [{ facette: 'TEXT_NOM_CODE', valeurs: [codeTitle] }] : [];
       const body = articleNumberSearch('CODE_ETAT', num, filtres, ALL_VERSIONS_PAGE_SIZE);
-      return post('/search', body, ctx, (raw) => mapArticleHits(raw, num));
+      return post('/search', body, ctx, (raw) => mapArticleHits(raw, num, ALL_VERSIONS_PAGE_SIZE));
     },
 
     getArticle(id, asOf, ctx) {

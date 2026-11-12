@@ -36,8 +36,9 @@ export function consistencyWarnings(
   const warnings: string[] = [];
   for (const l of links) {
     if (l.kind === 'abrogation' && l.effectiveDate !== null && l.effectiveDate <= date) {
+      const marks = v.status === 'deferred' ? 'as entering into force' : 'in force';
       warnings.push(
-        `Légifrance marks this version in force, but also records its abrogation by ${l.textTitle} (effective ${l.effectiveDate}).`,
+        `Légifrance marks this version ${marks}, but also records its abrogation by ${l.textTitle} (effective ${l.effectiveDate}).`,
       );
     }
   }

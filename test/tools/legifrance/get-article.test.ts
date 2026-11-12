@@ -8,7 +8,7 @@ import type {
   GetArticleInput,
   GetArticleResult,
 } from '../../../src/services/legislation/get-article.js';
-import type { CallContext } from '../../../src/services/legislation/ports.js';
+import type { CallContext, VersionSummary } from '../../../src/services/legislation/ports.js';
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
 import { renderGetArticle } from '../../../src/tools/legifrance/get-article.js';
 import {
@@ -62,7 +62,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     expect(text).toContain('### Code civil — art. 1240');
     expect(text).toContain('Tout fait quelconque');
     expect(text).toContain('✅ In force on');
-    expect(text).toContain('(since 2016-10-01) (VIGUEUR)');
+    expect(text).toContain('(since 2016-10-01, no end date) (VIGUEUR)');
     expect(text).toContain(
       'Livre III : Des différentes manières dont on acquiert la propriété › Titre III : Des sources d',
     );
@@ -92,7 +92,9 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     });
     expect(result.isError).toBeFalsy();
     expect(text).toContain('Tout fait quelconque');
-    expect(text).toContain('✅ In force on 2015-01-01 (since 1804-03-21) (MODIFIE)');
+    expect(text).toContain(
+      '✅ In force on 2015-01-01 (since 1804-03-21, until 2016-10-01) (MODIFIE)',
+    );
     expect(text).toContain(
       'Content moved — per Légifrance concordance, the text of art. 1382 as of 2015-01-01 is now at Code civil - art. 1240 (V)',
     );
@@ -123,6 +125,14 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     const { result, text } = await call({ number: 'L1234-1', code: '', at_date: '', id: '' });
     expect(result.isError).toBeFalsy();
     expect(text).toContain('Code de la santé publique');
+  });
+
+  it('an unknown code is reported as such, without searching any article', async () => {
+    const { result, text } = await call({ code: 'C. route', number: 'R413-17' });
+    expect(result.isError).toBeFalsy();
+    expect(text).toContain('Unknown code "C. route": no Légifrance code has this title.');
+    expect(result.structuredContent).toMatchObject({ kind: 'not_found', reason: 'unknown_code' });
+    expect(getArticleOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
 
   it('rejects an impossible date', async () => {
@@ -315,7 +325,7 @@ function expectBoundedPages(pages: Page[]) {
   }
 }
 
-const STATUS_LINE = '✅ In force on 2026-11-12 (since 2010-01-01) (VIGUEUR)';
+const STATUS_LINE = '✅ In force on 2026-11-12 (since 2010-01-01, no end date) (VIGUEUR)';
 const SOURCE_LINE = 'Source: https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000001';
 
 describe('legifrance_get_article on a long article', () => {
@@ -412,13 +422,14 @@ const render = (r: GetArticleResult, opts: { detailed?: boolean; requestedId?: s
   renderGetArticle(r, { detailed: false, today: TODAY, requestedId: null, offset: 0, ...opts })
     .text;
 
-const summary = (over: Partial<{ id: string; validFrom: string | null }> = {}) => ({
+const summary = (over: Partial<VersionSummary> = {}): VersionSummary => ({
   id: 'LEGIARTI000000000002',
   version: '2.0',
   status: 'in_force' as const,
   rawStatus: 'VIGUEUR',
   validFrom: '2020-01-01',
   validTo: null,
+  validToUndetermined: false,
   ...over,
 });
 
@@ -436,7 +447,7 @@ describe('renderGetArticle', () => {
     );
     expect(text).toBe(
       [
-        '### Code civil — art. 7\n✅ In force on 2026-11-12 (since 2010-01-01) (VIGUEUR)\nLivre Ier › Titre II',
+        '### Code civil — art. 7\n✅ In force on 2026-11-12 (since 2010-01-01, no end date) (VIGUEUR)\nLivre Ier › Titre II',
         'Texte officiel.',
         'Note: Conformément à l’article 9, ces dispositions entrent en vigueur le 1er janvier 2010.',
         '⚠️ Légifrance marks this version in force, but also records its abrogation.',
@@ -511,6 +522,7 @@ describe('renderGetArticle', () => {
       rawStatus: 'VIGUEUR',
       validFrom: '2000-01-01',
       validTo: null,
+      validToUndetermined: false,
     };
     const text = render({
       kind: 'ambiguous',
@@ -539,6 +551,7 @@ describe('renderGetArticle', () => {
       status: 'in_force' as const,
       rawStatus: 'VIGUEUR',
       validTo: null,
+      validToUndetermined: false,
     };
     const text = render({
       kind: 'ambiguous',
@@ -561,6 +574,7 @@ describe('renderGetArticle', () => {
       rawStatus: 'VIGUEUR',
       validFrom: '2000-01-01',
       validTo: null,
+      validToUndetermined: false,
     };
     const text = render({
       kind: 'ambiguous',
@@ -579,24 +593,61 @@ describe('renderGetArticle', () => {
 
   it('not found by id echoes the requested id', () => {
     const text = render(
-      { kind: 'not_found', num: null, codeTitle: null, didYouMean: [] },
+      { kind: 'not_found', reason: 'unknown_id', num: null, codeTitle: null, didYouMean: [] },
       { requestedId: 'LEGIARTI000000000999' },
     );
     expect(text).toBe('No Légifrance article with id LEGIARTI000000000999.');
   });
 
-  it('not found by number, with code suggestions labelled as such', () => {
-    expect(render({ kind: 'not_found', num: '9999', codeTitle: null, didYouMean: [] })).toBe(
-      'No article 9999 in any code on Légifrance.',
-    );
+  it('not found by number, in one code or in every code', () => {
+    expect(
+      render({
+        kind: 'not_found',
+        reason: 'no_article',
+        num: '9999',
+        codeTitle: null,
+        didYouMean: [],
+      }),
+    ).toBe('No article 9999 in any code on Légifrance.');
+    expect(
+      render({
+        kind: 'not_found',
+        reason: 'no_article',
+        num: '9999',
+        codeTitle: 'Code civil',
+        didYouMean: [],
+      }),
+    ).toBe('No article 9999 in Code civil on Légifrance.');
+  });
+
+  it('an unknown code is never reported as a missing article', () => {
     const text = render({
       kind: 'not_found',
+      reason: 'unknown_code',
+      num: 'R413-17',
+      codeTitle: 'C. route',
+      didYouMean: [],
+    });
+    expect(text).toBe(
+      'Unknown code "C. route": no Légifrance code has this title. Use the full title (e.g. "Code de la route") or omit the code.',
+    );
+    expect(text).not.toContain('No article');
+  });
+
+  it('an unknown code with code suggestions labels them as such', () => {
+    const text = render({
+      kind: 'not_found',
+      reason: 'unknown_code',
       num: '1240',
       codeTitle: 'Code civi',
       didYouMean: ['Code civil'],
     });
-    expect(text).toContain('No article 1240 in Code civi on Légifrance.');
-    expect(text).toContain('Did you mean: Code civil? (suggestions only');
+    expect(text).toBe(
+      [
+        'Unknown code "Code civi": no Légifrance code has this title. Use the full title (e.g. "Code de la route") or omit the code.',
+        'Did you mean: Code civil? (suggestions only — call again with the exact code title)',
+      ].join('\n'),
+    );
   });
 
   it('not in force at date, across codes, names the code of each period', () => {
@@ -615,11 +666,68 @@ describe('renderGetArticle', () => {
           rawStatus: 'ABROGE',
           validFrom: '2000-01-01',
           validTo: '2010-01-01',
+          validToUndetermined: false,
         },
       ],
     });
     expect(text).toContain('Art. 5 exists but was not in force on 1990-01-01:');
     expect(text).toContain('- ABROGE 2000-01-01 → 2010-01-01 (Code A)');
+  });
+
+  it('an end Légifrance has not dated is shown as such, never as "no end"', () => {
+    const period = {
+      id: 'LEGIARTI000000000005',
+      num: '5',
+      codeId: 'LEGITEXT000000000001',
+      codeTitle: 'Code A',
+      status: 'repeal_pending' as const,
+      rawStatus: 'ABROGE_DIFF',
+      validFrom: '2000-01-01',
+      validTo: null,
+      validToUndetermined: true,
+    };
+    const text = render({
+      kind: 'not_in_force_at_date',
+      num: '5',
+      codeTitle: 'Code A',
+      asOf: '1990-01-01',
+      periods: [period],
+    });
+    expect(text).toContain('- ABROGE_DIFF 2000-01-01 → date not yet determined');
+  });
+
+  it('found with an undetermined end: status line, warning and versions table say so', () => {
+    const base = view();
+    const version = {
+      ...base.record.version,
+      status: 'repeal_pending' as const,
+      rawStatus: 'ABROGE_DIFF',
+      validToUndetermined: true,
+    };
+    const text = render(
+      found({
+        record: {
+          ...base.record,
+          version,
+          versions: [
+            summary({
+              id: version.id,
+              status: 'repeal_pending',
+              rawStatus: 'ABROGE_DIFF',
+              validFrom: '2010-01-01',
+              validToUndetermined: true,
+            }),
+          ],
+        },
+        warnings: ['Repeal scheduled; Légifrance has not set its date.'],
+      }),
+      { detailed: true },
+    );
+    expect(text).toContain(
+      '✅ In force on 2026-11-12 (since 2010-01-01, until a date not yet determined) (ABROGE_DIFF)',
+    );
+    expect(text).toContain('⚠️ Repeal scheduled; Légifrance has not set its date.');
+    expect(text).toContain('| 2.0 (shown) | ABROGE_DIFF | 2010-01-01 | not yet determined |');
   });
 });
 

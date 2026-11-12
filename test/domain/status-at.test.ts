@@ -76,9 +76,11 @@ describe('consistencyWarnings', () => {
       [],
     );
   });
-  it('deferred also qualifies', () => {
-    expect(
-      consistencyWarnings({ status: 'deferred' }, [link('2008-05-01')], '2026-11-12'),
-    ).toHaveLength(1);
+  it('deferred also qualifies, and is not called "in force"', () => {
+    expect(consistencyWarnings({ status: 'deferred' }, [link('2008-05-01')], '2026-11-12')).toEqual(
+      [
+        'Légifrance marks this version as entering into force, but also records its abrogation by Ordonnance n°2007-329 du 12 mars 2007 (effective 2008-05-01).',
+      ],
+    );
   });
 });

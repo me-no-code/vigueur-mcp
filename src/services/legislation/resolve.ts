@@ -3,7 +3,13 @@ import { resolveCodeName } from '../../domain/codes.js';
 import { type IsoDate, isIsoDate, isoDateInParis } from '../../domain/dates.js';
 import { foldKey } from '../../domain/text.js';
 import { VigueurError } from '../../shared/errors.js';
-import type { CallContext, CodeInfo, LegislationRepository } from './ports.js';
+import type {
+  ArticleHit,
+  ArticleRecord,
+  CallContext,
+  CodeInfo,
+  LegislationRepository,
+} from './ports.js';
 
 const MAX_CODE_SUGGESTIONS = 5;
 
@@ -79,4 +85,143 @@ export function targetOf(input: {
   throw invalid(
     'Give an article number with its code (e.g. code "Code civil", number "1240") or a Légifrance article id (LEGIARTI…).',
   );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Citation resolution, shared by get_article and get_article_history.
+
+/**
+ * Why nothing was found: `unknown_code` (no code has the given title: nothing was searched),
+ * `no_article` (no version of the number was ever on record), `unknown_id` (no article has the id).
+ */
+export type NotFoundReason = 'unknown_code' | 'no_article' | 'unknown_id';
+
+export interface NotFound {
+  kind: 'not_found';
+  reason: NotFoundReason;
+  num: string | null;
+  /** The code as typed for `unknown_code`; otherwise its official title (`null`: every code). */
+  codeTitle: string | null;
+  /** Code titles containing the input, for `unknown_code`: suggestions, never substituted. */
+  didYouMean: string[];
+}
+
+export interface Ambiguous {
+  kind: 'ambiguous';
+  num: string;
+  candidates: ArticleHit[];
+  /** The lookup reads one page of hits; when it is full, more candidates may exist. */
+  possiblyIncomplete?: boolean;
+}
+
+/** What a citation (code + number) designates on a date. */
+export type CitationLookup =
+  /** Exactly one version in force on the date. */
+  | { kind: 'in_force'; hit: ArticleHit }
+  /** Several versions in force on the date (several codes, or twins in one code). */
+  | Ambiguous
+  /** None in force on the date, but versions on record (repealed, not yet in force…). */
+  | {
+      kind: 'periods';
+      num: string;
+      /** The code asked for, else the code every period shares; `null` when they span several. */
+      codeTitle: string | null;
+      /** Oldest first, unknown starts last; one entry per version id. */
+      periods: ArticleHit[];
+      /** The all-versions page was full: more periods may exist. */
+      truncated: boolean;
+    }
+  | NotFound;
+
+const startKey = (h: { validFrom: IsoDate | null }) => h.validFrom ?? '9999-12-31';
+
+/** By `validFrom` ascending, unknown starts last. */
+export const byStart = (a: { validFrom: IsoDate | null }, b: { validFrom: IsoDate | null }) =>
+  startKey(a).localeCompare(startKey(b));
+
+/** First occurrence of each id, in order. */
+export function dedupeById<T extends { id: string }>(items: readonly T[]): T[] {
+  const byId = new Map<string, T>();
+  for (const i of items) if (!byId.has(i.id)) byId.set(i.id, i);
+  return [...byId.values()];
+}
+
+/** The code every hit belongs to, when they share one. */
+function sharedCodeTitle(hits: readonly ArticleHit[]): string | null {
+  const titles = new Set(hits.map((h) => h.codeTitle));
+  return titles.size === 1 ? (hits[0]?.codeTitle ?? null) : null;
+}
+
+/**
+ * Resolves `rawNumber` (as people type it) in the code `rawCode` (any code when `null`) on
+ * `asOf`. An unknown code is reported as such without searching; several versions in force
+ * are `ambiguous` (never one picked); none in force falls back to every version on record, so
+ * a repealed article is never "not found".
+ */
+export async function resolveCitation(
+  repo: LegislationRepository,
+  rawNumber: string,
+  rawCode: string | null,
+  asOf: IsoDate,
+  ctx: CallContext | undefined,
+): Promise<CitationLookup> {
+  const num = cleanArticleNumber(rawNumber);
+  let codeTitle: string | null = null;
+  if (rawCode !== null) {
+    const resolved = await resolveCode(repo, rawCode, ctx);
+    if (resolved.code === null) {
+      return {
+        kind: 'not_found',
+        reason: 'unknown_code',
+        num,
+        codeTitle: rawCode,
+        didYouMean: resolved.didYouMean,
+      };
+    }
+    codeTitle = resolved.code.title;
+  }
+
+  const inForce = await repo.findArticleAt(codeTitle, num, asOf, ctx);
+  const hits = dedupeById(inForce.hits);
+  if (hits.length > 1) {
+    return {
+      kind: 'ambiguous',
+      num,
+      candidates: hits,
+      ...(inForce.truncated && { possiblyIncomplete: true }),
+    };
+  }
+  const [hit] = hits;
+  if (hit !== undefined) return { kind: 'in_force', hit };
+
+  const all = await repo.findArticleAllVersions(codeTitle, num, ctx);
+  const periods = dedupeById(all.hits).sort(byStart);
+  if (periods.length === 0) {
+    return { kind: 'not_found', reason: 'no_article', num, codeTitle, didYouMean: [] };
+  }
+  return {
+    kind: 'periods',
+    num,
+    codeTitle: codeTitle ?? sharedCodeTitle(periods),
+    periods,
+    truncated: all.truncated,
+  };
+}
+
+/** The article a search listed; Légifrance not returning it is an upstream failure. */
+export async function fetchListed(
+  repo: LegislationRepository,
+  hit: ArticleHit,
+  asOf: IsoDate,
+  ctx: CallContext | undefined,
+): Promise<ArticleRecord> {
+  const record = await repo.getArticle(hit.id, asOf, ctx);
+  if (record === null) {
+    throw new VigueurError(
+      'upstream_unavailable',
+      `Légifrance lists article ${hit.num} (${hit.id}) but did not return it. Try again later.`,
+      { source: 'legifrance' },
+    );
+  }
+  return record;
 }

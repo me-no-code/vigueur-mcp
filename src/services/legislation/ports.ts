@@ -20,8 +20,10 @@ export interface VersionSummary {
   status: LegalStatus;
   rawStatus: string;
   validFrom: IsoDate | null;
-  /** `null` = open-ended or undetermined end. */
+  /** `null` = no end date, or an end not determined yet (`validToUndetermined`). */
   validTo: IsoDate | null;
+  /** Légifrance records an end (a scheduled repeal) whose date it has not set yet. */
+  validToUndetermined: boolean;
 }
 
 /** An article version found by number in a code. */
@@ -33,7 +35,17 @@ export interface ArticleHit {
   status: LegalStatus;
   rawStatus: string;
   validFrom: IsoDate | null;
+  /** `null` = no end date, or an end not determined yet (`validToUndetermined`). */
   validTo: IsoDate | null;
+  /** Légifrance records an end (a scheduled repeal) whose date it has not set yet. */
+  validToUndetermined: boolean;
+}
+
+/** One page of a by-number lookup. */
+export interface ArticleHitPage {
+  hits: ArticleHit[];
+  /** The page Légifrance returned was full: more versions with this number may exist. */
+  truncated: boolean;
 }
 
 export interface ArticleRecord {
@@ -140,13 +152,13 @@ export interface LegislationRepository {
     num: string,
     date: IsoDate,
     ctx?: CallContext,
-  ): Promise<ArticleHit[]>;
+  ): Promise<ArticleHitPage>;
   /** Every version ever numbered `num`, whatever its status. */
   findArticleAllVersions(
     codeTitle: string | null,
     num: string,
     ctx?: CallContext,
-  ): Promise<ArticleHit[]>;
+  ): Promise<ArticleHitPage>;
   /** `null` when Légifrance has no article with this id. */
   getArticle(id: string, asOf: IsoDate, ctx?: CallContext): Promise<ArticleRecord | null>;
   /** Chronological, undetermined dates last. */
