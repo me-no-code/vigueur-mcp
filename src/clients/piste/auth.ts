@@ -42,6 +42,8 @@ export function createTokenProvider(opts: {
           scope: 'openid',
         }).toString(),
         signal: AbortSignal.timeout(timeoutMs),
+        // A 307/308 would resend this body, client secret included, to wherever it points.
+        redirect: 'error',
       });
     } catch (err) {
       const timedOut = err instanceof Error && err.name === 'TimeoutError';
