@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   articleUrl,
+  articleUrlFor,
   jorfUrl,
   kaliUrl,
   LEGIFRANCE_BASE_URL,
@@ -21,6 +22,15 @@ describe('links', () => {
     );
     expect(kaliUrl('KALITEXT000000000001')).toBe(
       'https://www.legifrance.gouv.fr/conv_coll/id/KALITEXT000000000001',
+    );
+  });
+
+  it('links an article by its id prefix', () => {
+    expect(articleUrlFor('LEGIARTI000032041571')).toBe(
+      'https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032041571',
+    );
+    expect(articleUrlFor('KALIARTI000005849443')).toBe(
+      'https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000005849443',
     );
   });
 });

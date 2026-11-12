@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isIsoDate, parseFrenchDate } from '../../src/domain/dates.js';
+import { isIsoDate, isoDateInParis, parseFrenchDate } from '../../src/domain/dates.js';
 
 describe('isIsoDate', () => {
   it.each([
@@ -64,5 +64,17 @@ describe('parseFrenchDate', () => {
     'hier',
   ])('rejects %j', (input) => {
     expect(parseFrenchDate(input)).toBeNull();
+  });
+});
+
+describe('isoDateInParis', () => {
+  it.each([
+    ['2026-11-11T23:30:00Z', '2026-11-12'], // CET (UTC+1): already the next day in Paris
+    ['2026-11-11T22:59:00Z', '2026-11-11'],
+    ['2026-07-01T21:59:00Z', '2026-07-01'], // CEST (UTC+2)
+    ['2026-07-01T22:01:00Z', '2026-07-02'],
+    ['0999-12-31T12:00:00Z', '0999-12-31'], // year padded to four digits
+  ])('%s → %s', (at, expected) => {
+    expect(isoDateInParis(new Date(at))).toBe(expected);
   });
 });

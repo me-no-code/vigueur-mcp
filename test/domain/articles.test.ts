@@ -17,8 +17,13 @@ describe('normalizeArticleNumber', () => {
     ['1240-1', '1240-1'],
     ['6bis', '6 bis'],
     ['6 bis', '6 bis'],
-    ['premier', '1er'],
-    ['1er', '1er'],
+    // Légifrance numbers article premier "1" (codes, laws, Journal officiel; checked live).
+    ['premier', '1'],
+    ['Premier', '1'],
+    ['1er', '1'],
+    ['1ER', '1'],
+    ['1er bis', '1 bis'],
+    ['premier ter', '1 ter'],
     ['L. 1234\u20111', 'L1234-1'], // U+2011 non-breaking hyphen (Word)
     ['L. 1234\u22121', 'L1234-1'], // U+2212 minus sign
   ])('%j → %j', (input, expected) => {

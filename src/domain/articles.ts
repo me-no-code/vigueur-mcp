@@ -11,8 +11,10 @@ function normalizeNumberPart(rest: string): string {
 }
 
 export function normalizeArticleNumber(raw: string): string {
-  const s = normalizeTypography(raw).trim();
-  if (/^(premier|1er)$/i.test(s)) return '1er';
+  // Légifrance numbers article premier "1", in codes, laws and the Journal officiel alike.
+  const s = normalizeTypography(raw)
+    .trim()
+    .replace(/^(?:premier|1er)(?=\s|$)/i, '1');
 
   // Prefix: LO / L.O. / L / R / D / A, optionally dotted, followed by a digit.
   const prefixed = /^(l\.?\s?o|[lrda])\s*\.?\s*(\d.*)$/i.exec(s);

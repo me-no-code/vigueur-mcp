@@ -26,6 +26,17 @@ describe('listChanges', () => {
     });
   });
 
+  it('consults the code as of the Paris calendar date', async () => {
+    const fake = fakePisteHttp([
+      { path: '/chrono/textCid', fixture: '24-chrono-textCid-civil-2025-2026' },
+    ]);
+    const repo = createLegifranceClient(fake.http, {
+      now: () => new Date('2026-11-11T23:30:00Z'),
+    });
+    await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');
+    expect(fake.calls[0]?.req.body).toMatchObject({ dateConsult: '2026-11-12' });
+  });
+
   it('flattens versions, amending texts and target articles', async () => {
     const { repo } = setup();
     const log = await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');

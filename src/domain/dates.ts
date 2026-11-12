@@ -20,6 +20,20 @@ export function isIsoDate(s: string): boolean {
   return isRealDate(Number(m[1]), Number(m[2]), Number(m[3]));
 }
 
+const PARIS_DAY = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Paris',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/** The calendar date in Paris at `at`: legal dates are French, so "today" is too. */
+export function isoDateInParis(at: Date): IsoDate {
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    PARIS_DAY.formatToParts(at).find((p) => p.type === type)?.value ?? '';
+  return `${part('year').padStart(4, '0')}-${part('month')}-${part('day')}`;
+}
+
 // Keys are lowercase, accent-free, without trailing dot.
 const MONTHS: Readonly<Record<string, number>> = {
   janvier: 1,

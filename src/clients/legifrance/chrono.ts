@@ -1,4 +1,4 @@
-import type { IsoDate } from '../../domain/dates.js';
+import { type IsoDate, isoDateInParis } from '../../domain/dates.js';
 import type { CallContext, ChangeEntry, ChangeLog } from '../../services/legislation/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
@@ -69,7 +69,7 @@ export function listChanges(
   }
   const body = {
     textCid: codeId,
-    dateConsult: today.toISOString().slice(0, 10),
+    dateConsult: isoDateInParis(today),
     startYear: yearOf(from),
     endYear: yearOf(to),
   };
