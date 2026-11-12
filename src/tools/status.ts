@@ -1,8 +1,9 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import type { StatusReport } from '../services/status.js';
-import { toToolError } from '../shared/errors.js';
+import { PISTE_ENVS } from '../config.js';
+import { HEALTH_STATES, type StatusReport } from '../services/status.js';
 import { SOURCE_IDS, SOURCE_LABELS } from '../shared/source-id.js';
+import { toToolError } from './tool-error.js';
 
 const CONSENT_STEP =
   'Open the consent page ("Cliquez ici pour accéder à la page de consentement"), tick **Légifrance** and **JUDILIBRE**, then click **Validate my ToS choices**.';
@@ -32,13 +33,14 @@ const ENABLE_APIS_GUIDE = `To enable a missing API on your PISTE application (ht
 
 const sourceHealthSchema = z.object({
   source: z.enum(SOURCE_IDS),
-  state: z.enum(['ok', 'not_enabled', 'credentials_invalid', 'quota_exceeded', 'unavailable']),
+  state: z.enum(HEALTH_STATES),
   detail: z.string().optional(),
+  retryAfterSeconds: z.number().optional(),
 });
 
 const statusReportSchema = z.object({
   configured: z.boolean(),
-  env: z.enum(['production', 'sandbox']).nullable(),
+  env: z.enum(PISTE_ENVS).nullable(),
   configProblems: z.array(z.string()),
   sources: z.array(sourceHealthSchema),
 }) satisfies z.ZodType<StatusReport>;
@@ -57,13 +59,19 @@ export function formatStatus(report: StatusReport): string {
   }
 
   const lines = [`Environment: ${report.env}`];
-  for (const { source, state, detail } of report.sources) {
+  for (const { source, state, detail, retryAfterSeconds } of report.sources) {
     const label = SOURCE_LABELS[source];
-    lines.push(
-      state === 'ok'
-        ? `✅ ${label}: ok`
-        : `❌ ${label}: ${state}${detail !== undefined ? ` — ${detail}` : ''}`,
-    );
+    if (state === 'ok') {
+      lines.push(`✅ ${label}: ok`);
+      continue;
+    }
+    const parts: string[] = [];
+    if (detail !== undefined)
+      parts.push(detail.startsWith(`${label}: `) ? detail.slice(label.length + 2) : detail);
+    if (state === 'quota_exceeded' && retryAfterSeconds !== undefined) {
+      parts.push(`Retry in about ${retryAfterSeconds} s.`);
+    }
+    lines.push(`❌ ${label}: ${state}${parts.length > 0 ? ` — ${parts.join(' ')}` : ''}`);
   }
   sections.push(lines.join('\n'));
 
@@ -72,6 +80,11 @@ export function formatStatus(report: StatusReport): string {
   if (states.has('credentials_invalid')) {
     sections.push(
       `PISTE rejected the credentials: check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET.\n${ENV_PAIRING_LINE}`,
+    );
+  }
+  if (states.has('unavailable')) {
+    sections.push(
+      'PISTE did not answer; try again in a moment. If it keeps failing, check https://piste.gouv.fr for incidents.',
     );
   }
   return sections.join('\n\n');

@@ -17,7 +17,9 @@ async function probe(http: PisteHttp, source: SourceId, req: PisteRequest): Prom
         case 'credentials_invalid':
           return { source, state: 'credentials_invalid' };
         case 'quota_exceeded':
-          return { source, state: 'quota_exceeded' };
+          return err.details?.retryAfterSeconds !== undefined
+            ? { source, state: 'quota_exceeded', retryAfterSeconds: err.details.retryAfterSeconds }
+            : { source, state: 'quota_exceeded' };
         default:
           return { source, state: 'unavailable', detail: err.message };
       }

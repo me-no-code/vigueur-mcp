@@ -2,17 +2,20 @@ import type { Config, PisteEnv } from '../config.js';
 import type { SourceId } from '../shared/source-id.js';
 import { SOURCE_IDS } from '../shared/source-id.js';
 
-export type HealthState =
-  | 'ok'
-  | 'not_enabled'
-  | 'credentials_invalid'
-  | 'quota_exceeded'
-  | 'unavailable';
+export const HEALTH_STATES = [
+  'ok',
+  'not_enabled',
+  'credentials_invalid',
+  'quota_exceeded',
+  'unavailable',
+] as const;
+export type HealthState = (typeof HEALTH_STATES)[number];
 
 export interface SourceHealth {
   source: SourceId;
   state: HealthState;
   detail?: string;
+  retryAfterSeconds?: number;
 }
 
 export type SourceProbe = () => Promise<SourceHealth>;

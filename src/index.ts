@@ -8,7 +8,9 @@ import { VERSION } from './version.js';
 // stdout carries JSON-RPC only: every log line goes to stderr.
 const config = loadConfig(process.env);
 const deps = compose(config);
-const handle = serveStdio(() => createServer(deps));
+const handle = serveStdio(() => createServer(deps), {
+  onerror: (err) => console.error(`vigueur: protocol error: ${err.message}`),
+});
 
 const pisteState = config.piste
   ? `PISTE env: ${config.piste.env}`

@@ -85,7 +85,45 @@ describe('formatStatus', () => {
         { source: 'judilibre', state: 'ok' },
       ],
     });
-    expect(text).toContain('❌ Légifrance: unavailable — Légifrance: service error (HTTP 503)');
+    expect(text).toContain('❌ Légifrance: unavailable — service error (HTTP 503)');
+  });
+
+  it('shows the retry delay for a quota_exceeded source', () => {
+    const text = formatStatus({
+      ...allOk,
+      sources: [
+        { source: 'legifrance', state: 'quota_exceeded', retryAfterSeconds: 30 },
+        { source: 'judilibre', state: 'ok' },
+      ],
+    });
+    expect(text).toContain('Retry in about 30 s');
+  });
+
+  it('does not double the source label in the detail', () => {
+    const text = formatStatus({
+      ...allOk,
+      sources: [
+        { source: 'legifrance', state: 'ok' },
+        {
+          source: 'judilibre',
+          state: 'unavailable',
+          detail: 'Judilibre: service error (HTTP 500)',
+        },
+      ],
+    });
+    expect(text).toContain('❌ Judilibre: unavailable — service error (HTTP 500)');
+    expect(text).not.toContain('Judilibre: Judilibre');
+  });
+
+  it('an unavailable source: says PISTE did not answer', () => {
+    const text = formatStatus({
+      ...allOk,
+      sources: [
+        { source: 'legifrance', state: 'unavailable' },
+        { source: 'judilibre', state: 'ok' },
+      ],
+    });
+    expect(text).toContain('PISTE did not answer; try again in a moment');
   });
 
   it('shows config problems verbatim alongside the setup guide', () => {

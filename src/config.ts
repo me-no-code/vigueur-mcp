@@ -1,4 +1,5 @@
-export type PisteEnv = 'production' | 'sandbox';
+export const PISTE_ENVS = ['production', 'sandbox'] as const;
+export type PisteEnv = (typeof PISTE_ENVS)[number];
 export interface PisteConfig {
   clientId: string;
   clientSecret: string;

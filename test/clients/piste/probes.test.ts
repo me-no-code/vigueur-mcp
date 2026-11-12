@@ -49,6 +49,15 @@ describe('probes', () => {
     });
   }
 
+  it('carries retryAfterSeconds for quota_exceeded', async () => {
+    const { http } = stub(new VigueurError('quota_exceeded', 'msg', { retryAfterSeconds: 12 }));
+    expect(await probeLegifrance(http)).toEqual({
+      source: 'legifrance',
+      state: 'quota_exceeded',
+      retryAfterSeconds: 12,
+    });
+  });
+
   it('maps upstream_unavailable to unavailable with detail', async () => {
     const { http } = stub(new VigueurError('upstream_unavailable', 'Judilibre: timed out'));
     expect(await probeJudilibre(http)).toEqual({
