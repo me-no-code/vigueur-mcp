@@ -2,12 +2,18 @@ import type { IsoDate } from './dates.js';
 
 export type LegalStatus =
   | 'in_force'
-  | 'repealed'
-  | 'amended'
   | 'deferred'
+  | 'repeal_pending'
+  | 'amended'
+  | 'repealed'
+  | 'stillborn'
   | 'annulled'
-  | 'transferred'
+  | 'severed'
   | 'expired'
+  | 'transferred'
+  | 'replaced'
+  | 'denounced'
+  | 'initial'
   | 'unknown';
 
 export interface ArticleVersion {
@@ -15,6 +21,8 @@ export interface ArticleVersion {
   number: string;
   text: string;
   status: LegalStatus;
+  /** Status label as sent by the source, kept for display. */
+  rawStatus?: string;
   validFrom: IsoDate;
   validTo: IsoDate | null;
 }
