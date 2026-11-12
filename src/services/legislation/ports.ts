@@ -69,6 +69,69 @@ export interface Concordance {
   to: ArticleRef[];
 }
 
+export type LegislationCollection = 'codes' | 'loda' | 'jorf' | 'kali';
+
+export interface LegislationQuery {
+  collection: LegislationCollection;
+  text?: string;
+  codeTitle?: string;
+  articleNumber?: string;
+  textNumber?: string;
+  nor?: string;
+  nature?: string;
+  idcc?: string;
+  atDate: IsoDate;
+  includeHistorical: boolean;
+  publishedFrom?: IsoDate;
+  publishedTo?: IsoDate;
+  /** 1-based. */
+  page: number;
+  /** 1 to 100. */
+  pageSize: number;
+}
+
+export interface LegislationHit {
+  kind: 'article' | 'text';
+  id: string;
+  textId: string;
+  title: string;
+  articleNumber: string | null;
+  status: LegalStatus;
+  rawStatus: string;
+  validFrom: IsoDate | null;
+  validTo: IsoDate | null;
+  snippet: string | null;
+  nature: string | null;
+  publishedOn: IsoDate | null;
+  nor: string | null;
+}
+
+export interface LegislationSearchPage {
+  total: number;
+  page: number;
+  pageSize: number;
+  hits: LegislationHit[];
+}
+
+/** One article touched by one amending text, dated by entry into force. */
+export interface ChangeEntry {
+  date: IsoDate;
+  action: HistoryEntry['action'];
+  articleNum: string | null;
+  articleId: string | null;
+  sectionTitle: string | null;
+  amendingTitle: string;
+  amendingArticleId: string | null;
+}
+
+export interface ChangeLog {
+  entries: ChangeEntry[];
+  /** Versions of the range whose entry-into-force date Légifrance leaves undetermined. */
+  undeterminedCount: number;
+  /** Years of the range for which Légifrance did not load the version detail. */
+  detailMissingYears: string[];
+}
+
 export interface LegislationRepository {
   listCodes(ctx?: CallContext): Promise<CodeInfo[]>;
   /** Versions in force on `date` numbered `num`, in one code or (codeTitle null) in every code. */
@@ -89,4 +152,7 @@ export interface LegislationRepository {
   /** Chronological, undetermined dates last. */
   getArticleHistory(codeId: string, articleCid: string, ctx?: CallContext): Promise<HistoryEntry[]>;
   getConcordance(articleId: string, ctx?: CallContext): Promise<Concordance>;
+  searchLegislation(query: LegislationQuery, ctx?: CallContext): Promise<LegislationSearchPage>;
+  /** Changes to a code with entry into force in `from..to` (inclusive). */
+  listChanges(codeId: string, from: IsoDate, to: IsoDate, ctx?: CallContext): Promise<ChangeLog>;
 }

@@ -1,0 +1,143 @@
+import { describe, expect, it } from 'vitest';
+import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
+import { VigueurError } from '../../../src/shared/errors.js';
+import { fakePisteHttp } from '../../helpers/fake-piste-http.js';
+
+const CIVIL = 'LEGITEXT000006070721';
+const today = () => new Date('2026-11-12T15:30:00Z');
+
+function setup(reply?: unknown) {
+  const fake = fakePisteHttp([
+    reply === undefined
+      ? { path: '/chrono/textCid', fixture: '24-chrono-textCid-civil-2025-2026' }
+      : { path: '/chrono/textCid', reply },
+  ]);
+  return { repo: createLegifranceClient(fake.http, { now: today }), calls: fake.calls };
+}
+
+describe('listChanges', () => {
+  it('requests the years of the range with today as consultation date', async () => {
+    const { repo, calls } = setup();
+    await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');
+    expect(calls[0]?.req).toEqual({
+      method: 'POST',
+      path: '/chrono/textCid',
+      body: { textCid: CIVIL, dateConsult: '2026-11-12', startYear: 2025, endYear: 2026 },
+    });
+  });
+
+  it('flattens versions, amending texts and target articles', async () => {
+    const { repo } = setup();
+    const log = await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');
+    expect(log.entries).toContainEqual(
+      expect.objectContaining({
+        articleNum: '61-3-1',
+        amendingTitle: 'LOI n°2026-667 du 27 juillet 2026 - art. 7',
+        date: '2026-07-29',
+      }),
+    );
+    const entry = log.entries.find((e) => e.articleNum === '61-3-1');
+    expect(entry?.articleId).toMatch(/^LEGIARTI\d+$/);
+    expect(entry?.sectionTitle).toMatch(/^Section|^Chapitre|^Titre/);
+    expect(entry?.amendingArticleId).toBe('LEGIARTI000054500222');
+    for (const e of log.entries) {
+      expect(e.date >= '2025-01-01' && e.date <= '2026-12-31').toBe(true);
+    }
+  });
+
+  it('excludes entries outside the range', async () => {
+    const { repo } = setup();
+    const log = await repo.listChanges(CIVIL, '2026-08-01', '2026-12-31');
+    expect(log.entries.length).toBeGreaterThan(0);
+    expect(log.entries.every((e) => e.date >= '2026-08-01')).toBe(true);
+    expect(log.entries.some((e) => e.date === '2026-07-29')).toBe(false);
+  });
+
+  it('excludes entries after the upper bound', async () => {
+    const { repo } = setup();
+    const log = await repo.listChanges(CIVIL, '2025-01-01', '2026-06-30');
+    expect(log.entries.length).toBeGreaterThan(0);
+    expect(log.entries.every((e) => e.date <= '2026-06-30')).toBe(true);
+    expect(log.entries.some((e) => e.date === '2026-07-29')).toBe(false);
+    expect(log.entries.some((e) => e.articleNum === '61-3-1')).toBe(false);
+  });
+
+  it('lists entries oldest first', async () => {
+    const { repo } = setup();
+    const { entries } = await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');
+    const dates = entries.map((e) => e.date);
+    expect(dates).toEqual([...dates].sort());
+  });
+
+  it('reports years in range whose detail was not loaded', async () => {
+    const { repo } = setup();
+    const log = await repo.listChanges(CIVIL, '2024-06-01', '2026-12-31');
+    expect(log.detailMissingYears).toEqual(['2024']);
+  });
+
+  it('counts undetermined-date versions apart from the entries', async () => {
+    const target = {
+      name: '12',
+      id: 'LEGIARTI000000000012',
+      cid: 'LEGIARTI000000000012',
+    };
+    const version = (n: number) => ({
+      dateDebut: 0,
+      isEndVersion: false,
+      articlesModificateurs: {
+        UNKNOWN: {
+          title: `Ordonnance ${n}`,
+          id: 'UNKNOWN',
+          actions: {
+            ABROGATION: {
+              action: 'ABROGATION',
+              parents: {
+                LEGISCTA1: { name: ' Titre I \r\n', articlesCibles: { [target.id]: target } },
+              },
+            },
+          },
+        },
+      },
+    });
+    const { repo } = setup({
+      regroupements: [
+        {
+          title: '2026',
+          detailLoaded: true,
+          versions: { '2222-02-22': version(1), '2026-03-01': version(2) },
+        },
+      ],
+    });
+    const log = await repo.listChanges(CIVIL, '2026-01-01', '2026-12-31');
+    expect(log.undeterminedCount).toBe(1);
+    expect(log.entries).toEqual([
+      {
+        date: '2026-03-01',
+        action: 'abrogation',
+        articleNum: '12',
+        articleId: 'LEGIARTI000000000012',
+        sectionTitle: 'Titre I',
+        amendingTitle: 'Ordonnance 2',
+        amendingArticleId: null,
+      },
+    ]);
+  });
+
+  it('rejects an inverted range without calling Légifrance', async () => {
+    const { repo, calls } = setup();
+    const err = await repo.listChanges(CIVIL, '2026-12-31', '2026-01-01').then(
+      () => undefined,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(VigueurError);
+    expect((err as VigueurError).kind).toBe('invalid_input');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('reports a malformed body as an unexpected response', async () => {
+    const { repo } = setup({ regroupements: 'nope' });
+    await expect(repo.listChanges(CIVIL, '2025-01-01', '2026-12-31')).rejects.toMatchObject({
+      kind: 'upstream_unavailable',
+    });
+  });
+});

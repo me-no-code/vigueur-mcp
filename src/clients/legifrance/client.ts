@@ -14,6 +14,22 @@ import type {
 } from '../../services/legislation/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
+import { listChanges } from './chrono.js';
+import {
+  asObj,
+  cleanNum,
+  HISTORY_ACTIONS,
+  keyed,
+  list,
+  lookup,
+  numKey,
+  type Obj,
+  optStr,
+  postJson,
+  shape,
+  str,
+} from './request.js';
+import { searchLegislation } from './search.js';
 import { mapPisteStatus } from './status-map.js';
 import { cleanTitle, htmlToText, parseApiDate, stripIdSuffix, stripMarks } from './wire.js';
 
@@ -23,55 +39,7 @@ const AT_DATE_PAGE_SIZE = 20;
 const ALL_VERSIONS_PAGE_SIZE = 100;
 
 // ---------------------------------------------------------------------------------------------
-// Wire reading. Légifrance JSON never leaves this file; bodies are read field by field and a
-// missing required field is reported as an unexpected response (see `post`).
-
-type Obj = Record<string, unknown>;
-
-function isObj(v: unknown): v is Obj {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
-}
-
-const shape = (detail: string) => new Error(detail);
-
-function asObj(v: unknown, what: string): Obj {
-  if (!isObj(v)) throw shape(`${what} is not an object`);
-  return v;
-}
-
-/** A required non-empty string field. */
-function str(o: Obj, key: string): string {
-  const v = o[key];
-  if (typeof v !== 'string' || v === '') throw shape(`missing ${key}`);
-  return v;
-}
-
-/** An optional string field: `null` when absent or not a string. */
-function optStr(o: Obj, key: string): string | null {
-  const v = o[key];
-  return typeof v === 'string' ? v : null;
-}
-
-/** A list of objects; absent or null is empty unless `required`. */
-function list(o: Obj, key: string, required = false): Obj[] {
-  const v = o[key];
-  if (!required && (v === undefined || v === null)) return [];
-  if (!Array.isArray(v) || !v.every(isObj)) throw shape(`${key} is not a list of objects`);
-  return v;
-}
-
-/** The entries of an object keyed by id or date; absent or null is empty. */
-function keyed(o: Obj, key: string): Array<[string, Obj]> {
-  const v = o[key];
-  if (v === undefined || v === null) return [];
-  const entries = Object.entries(asObj(v, key));
-  if (!entries.every(([, e]) => isObj(e))) throw shape(`${key} holds a non-object entry`);
-  return entries as Array<[string, Obj]>;
-}
-
-function lookup<T>(table: Readonly<Record<string, T>>, key: string | null, fallback: T): T {
-  return key !== null && Object.hasOwn(table, key) ? (table[key] as T) : fallback;
-}
+// Wire reading (guards live in request.ts).
 
 /** HTML converted to text when it yields any, else the plain variant; `''` when both are empty. */
 function richText(o: Obj, htmlKey: string, plainKey: string): string {
@@ -131,11 +99,6 @@ function codeOf(result: Obj): { id: string; title: string } {
   }
   throw shape('search result without a code title');
 }
-
-/** Article number as displayed: no highlight tags, single spaces. */
-const cleanNum = (s: string) => stripMarks(s).replace(/\s+/g, ' ').trim();
-/** Comparison key: the requested number may differ from the official one in case and spacing. */
-const numKey = (s: string) => cleanNum(s).toLowerCase();
 
 function mapArticleHits(body: unknown, num: string): ArticleHit[] {
   const wanted = numKey(num);
@@ -301,14 +264,6 @@ function mapArticleResponse(body: unknown, asOf: IsoDate): ArticleRecord | null 
 // ---------------------------------------------------------------------------------------------
 // History and concordance
 
-const HISTORY_ACTIONS: Readonly<Record<string, HistoryEntry['action']>> = {
-  CREATION: 'creation',
-  MODIFICATION: 'modification',
-  ABROGATION: 'abrogation',
-  CODIFICATION: 'codification',
-  DEPLACEMENT: 'transfer',
-};
-
 /** Oldest first; entries without a date (undetermined) last. Stable for equal dates. */
 function byDate(a: HistoryEntry, b: HistoryEntry): number {
   if (a.date === b.date) return 0;
@@ -376,29 +331,12 @@ export function createLegifranceClient(
   const codesTtlMs = opts.codesTtlMs ?? DEFAULT_CODES_TTL_MS;
   let codes: { fetchedAt: number; list: CodeInfo[] } | null = null;
 
-  /** POSTs to Légifrance and maps the body; any mapping failure is an unexpected response. */
-  async function post<T>(
+  const post = <T>(
     path: string,
     body: unknown,
     ctx: CallContext | undefined,
     map: (raw: unknown) => T,
-  ): Promise<T> {
-    const raw = await http.request<unknown>(
-      { method: 'POST', path, body },
-      ctx?.signal ? { signal: ctx.signal } : undefined,
-    );
-    try {
-      return map(raw);
-    } catch (err) {
-      if (err instanceof VigueurError) throw err;
-      const detail = err instanceof Error ? err.message : String(err);
-      throw new VigueurError(
-        'upstream_unavailable',
-        `Légifrance: unexpected response from ${path} (${detail}).`,
-        { source: 'legifrance' },
-      );
-    }
-  }
+  ) => postJson(http, path, body, ctx, map);
 
   return {
     async listCodes(ctx) {
@@ -432,6 +370,14 @@ export function createLegifranceClient(
     getArticleHistory(codeId, articleCid, ctx) {
       const body = { textCid: codeId, elementCid: articleCid };
       return post('/chrono/textCidAndElementCid', body, ctx, mapHistory);
+    },
+
+    searchLegislation(query, ctx) {
+      return searchLegislation(http, query, ctx);
+    },
+
+    listChanges(codeId, from, to, ctx) {
+      return listChanges(http, codeId, from, to, now(), ctx);
     },
 
     getConcordance(articleId, ctx) {
