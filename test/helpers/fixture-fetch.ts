@@ -1,0 +1,143 @@
+import { pisteEndpoints } from '../../src/clients/piste/endpoints.js';
+import { type Config, loadConfig } from '../../src/config.js';
+import type { FetchLike } from '../../src/shared/fetch.js';
+import { fakeFetch } from './fake-fetch.js';
+import { loadFixture } from './fake-piste-http.js';
+
+/** Sandbox credentials: requests go to the sandbox hosts the router below answers. */
+export function sandboxConfig(): Config {
+  return loadConfig({ PISTE_CLIENT_ID: 'id', PISTE_CLIENT_SECRET: 'secret', PISTE_ENV: 'sandbox' });
+}
+
+export interface FixtureRoute {
+  /** Path under the Légifrance prefix, e.g. `/search`. */
+  path: string;
+  /** Extra condition on the JSON request body; routes are tried in order. */
+  when?: (body: unknown) => boolean;
+  /** Fixture name under `test/fixtures/legifrance/`. */
+  fixture: string;
+}
+
+type Json = Record<string, unknown>;
+const asJson = (v: unknown): Json => (typeof v === 'object' && v !== null ? (v as Json) : {});
+
+/** A by-number `/search` on `fond` for article `num`. */
+export function numberSearch(fond: 'CODE_DATE' | 'CODE_ETAT', num: string) {
+  return (body: unknown): boolean => {
+    const b = asJson(body);
+    const champs = asJson(b.recherche).champs;
+    const champ = asJson(Array.isArray(champs) ? champs[0] : undefined);
+    const critere = asJson(Array.isArray(champ.criteres) ? champ.criteres[0] : undefined);
+    return b.fond === fond && champ.typeChamp === 'NUM_ARTICLE' && critere.valeur === num;
+  };
+}
+
+/** A request whose body field `key` equals `value` (e.g. `/consult/getArticle` by `id`). */
+export const bodyField =
+  (key: string, value: string) =>
+  (body: unknown): boolean =>
+    asJson(body)[key] === value;
+
+/** `getArticleWithIdAndNum` returns the same payload as `getArticle`. */
+export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
+  { path: '/list/code', fixture: '68-list-code-pagesize200' },
+  // Code civil 1240 and 1382 (old 1382 content moved to 1240 on 2016-10-01).
+  {
+    path: '/search',
+    when: numberSearch('CODE_DATE', '1240'),
+    fixture: '02-search-code-date-1240-today',
+  },
+  {
+    path: '/search',
+    when: numberSearch('CODE_DATE', '1382'),
+    fixture: '03-search-code-date-1382-2015',
+  },
+  {
+    path: '/search',
+    when: numberSearch('CODE_ETAT', '1382'),
+    fixture: '110-search-code-etat-num-1382-all-versions',
+  },
+  {
+    path: '/consult/getArticle',
+    when: bodyField('id', 'LEGIARTI000032041571'),
+    fixture: '06-getArticleWithIdAndNum-1240',
+  },
+  {
+    path: '/consult/getArticle',
+    when: bodyField('id', 'LEGIARTI000006437044'),
+    fixture: '09-getArticle-1240-prev-version',
+  },
+  {
+    path: '/consult/getArticle',
+    when: bodyField('id', 'LEGIARTI000006438819'),
+    fixture: '08-getArticle-1382-old',
+  },
+  {
+    path: '/consult/getArticle',
+    when: bodyField('id', 'LEGIARTI000032042379'),
+    fixture: '07-getArticleWithIdAndNum-1382',
+  },
+  {
+    path: '/consult/concordanceLinksArticle',
+    when: bodyField('articleId', 'LEGIARTI000006438819'),
+    fixture: '11-concordanceLinks-1382-old',
+  },
+  {
+    path: '/consult/concordanceLinksArticle',
+    when: bodyField('articleId', 'LEGIARTI000032041571'),
+    fixture: '14-concordanceLinks-1240',
+  },
+  // L1234-1: Code du travail and Code de la santé publique.
+  {
+    path: '/search',
+    when: numberSearch('CODE_DATE', 'L1234-1'),
+    fixture: '74-search-code-date-L1234-1-all-codes',
+  },
+  // CGI art. 199 undecies B: a ~32 000-character article with 35 versions.
+  {
+    path: '/consult/getArticle',
+    when: bodyField('id', 'LEGIARTI000046892900'),
+    fixture: '59-getArticleWithIdAndNum-cgi-long',
+  },
+  // Code du travail R4217-2, repealed on 2026-10-01.
+  {
+    path: '/search',
+    when: numberSearch('CODE_DATE', 'R4217-2'),
+    fixture: '106-search-code-date-R4217-2-today',
+  },
+  {
+    path: '/search',
+    when: numberSearch('CODE_ETAT', 'R4217-2'),
+    fixture: '108-search-code-etat-num-abroge-R4217-2',
+  },
+];
+
+/**
+ * A `fetch` answering the sandbox OAuth token and Légifrance fixtures by path and request body.
+ * Anything else gets a 404 and is listed in `unmatched` — assert it stays empty so a missing
+ * fixture fails the test with the request that needed it.
+ */
+export function fixtureFetch(routes: readonly FixtureRoute[] = LEGIFRANCE_FIXTURE_ROUTES): {
+  fetch: FetchLike;
+  calls: Request[];
+  unmatched: string[];
+} {
+  const endpoints = pisteEndpoints('sandbox');
+  const unmatched: string[] = [];
+  const { fetch, calls } = fakeFetch(async (req) => {
+    if (req.method === 'POST' && req.url === endpoints.oauthTokenUrl) {
+      return Response.json({ access_token: 'fixture-token', expires_in: 3600 });
+    }
+    const raw = await req.clone().text();
+    if (req.url.startsWith(endpoints.legifranceBaseUrl)) {
+      const path = req.url.slice(endpoints.legifranceBaseUrl.length);
+      const body: unknown = raw === '' ? undefined : JSON.parse(raw);
+      const route = routes.find((r) => r.path === path && (r.when?.(body) ?? true));
+      if (route !== undefined) return Response.json(loadFixture(route.fixture));
+    }
+    const request = `${req.method} ${req.url}${raw === '' ? '' : ` ${raw}`}`;
+    unmatched.push(request);
+    return new Response(`fixture-fetch: no fixture for ${request}`, { status: 404 });
+  });
+  return { fetch, calls, unmatched };
+}

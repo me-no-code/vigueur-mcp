@@ -1,11 +1,17 @@
+import { createLegifranceClient } from './clients/legifrance/client.js';
 import { createTokenProvider } from './clients/piste/auth.js';
 import { pisteEndpoints } from './clients/piste/endpoints.js';
 import { createPisteHttp } from './clients/piste/http.js';
 import { probeJudilibre, probeLegifrance } from './clients/piste/probes.js';
 import type { Config } from './config.js';
 import type { ServerDeps } from './server.js';
+import { createListChanges } from './services/legislation/changes.js';
+import { createGetArticle } from './services/legislation/get-article.js';
+import { createGetArticleHistory } from './services/legislation/history.js';
+import { createSearchLegislation } from './services/legislation/search.js';
 import { getStatus } from './services/status.js';
 import type { FetchLike } from './shared/fetch.js';
+import { createLegifranceSource } from './tools/legifrance/index.js';
 
 /** Wires the PISTE clients and services for a configuration (no network until used). */
 export function compose(config: Config, opts: { fetch?: FetchLike } = {}): ServerDeps {
@@ -38,5 +44,13 @@ export function compose(config: Config, opts: { fetch?: FetchLike } = {}): Serve
     judilibre: () => probeJudilibre(judilibre),
   };
 
-  return { config, getStatus: () => getStatus({ config, probes }), sources: [] };
+  const legislation = createLegifranceClient(legifrance);
+  const legifranceSource = createLegifranceSource({
+    getArticle: createGetArticle(legislation),
+    getArticleHistory: createGetArticleHistory(legislation),
+    searchLegislation: createSearchLegislation(legislation),
+    listChanges: createListChanges(legislation),
+  });
+
+  return { config, getStatus: () => getStatus({ config, probes }), sources: [legifranceSource] };
 }
