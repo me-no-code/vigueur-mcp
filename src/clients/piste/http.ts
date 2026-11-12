@@ -15,20 +15,46 @@ export interface PisteRequest {
 export interface RequestOptions {
   maxRetries?: number;
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 export interface PisteHttp {
   request<T>(req: PisteRequest, opts?: RequestOptions): Promise<T>;
 }
 
-const DEFAULT_MAX_RETRIES = 2;
-const DEFAULT_TIMEOUT_MS = 20_000;
+export const DEFAULT_MAX_RETRIES = 1;
+export const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_RETRY_AFTER_WAIT_MS = 10_000;
 const BACKOFF_BASE_MS = 500;
 const BODY_EXCERPT_CHARS = 300;
 
-const defaultSleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+// Resolves early when the signal aborts; callers re-check the signal afterwards.
+const defaultSleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise((resolve) => {
+    if (signal?.aborted) return resolve();
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+
+function redact(text: string, token: string): string {
+  const scrubbed = token === '' ? text : text.replaceAll(token, '[redacted]');
+  return scrubbed.replace(/bearer\s+\S+/gi, '[redacted]');
+}
+
+function errorCode(err: unknown): string {
+  if (err instanceof Error) {
+    const code = (err.cause as { code?: unknown } | undefined)?.code;
+    return typeof code === 'string' ? code : err.name;
+  }
+  return 'unknown';
+}
 
 function parseRetryAfter(value: string | null): number | undefined {
   if (value === null || !/^\d+$/.test(value.trim())) return undefined;
@@ -48,7 +74,7 @@ export function createPisteHttp(opts: {
   source: SourceId;
   tokens: TokenProvider;
   fetch?: FetchLike;
-  sleep?: (ms: number) => Promise<void>;
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   maxRetries?: number;
   timeoutMs?: number;
 }): PisteHttp {
@@ -63,6 +89,9 @@ export function createPisteHttp(opts: {
       ...(retryAfterSeconds !== undefined && { retryAfterSeconds }),
     });
 
+  const cancelled = () =>
+    new VigueurError('cancelled', `${label}: request cancelled.`, { source: opts.source });
+
   async function request<T>(req: PisteRequest, ro?: RequestOptions): Promise<T> {
     const maxRetries = ro?.maxRetries ?? opts.maxRetries ?? DEFAULT_MAX_RETRIES;
     const timeoutMs = ro?.timeoutMs ?? opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -72,6 +101,7 @@ export function createPisteHttp(opts: {
       if (value !== undefined) url.searchParams.append(key, String(value));
     }
     const hasBody = req.body !== undefined;
+    const callerSignal = ro?.signal;
 
     const final = new WeakSet<VigueurError>(); // errors that must not be retried
     let attempt = 0;
@@ -79,13 +109,16 @@ export function createPisteHttp(opts: {
 
     // Each loop iteration is one HTTP attempt; `retry` decides whether to go again.
     for (;;) {
+      if (callerSignal?.aborted) throw cancelled();
       const token = await opts.tokens.getToken();
+      if (callerSignal?.aborted) throw cancelled();
       const headers: Record<string, string> = {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
       };
       if (hasBody) headers['Content-Type'] = 'application/json';
-      const signal = AbortSignal.timeout(timeoutMs);
+      const timeoutSignal = AbortSignal.timeout(timeoutMs);
+      const signal = callerSignal ? AbortSignal.any([callerSignal, timeoutSignal]) : timeoutSignal;
 
       let failure: VigueurError;
       let waitMs = BACKOFF_BASE_MS * 2 ** attempt;
@@ -115,6 +148,7 @@ export function createPisteHttp(opts: {
         }
         if (res.status === 401) {
           opts.tokens.invalidate();
+          if (callerSignal?.aborted) throw cancelled();
           if (refreshedToken) {
             throw fail('credentials_invalid', 'credentials rejected (HTTP 401)', 401);
           }
@@ -135,11 +169,12 @@ export function createPisteHttp(opts: {
         } else {
           throw fail(
             'invalid_input',
-            `request rejected (HTTP ${res.status}): ${text.slice(0, BODY_EXCERPT_CHARS)}`,
+            `request rejected (HTTP ${res.status}): ${redact(text, token).slice(0, BODY_EXCERPT_CHARS)}`,
             res.status,
           );
         }
       } catch (err) {
+        if (callerSignal?.aborted) throw cancelled();
         if (err instanceof VigueurError) {
           if (
             final.has(err) ||
@@ -148,16 +183,18 @@ export function createPisteHttp(opts: {
             throw err;
           }
           failure = err;
+        } else if (isTimeout(err, signal)) {
+          failure = fail('upstream_unavailable', `request timed out after ${timeoutMs} ms`);
         } else {
-          failure = isTimeout(err, signal)
-            ? fail('upstream_unavailable', `request timed out after ${timeoutMs} ms`)
-            : fail('upstream_unavailable', 'network error while contacting the service');
+          console.error(`vigueur: ${label} network error (${errorCode(err)})`);
+          failure = fail('upstream_unavailable', 'network error while contacting the service');
         }
       }
 
       if (attempt >= maxRetries) throw failure;
       attempt++;
-      await sleep(waitMs);
+      await sleep(waitMs, callerSignal);
+      if (callerSignal?.aborted) throw cancelled();
     }
   }
 

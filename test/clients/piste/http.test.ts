@@ -1,10 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { RequestOptions } from '../../../src/clients/piste/http.js';
-import { createPisteHttp } from '../../../src/clients/piste/http.js';
+import {
+  createPisteHttp,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_TIMEOUT_MS,
+} from '../../../src/clients/piste/http.js';
 import { VigueurError } from '../../../src/shared/errors.js';
 import { fakeFetch } from '../../helpers/fake-fetch.js';
 
-function setup(handler: (req: Request) => Response | Promise<Response>) {
+function setup(
+  handler: (req: Request) => Response | Promise<Response>,
+  config: { maxRetries?: number } = { maxRetries: 2 },
+) {
   const f = fakeFetch(handler);
   const sleeps: number[] = [];
   let invalidations = 0;
@@ -18,6 +25,7 @@ function setup(handler: (req: Request) => Response | Promise<Response>) {
       },
     },
     fetch: f.fetch,
+    ...(config.maxRetries !== undefined && { maxRetries: config.maxRetries }),
     sleep: async (ms) => {
       sleeps.push(ms);
     },
@@ -163,5 +171,176 @@ describe('createPisteHttp', () => {
     const { http, calls } = setup(() => json({}, 503));
     await failure(http.request({ method: 'GET', path: '/a' }, { maxRetries: 0 }));
     expect(calls).toHaveLength(1);
+  });
+
+  it('aborting the caller signal mid-request rejects with cancelled and makes no retry', async () => {
+    const { http, calls } = setup(
+      (req) =>
+        new Promise<Response>((_, reject) => {
+          req.signal.addEventListener('abort', () => reject(req.signal.reason));
+        }),
+    );
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 5);
+    const err = await failure(
+      http.request({ method: 'GET', path: '/a' }, { signal: controller.signal }),
+    );
+    expect(err.kind).toBe('cancelled');
+    expect(err.message).toBe('Légifrance: request cancelled.');
+    expect(err.details?.source).toBe('legifrance');
+    expect(calls).toHaveLength(1);
+  });
+
+  it('an already-aborted signal makes no call', async () => {
+    const { http, calls } = setup(() => json({}));
+    const err = await failure(
+      http.request({ method: 'GET', path: '/a' }, { signal: AbortSignal.abort() }),
+    );
+    expect(err.kind).toBe('cancelled');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('cancellation during a backoff sleep stops retrying', async () => {
+    const controller = new AbortController();
+    const f = fakeFetch(() => json({}, 503));
+    const http = createPisteHttp({
+      baseUrl: 'https://x.test/base',
+      source: 'legifrance',
+      tokens: { getToken: async () => 'tok-1', invalidate: () => {} },
+      fetch: f.fetch,
+      maxRetries: 2,
+      sleep: async () => {
+        controller.abort();
+      },
+    });
+    const err = await failure(
+      http.request({ method: 'GET', path: '/a' }, { signal: controller.signal }),
+    );
+    expect(err.kind).toBe('cancelled');
+    expect(f.calls).toHaveLength(1);
+  });
+
+  it('the default sleep is interrupted by the caller signal', async () => {
+    const f = fakeFetch(() => json({}, 503));
+    const http = createPisteHttp({
+      baseUrl: 'https://x.test/base',
+      source: 'legifrance',
+      tokens: { getToken: async () => 'tok-1', invalidate: () => {} },
+      fetch: f.fetch,
+    });
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 20);
+    const started = Date.now();
+    const err = await failure(
+      http.request({ method: 'GET', path: '/a' }, { signal: controller.signal }),
+    );
+    expect(err.kind).toBe('cancelled');
+    expect(Date.now() - started).toBeLessThan(400);
+  });
+
+  it('cancellation after a 401 does not retry the refresh', async () => {
+    const controller = new AbortController();
+    const { http, calls } = setup(() => {
+      controller.abort();
+      return json({}, 401);
+    });
+    const err = await failure(
+      http.request({ method: 'GET', path: '/a' }, { signal: controller.signal }),
+    );
+    expect(err.kind).toBe('cancelled');
+    expect(calls).toHaveLength(1);
+  });
+
+  it('defaults are one retry and 10 s', async () => {
+    expect(DEFAULT_MAX_RETRIES).toBe(1);
+    expect(DEFAULT_TIMEOUT_MS).toBe(10_000);
+    const { http, calls } = setup(() => json({}, 503), {});
+    await failure(http.request({ method: 'GET', path: '/a' }));
+    expect(calls).toHaveLength(2);
+  });
+
+  it('network errors log a code, not the URL', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { http } = setup(() => {
+        throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } });
+      });
+      await failure(http.request({ method: 'GET', path: '/a' }, { maxRetries: 0 }));
+      const lines = spy.mock.calls.map((c) => c.join(' '));
+      expect(lines).toContain('vigueur: Légifrance network error (ENOTFOUND)');
+      expect(lines.join('\n')).not.toContain('x.test');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('secret-leak guard', () => {
+  const echo = () => new Response('invalid header Authorization: Bearer tok-1', { status: 400 });
+  const hang = (req: Request) =>
+    new Promise<Response>((_, reject) => {
+      req.signal.addEventListener('abort', () => reject(req.signal.reason));
+    });
+  const cases: [string, (req: Request) => Response | Promise<Response>, RequestOptions][] = [
+    ['401 twice', () => json({ m: 'Bearer tok-1' }, 401), {}],
+    ['403', () => new Response('Bearer tok-1', { status: 403 }), {}],
+    ['404', () => new Response('Bearer tok-1', { status: 404 }), {}],
+    ['400 echoing the token', echo, {}],
+    ['429', () => new Response('Bearer tok-1', { status: 429 }), {}],
+    ['503', () => new Response('Bearer tok-1', { status: 503 }), {}],
+    [
+      'network error',
+      () => {
+        throw Object.assign(new TypeError('fetch failed Bearer tok-1'), {
+          cause: { code: 'ECONNRESET' },
+        });
+      },
+      {},
+    ],
+    ['timeout', hang, { timeoutMs: 10, maxRetries: 0 }],
+    ['HTML on 200', () => new Response('<html>Bearer tok-1</html>', { status: 200 }), {}],
+  ];
+  for (const [name, handler, opts] of cases) {
+    it(`${name} leaks neither token nor Bearer`, async () => {
+      const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        const { http } = setup(handler);
+        const err = await failure(http.request({ method: 'GET', path: '/a' }, opts));
+        const dump = JSON.stringify({ m: err.message, d: err.details });
+        expect(dump).not.toContain('tok-1');
+        expect(dump).not.toContain('Bearer');
+        expect(spy.mock.calls.join('\n')).not.toContain('tok-1');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+  }
+});
+
+describe('400 body redaction', () => {
+  for (const [name, prefix] of [
+    ['with Bearer', 'Bearer '],
+    ['without Bearer', ''],
+  ] as const) {
+    it(`redacts a token straddling the excerpt boundary (${name})`, async () => {
+      const pad = 'x'.repeat(300 - prefix.length - 4);
+      const { http } = setup(() => new Response(`${pad}${prefix}tok-1 tail`, { status: 400 }));
+      const err = await failure(http.request({ method: 'GET', path: '/a' }));
+      const dump = JSON.stringify({ m: err.message, d: err.details });
+      for (let n = 4; n <= 5; n++) expect(dump).not.toContain('tok-1'.slice(0, n));
+      expect(dump).not.toContain('Bearer');
+    });
+  }
+
+  it('leaves the excerpt intact when the token is empty', async () => {
+    const f = fakeFetch(() => new Response('plain body', { status: 400 }));
+    const http = createPisteHttp({
+      baseUrl: 'https://x.test/base',
+      source: 'legifrance',
+      tokens: { getToken: async () => '', invalidate: () => {} },
+      fetch: f.fetch,
+    });
+    const err = await failure(http.request({ method: 'GET', path: '/a' }));
+    expect(err.message).toBe('Légifrance: request rejected (HTTP 400): plain body');
   });
 });
