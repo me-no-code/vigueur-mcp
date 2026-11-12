@@ -1,0 +1,40 @@
+{
+  "name": "vigueur",
+  "displayName": "Vigueur",
+  "version": "0.1.0",
+  "description": "Reliable access to French law for Claude: Légifrance and Judilibre through your own PISTE credentials, running locally.",
+  "author": { "name": "Vigueur contributors" },
+  "license": "PolyForm-Shield-1.0.0",
+  "keywords": ["legifrance", "judilibre", "french-law", "droit", "mcp"],
+  "mcpServers": {
+    "vigueur": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "env": {
+        "PISTE_CLIENT_ID": "${user_config.piste_client_id}",
+        "PISTE_CLIENT_SECRET": "${user_config.piste_client_secret}",
+        "PISTE_ENV": "${user_config.piste_env}"
+      }
+    }
+  },
+  "userConfig": {
+    "piste_client_id": {
+      "type": "string",
+      "title": "PISTE client ID",
+      "description": "OAuth client ID of your PISTE application (free account on https://piste.gouv.fr). No account yet? Leave it empty and ask Claude to run vigueur_status for step-by-step setup."
+    },
+    "piste_client_secret": {
+      "type": "string",
+      "title": "PISTE client secret",
+      "description": "OAuth client secret of the same PISTE application. Stored in your system's secure credential store.",
+      "sensitive": true
+    },
+    "piste_env": {
+      "type": "string",
+      "title": "PISTE environment",
+      "description": "Must match the application the credentials belong to: sandbox for the application PISTE creates automatically, production for one you created.",
+      "options": ["production", "sandbox"],
+      "default": "production"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "vigueur",
+  "owner": { "name": "Vigueur contributors" },
+  "description": "Vigueur: a local MCP server giving Claude reliable access to French law (Légifrance, Judilibre).",
+  "plugins": [
+    {
+      "name": "vigueur",
+      "source": "./",
+      "description": "Reliable access to French law for Claude: Légifrance and Judilibre through your own PISTE credentials, running locally."
+    }
+  ]
+}
