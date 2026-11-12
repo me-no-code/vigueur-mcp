@@ -1,19 +1,25 @@
-import { normalizeArticleNumber } from '../../domain/articles.js';
-import { resolveCodeName } from '../../domain/codes.js';
-import { type IsoDate, isIsoDate, isoDateInParis } from '../../domain/dates.js';
+import type { IsoDate } from '../../domain/dates.js';
 import { articleUrlFor } from '../../domain/links.js';
 import { assessRelocation, type Relocation } from '../../domain/relocation.js';
 import { consistencyWarnings, type StatusAt, statusAt } from '../../domain/status-at.js';
-import { foldKey } from '../../domain/text.js';
 import { VigueurError } from '../../shared/errors.js';
 import type {
   ArticleHit,
   ArticleRecord,
   CallContext,
-  CodeInfo,
   LegislationRepository,
   VersionSummary,
 } from './ports.js';
+import {
+  ARTICLE_ID,
+  blankToNull,
+  cleanArticleNumber,
+  invalid,
+  requireIsoDate,
+  resolveCode,
+  targetOf,
+  todayInParis,
+} from './resolve.js';
 
 export interface GetArticleInput {
   code?: string;
@@ -58,66 +64,8 @@ export type GetArticleResult =
     }
   | { kind: 'not_found'; num: string | null; codeTitle: string | null; didYouMean: string[] };
 
-const ARTICLE_ID = /^(LEGIARTI|KALIARTI)\d{12}$/;
 /** Hits per by-number lookup: the client reads the first page of `/search` only. */
 const HITS_PAGE_SIZE = 20;
-const MAX_CODE_SUGGESTIONS = 5;
-
-const invalid = (message: string) => new VigueurError('invalid_input', message);
-
-function blankToNull(s: string | undefined): string | null {
-  const t = s?.trim();
-  return t === undefined || t === '' ? null : t;
-}
-
-/** What the caller asked for: exactly one of a number or an id. */
-function targetOf(input: GetArticleInput): { id: string } | { number: string } {
-  const number = blankToNull(input.number);
-  const id = blankToNull(input.id);
-  if (number !== null && id !== null) {
-    throw invalid('Give either an article number or an article id, not both.');
-  }
-  if (id !== null) return { id };
-  if (number !== null) return { number };
-  throw invalid(
-    'Give an article number with its code (e.g. code "Code civil", number "1240") or a Légifrance article id (LEGIARTI…).',
-  );
-}
-
-/** `Art. L. 1234-1` → `L1234-1`: drops a leading "article" / "art." then normalizes. */
-function cleanArticleNumber(raw: string): string {
-  const num = normalizeArticleNumber(raw.trim().replace(/^(?:article|art)\.?\s*/i, ''));
-  if (num === '') {
-    throw invalid(`"${raw}" is not an article number. Example: number "L1234-1" or "1240".`);
-  }
-  return num;
-}
-
-type CodeResolution = { code: CodeInfo } | { code: null; didYouMean: string[] };
-
-/**
- * The code whose title folds equal to the input (or to the title its abbreviation stands for).
- * Otherwise up to five titles containing the input, as suggestions only — never substituted.
- */
-async function resolveCode(
-  repo: LegislationRepository,
-  raw: string,
-  ctx: CallContext | undefined,
-): Promise<CodeResolution> {
-  const wanted = foldKey(resolveCodeName(raw) ?? raw);
-  const codes = await repo.listCodes(ctx);
-  const code = codes.find((c) => foldKey(c.title) === wanted);
-  if (code) return { code };
-
-  const typed = foldKey(raw);
-  if (typed === '') return { code: null, didYouMean: [] };
-  const didYouMean = codes
-    .map((c) => c.title)
-    .filter((title) => foldKey(title).includes(typed))
-    .sort((a, b) => a.localeCompare(b, 'fr'))
-    .slice(0, MAX_CODE_SUGGESTIONS);
-  return { code: null, didYouMean };
-}
 
 function dedupeById(hits: readonly ArticleHit[]): ArticleHit[] {
   const byId = new Map<string, ArticleHit>();
@@ -288,8 +236,6 @@ async function byCitation(
   };
 }
 
-const todayInParis = (): IsoDate => isoDateInParis(new Date());
-
 /**
  * Resolves an article by citation (code + number) or by id, as of a date (default: today in Paris):
  * - a number found in several codes is `ambiguous` (candidates listed, never one picked);
@@ -306,10 +252,7 @@ export function createGetArticle(
   const today = opts.today ?? todayInParis;
   return async (input, ctx) => {
     const target = targetOf(input);
-    if (input.atDate !== undefined && !isIsoDate(input.atDate)) {
-      throw invalid(`"${input.atDate}" is not a valid date: use a real date as YYYY-MM-DD.`);
-    }
-    const asOf = input.atDate ?? today();
+    const asOf = input.atDate === undefined ? today() : requireIsoDate(input.atDate);
     if ('id' in target) return byId(repo, target.id, asOf, ctx);
     return byCitation(repo, target.number, blankToNull(input.code), asOf, ctx);
   };
