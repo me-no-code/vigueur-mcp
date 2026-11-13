@@ -31,6 +31,8 @@ describe('tools answer with text only', () => {
         'legifrance_browse_code',
         'legifrance_latest_jo',
         'legifrance_list_reference_values',
+        'legifrance_search_case_law',
+        'legifrance_get_decision',
         'judilibre_search_decisions',
         'judilibre_get_decision',
         'judilibre_list_taxonomy',
@@ -94,6 +96,17 @@ describe('tools answer with text only', () => {
     });
     expect(result.structuredContent).toBeUndefined();
     expect(firstText(result)).toContain('section_id LEGISCTA000006112874');
+  });
+
+  it('the case-law tools return text only, no structuredContent', async () => {
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
+    for (const [name, args] of [
+      ['legifrance_search_case_law', { collection: 'constitutional', number: '2026-1217' }],
+      ['legifrance_get_decision', { id: 'JURITEXT000099999999' }],
+    ] as const) {
+      const result = await client.callTool({ name, arguments: args });
+      expect(result.structuredContent, name).toBeUndefined();
+    }
   });
 
   it.each([

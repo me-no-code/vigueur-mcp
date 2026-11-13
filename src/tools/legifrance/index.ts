@@ -1,4 +1,9 @@
 import type { IsoDate } from '../../domain/dates.js';
+import type {
+  CaseLawSearchView,
+  LegifranceDecisionResult,
+  SearchCaseLawInput,
+} from '../../services/case-law/legifrance.js';
 import type { ChangesView } from '../../services/legislation/changes.js';
 import type {
   ArticleHistoryResult,
@@ -11,10 +16,12 @@ import type { SourceModule } from '../../sources.js';
 import { type BrowseCode, registerBrowseCodeTool } from './browse-code.js';
 import { type GetArticle, registerGetArticleTool } from './get-article.js';
 import { registerGetArticleHistoryTool } from './get-article-history.js';
+import { registerGetDecisionTool } from './get-decision.js';
 import { type GetText, registerGetTextTool } from './get-text.js';
 import { type LatestJo, registerLatestJoTool } from './latest-jo.js';
 import { registerListChangesTool } from './list-changes.js';
 import { type ListReferenceValues, registerReferenceValuesTool } from './reference-values.js';
+import { registerSearchCaseLawTool } from './search-case-law.js';
 import { registerSearchLegislationTool } from './search-legislation.js';
 
 /** The Légifrance services the tools call (see `services/legislation/`). */
@@ -36,6 +43,8 @@ export interface LegifranceServices {
   browseCode: BrowseCode;
   latestJo: LatestJo;
   listReferenceValues: ListReferenceValues;
+  searchCaseLaw: (input: SearchCaseLawInput, ctx?: CallContext) => Promise<CaseLawSearchView>;
+  getDecision: (input: { id: string }, ctx?: CallContext) => Promise<LegifranceDecisionResult>;
 }
 
 /** The Légifrance tools; `today` (default: today in Paris) sets the tense of upcoming changes; `deadlineMs`
@@ -56,6 +65,8 @@ export function createLegifranceSource(
       registerBrowseCodeTool(server, services.browseCode, opts.deadlineMs);
       registerLatestJoTool(server, services.latestJo, opts.deadlineMs);
       registerReferenceValuesTool(server, services.listReferenceValues, opts.deadlineMs);
+      registerSearchCaseLawTool(server, services.searchCaseLaw, opts.deadlineMs);
+      registerGetDecisionTool(server, services.getDecision, opts.deadlineMs);
     },
   };
 }

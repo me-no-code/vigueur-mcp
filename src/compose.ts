@@ -1,4 +1,5 @@
 import { createJudilibreClient } from './clients/judilibre/client.js';
+import { createLegifranceCaseLawClient } from './clients/legifrance/case-law.js';
 import { createLegifranceClient } from './clients/legifrance/client.js';
 import { createTokenProvider } from './clients/piste/auth.js';
 import { pisteEndpoints } from './clients/piste/endpoints.js';
@@ -12,6 +13,10 @@ import {
   createListJudilibreTaxonomy,
   createSearchJudilibre,
 } from './services/case-law/judilibre.js';
+import {
+  createGetLegifranceDecision,
+  createSearchCaseLaw,
+} from './services/case-law/legifrance.js';
 import { createBrowseCode } from './services/legislation/browse.js';
 import { createListChanges } from './services/legislation/changes.js';
 import { createGetArticle } from './services/legislation/get-article.js';
@@ -59,6 +64,7 @@ export function compose(
   };
 
   const legislation = createLegifranceClient(legifrance);
+  const caseLaw = createLegifranceCaseLawClient(legifrance);
   const legifranceSource = createLegifranceSource(
     {
       getArticle: createGetArticle(legislation, { today: opts.today }),
@@ -69,6 +75,8 @@ export function compose(
       browseCode: createBrowseCode(legislation, { today: opts.today }),
       latestJo: createLatestJo(legislation, { today: opts.today }),
       listReferenceValues: createListReferenceValues(legislation, { today: opts.today }),
+      searchCaseLaw: createSearchCaseLaw(caseLaw),
+      getDecision: createGetLegifranceDecision(caseLaw),
     },
     { today: opts.today },
   );

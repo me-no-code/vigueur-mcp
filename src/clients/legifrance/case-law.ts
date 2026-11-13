@@ -214,7 +214,12 @@ function mapHit(result: Obj, collection: CaseLawCollection): CaseLawHit {
     title: text,
     court: parsed?.court ?? null,
     chamber: parsed?.chamber ?? null,
-    nature: optStr(result, 'nature') ?? parsed?.nature ?? null,
+    // A CNIL title opens with the kind of act ("Délibération", "Décision"); the hit's own `nature`
+    // is a lower-case key of the source. The tools print the act kind, so the title wins there.
+    nature:
+      collection === 'cnil'
+        ? (parsed?.nature ?? optStr(result, 'nature') ?? null)
+        : (optStr(result, 'nature') ?? parsed?.nature ?? null),
     decisionDate: parsed?.date ?? parseApiDate(result.date).date,
     numbers: parsed?.numbers ?? [],
     publication: parsed?.publication ?? null,

@@ -225,6 +225,8 @@ function fakeServices(browseCode: LegifranceServices['browseCode']): LegifranceS
     browseCode,
     latestJo: unused,
     listReferenceValues: unused,
+    searchCaseLaw: unused,
+    getDecision: unused,
   };
 }
 

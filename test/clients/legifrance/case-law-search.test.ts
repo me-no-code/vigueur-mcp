@@ -333,7 +333,7 @@ describe('searchCaseLaw mapping', () => {
     });
     expect(cnil.hits[0]).toMatchObject({
       id: 'CNILTEXT000055065700',
-      nature: 'deliberation',
+      nature: 'Délibération',
       numbers: ['2026-121'],
       decisionDate: '2026-11-05',
     });

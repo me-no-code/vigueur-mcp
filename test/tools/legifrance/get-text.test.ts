@@ -358,6 +358,8 @@ function fakeServices(getText: LegifranceServices['getText']): LegifranceService
     browseCode: unused,
     latestJo: unused,
     listReferenceValues: unused,
+    searchCaseLaw: unused,
+    getDecision: unused,
   };
 }
 

@@ -18,6 +18,8 @@ const MINIMAL_ARGS: Record<string, Record<string, unknown>> = {
   legifrance_browse_code: { code: 'Code civil' },
   legifrance_latest_jo: {},
   legifrance_list_reference_values: { kind: 'codes' },
+  legifrance_search_case_law: { collection: 'judicial', query: 'forfait jours' },
+  legifrance_get_decision: { id: 'JURITEXT000053197030' },
   judilibre_search_decisions: { query: 'forfait jours' },
   judilibre_get_decision: { id: '6a0e9ff1cdc6046d47668703' },
   judilibre_list_taxonomy: { list: 'chamber' },
@@ -46,6 +48,8 @@ const neverServices: LegifranceServices = {
   browseCode: never(),
   latestJo: never(),
   listReferenceValues: never(),
+  searchCaseLaw: never(),
+  getDecision: never(),
 };
 
 const neverJudilibre: JudilibreServices = {
