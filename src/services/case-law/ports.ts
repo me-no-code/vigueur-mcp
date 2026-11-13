@@ -65,7 +65,67 @@ export interface JudilibreSearchPage {
   hits: JudilibreHit[];
 }
 
+export type DecisionZone =
+  | 'introduction'
+  | 'expose'
+  | 'moyens'
+  | 'motivations'
+  | 'dispositif'
+  | 'annexes';
+
+/** A zone of the decision text; UTF-16 offsets into `text` (usable with `String.prototype.slice`). */
+export interface ZoneSegment {
+  zone: DecisionZone;
+  start: number;
+  end: number;
+}
+
+export interface JudilibreDecision extends Omit<JudilibreHit, 'highlights'> {
+  text: string;
+  /** Sorted by start; empty when the source gives none. */
+  zones: ZoneSegment[];
+  /** The outcome in this decision's own timeline entry, when present. */
+  solutionFull: string | null;
+  updatedOn: IsoDate | null;
+  /** `titlesAndSummaries[].titles`, flattened. */
+  titles: string[];
+  /** Each visa title as plain text (links dropped). */
+  visa: string[];
+  rapprochements: string[];
+  /** The attacked decision. */
+  contested: {
+    title: string;
+    number: string | null;
+    date: IsoDate | null;
+    judilibreId: string | null;
+  } | null;
+  /** `url` is the file's `rawUrl`, else its `url`. */
+  files: Array<{ name: string; type: string; url: string }>;
+}
+
+export type JudilibreTaxonomyId =
+  | 'jurisdiction'
+  | 'chamber'
+  | 'formation'
+  | 'publication'
+  | 'solution'
+  | 'location'
+  | 'theme'
+  | 'field';
+
+export interface TaxonomyEntry {
+  key: string | null;
+  label: string;
+  group: string | null;
+}
+
 export interface JudilibreRepository {
   search(q: JudilibreQuery, ctx?: CallContext): Promise<JudilibreSearchPage>;
-  // getDecision and taxonomy
+  /** `null` when the id is unknown (HTTP 404). */
+  getDecision(id: string, ctx?: CallContext): Promise<JudilibreDecision | null>;
+  taxonomy(
+    id: JudilibreTaxonomyId,
+    context: JudilibreJurisdiction,
+    ctx?: CallContext,
+  ): Promise<TaxonomyEntry[]>;
 }

@@ -1,9 +1,14 @@
 import { type IsoDate, isIsoDate } from '../../domain/dates.js';
 import type {
+  DecisionZone,
+  JudilibreDecision,
   JudilibreHit,
   JudilibreQuery,
   JudilibreSearchPage,
+  TaxonomyEntry,
+  ZoneSegment,
 } from '../../services/case-law/ports.js';
+import { htmlToText } from '../html.js';
 import { asObj, isObj, list, type Obj, optStr, shape, str } from '../json.js';
 import {
   CHAMBER_LABELS,
@@ -144,4 +149,116 @@ export function mapSearch(raw: unknown): JudilibreSearchPage {
     relaxed: o.relaxed === true,
     hits: list(o, 'results', true).map(mapHit),
   };
+}
+
+const ZONES: readonly DecisionZone[] = [
+  'introduction',
+  'expose',
+  'moyens',
+  'motivations',
+  'dispositif',
+  'annexes',
+];
+
+function zones(o: Obj): ZoneSegment[] {
+  const z = o.zones;
+  if (!isObj(z)) return [];
+  const out: ZoneSegment[] = [];
+  for (const zone of ZONES) {
+    const segments = z[zone];
+    if (!Array.isArray(segments)) continue;
+    for (const seg of segments) {
+      if (isObj(seg) && typeof seg.start === 'number' && typeof seg.end === 'number') {
+        out.push({ zone, start: seg.start, end: seg.end });
+      }
+    }
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
+
+function isoOrNull(s: string | null): IsoDate | null {
+  return s !== null && isIsoDate(s) ? (s as IsoDate) : null;
+}
+
+const HEX_ID = /^[0-9a-f]{24}$/;
+
+function contested(o: Obj): JudilibreDecision['contested'] {
+  const c = o.contested;
+  if (!isObj(c)) return null;
+  const id = [optStr(c, 'id'), optStr(c, 'url')].find((v) => v !== null && HEX_ID.test(v));
+  return {
+    title: (optStr(c, 'title') ?? '').replace(/\n/g, ', '),
+    number: optStr(c, 'number') || null,
+    date: isoOrNull(optStr(c, 'date')),
+    judilibreId: id ?? null,
+  };
+}
+
+/**
+ * The outcome in this decision's own timeline entry: the entry with its id, else the one entry
+ * dated on its decision date. The timeline is the whole case, so it may list later decisions.
+ */
+function solutionFull(o: Obj): string | null {
+  const entries = Array.isArray(o.timeline) ? o.timeline.filter(isObj) : [];
+  const id = optStr(o, 'id');
+  const date = optStr(o, 'decision_date');
+  const byId = entries.find((e) => id !== null && optStr(e, 'id') === id);
+  const onDate = entries.filter((e) => date !== null && optStr(e, 'date') === date);
+  const own = byId ?? (onDate.length === 1 ? onDate[0] : undefined);
+  return own === undefined ? null : optStr(own, 'solution') || null;
+}
+
+function titles(o: Obj): string[] {
+  return list(o, 'titlesAndSummaries').flatMap((t) => strList(t, 'titles'));
+}
+
+function files(o: Obj): JudilibreDecision['files'] {
+  return list(o, 'files').map((f) => ({
+    name: optStr(f, 'name') ?? '',
+    type: optStr(f, 'type') ?? '',
+    url: optStr(f, 'rawUrl') ?? str(f, 'url'),
+  }));
+}
+
+/** `/decision`: the hit's shared fields plus the text, its zones and the decision's links. */
+export function mapDecision(raw: unknown): JudilibreDecision {
+  const o = asObj(raw, 'decision');
+  const { highlights: _dropped, ...shared } = mapHit(o);
+  return {
+    ...shared,
+    text: str(o, 'text'),
+    zones: zones(o),
+    solutionFull: solutionFull(o),
+    updatedOn: isoOrNull(optStr(o, 'update_date')),
+    titles: titles(o),
+    visa: list(o, 'visa').map((v) => htmlToText(str(v, 'title'))),
+    rapprochements: list(o, 'rapprochements').map((r) => str(r, 'title')),
+    contested: contested(o),
+    files: files(o),
+  };
+}
+
+/** `/taxonomy`: a key-to-label map, a flat list, or (ca themes) lists headed by their group. */
+export function mapTaxonomy(raw: unknown): TaxonomyEntry[] {
+  const o = asObj(raw, 'body');
+  const result = o.result;
+  if (Array.isArray(result)) {
+    if (result.every((x) => typeof x === 'string')) {
+      return (result as string[]).map((label) => ({ key: null, label, group: null }));
+    }
+    return result.flatMap((g) => {
+      if (!Array.isArray(g) || !g.every((x) => typeof x === 'string')) {
+        throw shape('taxonomy result is not a list of strings or groups');
+      }
+      const [group, ...rest] = g as string[];
+      return rest.map((label) => ({ key: null, label, group: group ?? null }));
+    });
+  }
+  if (isObj(result)) {
+    return Object.entries(result).map(([key, label]) => {
+      if (typeof label !== 'string') throw shape(`taxonomy label of ${key} is not a string`);
+      return { key, label, group: null };
+    });
+  }
+  throw shape('missing taxonomy result');
 }

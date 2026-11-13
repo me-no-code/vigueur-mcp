@@ -1,0 +1,11 @@
+{
+  "id": "publication",
+  "context_value": "cc",
+  "result": {
+    "b": "Publié au Bulletin",
+    "r": "Publié au Rapport",
+    "l": "Publié aux Lettres de chambre",
+    "c": "Communiqué",
+    "n": "Non publié"
+  }
+}

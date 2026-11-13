@@ -1,0 +1,9 @@
+{
+  "route": "GET /decision",
+  "errors": [
+    {
+      "msg": "Not Found",
+      "error": "Decision '000000000000000000000000' not found."
+    }
+  ]
+}

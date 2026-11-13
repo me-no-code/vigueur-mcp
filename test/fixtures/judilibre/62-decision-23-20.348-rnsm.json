@@ -1,0 +1,86 @@
+{
+  "id": "6a0e9ff1cdc6046d47668703",
+  "source": "jurinet",
+  "text": "CIV. 2\n \n MC22\n \n \n \n COUR DE CASSATION\n ______________________\n \n \n Arrêt du 21 mai 2026\n \n \n \n \n Rejet non spécialement motivé\n \n \n Mme DURIN-KARSENTY, conseillère doyenne \n faisant fonction de présidente\n \n \n \n Arrêt n° 10500 F\n \n Pourvoi n° T 23-20.348 \n \n \n \n \n R É P U B L I Q U E F R A N Ç A I S E \n \n _________________________\n \n AU NOM DU PEUPLE FRANÇAIS\n _________________________\n \n \n ARRÊT DE LA COUR DE CASSATION, DEUXIÈME CHAMBRE CIVILE, DU 21 MAI 2026\n \n La Maison de poésie, fondation reconnue d'utilité publique, dont le siège est [Adresse 1], a formé le pourvoi n° T 23-20.348 contre l'arrêt rendu le 22 juin 2023 par la cour d'appel de Paris (pôle 1, chambre 10), dans le litige l'opposant à la Société des auteurs et compositeurs dramatiques, société civile à capital variable, dont le siège est [Adresse 1], défenderesse à la cassation.\n \n Le dossier a été communiqué au procureur général.\n \n Sur le rapport de Mme Latreille, conseillère référendaire, les observations écrites de la SCP Krivine et Viaud, avocat de La Maison de poésie, de la SCP Le Guerer, Bouniol-Brochier, Lassalle-Byhet, avocat de la Société des auteurs et compositeurs dramatiques, et l'avis de M. Adida-Canac, avocat général, après débats en l'audience publique du 1er avril 2026 où étaient présents Mme Durin-Karsenty, conseillère doyenne faisant fonction de présidente, Mme Latreille, conseillère référendaire rapporteure, M. Delbano, conseiller, et Mme Gratian, greffière de chambre,\n \n la deuxième chambre civile de la Cour de cassation, composée de la présidente et des conseillers précités, après en avoir délibéré conformément à la loi, a rendu le présent arrêt.\n \n 1. Les moyens de cassation, qui sont invoqués à l'encontre de la décision attaquée, ne sont manifestement pas de nature à entraîner la cassation.\n \n 2. En application de l'article 1014, alinéa 1er, du code de procédure civile, il n'y a pas lieu de statuer par une décision spécialement motivée sur ce pourvoi qui n'est manifestement pas de nature à entraîner la cassation.\n \n PAR CES MOTIFS, la Cour :\n \n REJETTE le pourvoi ;\n \n Condamne La Maison de poésie aux dépens ;\n \n En application de l'article 700 du code de procédure civile, rejette la demande formée par La Maison de poésie et la condamne à payer à la Société des auteurs et compositeurs dramatiques la somme de 3 000 euros ;\n \n Ainsi fait et jugé par la Cour de cassation, deuxième chambre civile, et prononcé publiquement le vingt et un mai deux mille vingt-six par mise à disposition de l'arrêt au greffe de la Cour, les parties ayant été préalablement avisées dans les conditions prévues au deuxième alinéa de l'article 450 du code de procédure civile.",
+  "chamber": "civ2",
+  "decision_date": "2026-05-21",
+  "decision_datetime": "2026-05-20T22:00:00.000Z",
+  "ecli": "ECLI:FR:CCASS:2026:C210500",
+  "jurisdiction": "cc",
+  "number": "23-20.348",
+  "numbers": [
+    "23-20.348",
+    "23-20.348"
+  ],
+  "publication": [],
+  "solution": "rejet",
+  "type": "other",
+  "formation": "frr",
+  "update_date": "2026-05-29",
+  "update_datetime": "2026-05-29T16:46:06.525Z",
+  "nac": null,
+  "portalis": null,
+  "files": [],
+  "zones": {
+    "introduction": [
+      {
+        "start": 0,
+        "end": 1663
+      }
+    ],
+    "motivations": [
+      {
+        "start": 1663,
+        "end": 2042
+      }
+    ],
+    "dispositif": [
+      {
+        "start": 2042,
+        "end": 2683
+      }
+    ]
+  },
+  "contested": {
+    "date": "2023-06-22",
+    "title": "Cour d'appel de Paris\nB1",
+    "jurisdiction": "Cour d'appel de Paris",
+    "chamber": "B1",
+    "solution": "Confirme la décision déférée dans toutes ses dispositions, à l'égard de toutes les parties au recours",
+    "id": "64953aa7aa086705db6f12ef",
+    "sourceId": "jurica:2709617",
+    "number": "22/10744",
+    "url": "64953aa7aa086705db6f12ef"
+  },
+  "forward": null,
+  "timeline": [
+    {
+      "date": "2023-06-22",
+      "title": "Cour d'appel de Paris\nB1",
+      "jurisdiction": "Cour d'appel de Paris",
+      "chamber": "B1",
+      "solution": "Confirme la décision déférée dans toutes ses dispositions, à l'égard de toutes les parties au recours",
+      "id": "64953aa7aa086705db6f12ef",
+      "sourceId": "jurica:2709617",
+      "number": "22/10744",
+      "url": "64953aa7aa086705db6f12ef"
+    },
+    {
+      "date": "2026-05-21",
+      "title": "Cour de cassation\nCIV.2",
+      "jurisdiction": "Cour de cassation",
+      "chamber": "CIV.2",
+      "solution": "Rejet non spécialement motivé",
+      "id": "6a0e9ff1cdc6046d47668703",
+      "sourceId": "jurinet:2129805",
+      "number": "T2320348",
+      "url": "6a0e9ff1cdc6046d47668703"
+    }
+  ],
+  "partial": false,
+  "visa": [],
+  "rapprochements": [],
+  "legacy": {},
+  "titlesAndSummaries": [],
+  "particularInterest": false
+}

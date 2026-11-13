@@ -1,7 +1,11 @@
-import type { CallContext, JudilibreRepository } from '../../services/case-law/ports.js';
+import type {
+  CallContext,
+  JudilibreRepository,
+  TaxonomyEntry,
+} from '../../services/case-law/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
-import { mapSearch, searchParams } from './wire.js';
+import { mapDecision, mapSearch, mapTaxonomy, searchParams } from './wire.js';
 
 /** GETs from Judilibre and maps the body; any mapping failure is an unexpected response. */
 export async function getJson<T>(
@@ -28,8 +32,42 @@ export async function getJson<T>(
   }
 }
 
-export function createJudilibreClient(http: PisteHttp): JudilibreRepository {
+const TAXONOMY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+export function createJudilibreClient(
+  http: PisteHttp,
+  now: () => Date = () => new Date(),
+): JudilibreRepository {
+  const taxonomies = new Map<string, { fetchedAt: number; entries: TaxonomyEntry[] }>();
+
   return {
     search: (q, ctx) => getJson(http, '/search', searchParams(q), ctx, mapSearch),
+
+    async getDecision(id, ctx) {
+      // Only `id`: `query` rewrites the text and shifts the zones.
+      try {
+        return await getJson(http, '/decision', { id }, ctx, mapDecision);
+      } catch (err) {
+        if (err instanceof VigueurError && err.kind === 'not_found') return null;
+        throw err;
+      }
+    },
+
+    async taxonomy(id, context, ctx) {
+      const key = `${id}|${context}`;
+      const hit = taxonomies.get(key);
+      if (hit !== undefined && now().getTime() - hit.fetchedAt < TAXONOMY_MAX_AGE_MS) {
+        return hit.entries;
+      }
+      const entries = await getJson(
+        http,
+        '/taxonomy',
+        { id, context_value: context },
+        ctx,
+        mapTaxonomy,
+      );
+      taxonomies.set(key, { fetchedAt: now().getTime(), entries });
+      return entries;
+    },
   };
 }
