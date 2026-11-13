@@ -1,3 +1,4 @@
+import { createJudilibreClient } from './clients/judilibre/client.js';
 import { createLegifranceClient } from './clients/legifrance/client.js';
 import { createTokenProvider } from './clients/piste/auth.js';
 import { pisteEndpoints } from './clients/piste/endpoints.js';
@@ -6,6 +7,11 @@ import { probeJudilibre, probeLegifrance } from './clients/piste/probes.js';
 import type { Config } from './config.js';
 import type { IsoDate } from './domain/dates.js';
 import type { ServerDeps } from './server.js';
+import {
+  createGetJudilibreDecision,
+  createListJudilibreTaxonomy,
+  createSearchJudilibre,
+} from './services/case-law/judilibre.js';
 import { createBrowseCode } from './services/legislation/browse.js';
 import { createListChanges } from './services/legislation/changes.js';
 import { createGetArticle } from './services/legislation/get-article.js';
@@ -15,6 +21,7 @@ import { createLatestJo, createListReferenceValues } from './services/legislatio
 import { createSearchLegislation } from './services/legislation/search.js';
 import { getStatus, type StatusContext } from './services/status.js';
 import type { FetchLike } from './shared/fetch.js';
+import { createJudilibreSource } from './tools/judilibre/index.js';
 import { createLegifranceSource } from './tools/legifrance/index.js';
 
 /** Wires the PISTE clients and services for a configuration (no network until used). */
@@ -66,9 +73,16 @@ export function compose(
     { today: opts.today },
   );
 
+  const judilibreRepo = createJudilibreClient(judilibre);
+  const judilibreSource = createJudilibreSource({
+    searchDecisions: createSearchJudilibre(judilibreRepo),
+    getDecision: createGetJudilibreDecision(judilibreRepo),
+    listTaxonomy: createListJudilibreTaxonomy(judilibreRepo),
+  });
+
   return {
     config,
     getStatus: (ctx) => getStatus({ config, probes }, ctx),
-    sources: [legifranceSource],
+    sources: [legifranceSource, judilibreSource],
   };
 }

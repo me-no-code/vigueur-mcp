@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ServerDeps } from '../../src/server.js';
+import { createJudilibreSource, type JudilibreServices } from '../../src/tools/judilibre/index.js';
 import {
   createLegifranceSource,
   type LegifranceServices,
@@ -17,6 +18,9 @@ const MINIMAL_ARGS: Record<string, Record<string, unknown>> = {
   legifrance_browse_code: { code: 'Code civil' },
   legifrance_latest_jo: {},
   legifrance_list_reference_values: { kind: 'codes' },
+  judilibre_search_decisions: { query: 'forfait jours' },
+  judilibre_get_decision: { id: '6a0e9ff1cdc6046d47668703' },
+  judilibre_list_taxonomy: { list: 'chamber' },
 };
 
 /** A service that never answers: it rejects with the signal's abort reason once the call is aborted. */
@@ -44,11 +48,20 @@ const neverServices: LegifranceServices = {
   listReferenceValues: never(),
 };
 
+const neverJudilibre: JudilibreServices = {
+  searchDecisions: never(),
+  getDecision: never(),
+  listTaxonomy: never(),
+};
+
 /** The server under test: add each source's module here, with never-answering services. */
 const deps = (): ServerDeps => ({
   config: sandboxConfig(),
   getStatus: () => Promise.reject(new Error('not used')),
-  sources: [createLegifranceSource(neverServices, { deadlineMs: 20 })],
+  sources: [
+    createLegifranceSource(neverServices, { deadlineMs: 20 }),
+    createJudilibreSource(neverJudilibre, { deadlineMs: 20 }),
+  ],
 });
 
 const cleanup: Array<() => Promise<void>> = [];

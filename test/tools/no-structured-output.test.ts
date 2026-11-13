@@ -31,6 +31,9 @@ describe('tools answer with text only', () => {
         'legifrance_browse_code',
         'legifrance_latest_jo',
         'legifrance_list_reference_values',
+        'judilibre_search_decisions',
+        'judilibre_get_decision',
+        'judilibre_list_taxonomy',
       ]),
     );
     for (const tool of tools) expect(tool.outputSchema, tool.name).toBeUndefined();

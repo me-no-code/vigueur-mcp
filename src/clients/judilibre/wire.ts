@@ -1,4 +1,13 @@
 import { type IsoDate, isIsoDate } from '../../domain/dates.js';
+import {
+  CA_LOCATION_LABELS,
+  CHAMBER_LABELS,
+  CHAMBER_WIRE,
+  FORMATION_LABELS,
+  JURISDICTION_LABELS,
+  PUBLICATION_LABELS,
+  SOLUTION_LABELS,
+} from '../../domain/judilibre-labels.js';
 import type {
   DecisionZone,
   JudilibreDecision,
@@ -10,15 +19,7 @@ import type {
 } from '../../services/case-law/ports.js';
 import { htmlToText } from '../html.js';
 import { asObj, isObj, list, type Obj, optStr, shape, str } from '../json.js';
-import {
-  CHAMBER_LABELS,
-  CHAMBER_WIRE,
-  FORMATION_LABELS,
-  JURISDICTION_LABELS,
-  labelled,
-  PUBLICATION_LABELS,
-  SOLUTION_LABELS,
-} from './labels.js';
+import { labelled } from './labels.js';
 
 const MAX_HIGHLIGHTS = 2;
 
@@ -128,7 +129,7 @@ export function mapHit(raw: unknown): JudilibreHit {
     solution,
     solutionText,
     location:
-      locationKey === null || locationKey === '' ? null : { key: locationKey, label: locationKey },
+      locationKey === null || locationKey === '' ? null : labelled(CA_LOCATION_LABELS, locationKey),
     summary: optStr(o, 'summary') || null,
     highlights: highlights(o),
   };

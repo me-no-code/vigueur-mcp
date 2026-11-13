@@ -35,7 +35,7 @@ describe('compose', () => {
       { fetch },
     );
 
-    expect(deps.sources.map((s) => s.id)).toEqual(['legifrance']);
+    expect(deps.sources.map((s) => s.id)).toEqual(['legifrance', 'judilibre']);
     expect(await deps.getStatus()).toEqual({
       configured: true,
       env: 'sandbox',
