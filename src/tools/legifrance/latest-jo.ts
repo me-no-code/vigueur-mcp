@@ -238,7 +238,7 @@ export function registerLatestJoTool(
           content: [{ type: 'text', text: renderLatestJo(view, { page: args.page ?? 1 }) }],
         };
       } catch (err) {
-        return toToolError(err, signal);
+        return toToolError(err, signal, 'legifrance');
       }
     },
   );

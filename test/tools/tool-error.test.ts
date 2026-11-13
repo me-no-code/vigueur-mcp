@@ -32,6 +32,13 @@ describe('toToolError', () => {
     });
   }
 
+  it('names the source of an unexpected_response', () => {
+    const result = toToolError(
+      new VigueurError('unexpected_response', 'x', { source: 'judilibre' }),
+    );
+    expect((result.content[0] as { text: string }).text).toContain('Judilibre returned a response');
+  });
+
   it('includes retry delay for quota_exceeded when known', () => {
     const result = toToolError(
       new VigueurError('quota_exceeded', 'msg', { retryAfterSeconds: 30 }),
@@ -92,6 +99,12 @@ describe('toToolError', () => {
     it('deadline fired + a genuine failure is not masked', async () => {
       const result = toToolError(new VigueurError('invalid_input', 'bad date'), await fired());
       expect(textOf(result)).toBe('bad date');
+    });
+
+    it('deadline fired names the source it was given', async () => {
+      const result = toToolError(new VigueurError('cancelled', 'x'), await fired(), 'judilibre');
+      expect(textOf(result)).toContain('Judilibre did not answer in time.');
+      expect(textOf(result)).toContain('Judilibre did not answer within 45 s');
     });
 
     it('MCP cancel (deadline not fired) + cancelled renders the normal cancelled text', () => {

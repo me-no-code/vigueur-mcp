@@ -82,7 +82,7 @@ export function registerReferenceValuesTool(
         );
         return { content: [{ type: 'text', text: renderReferenceValues(view) }] };
       } catch (err) {
-        return toToolError(err, signal);
+        return toToolError(err, signal, 'legifrance');
       }
     },
   );

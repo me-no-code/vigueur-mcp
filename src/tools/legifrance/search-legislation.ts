@@ -232,7 +232,7 @@ export function registerSearchLegislationTool(
         });
         return { content: [{ type: 'text', text }] };
       } catch (err) {
-        return toToolError(err, signal);
+        return toToolError(err, signal, 'legifrance');
       }
     },
   );
