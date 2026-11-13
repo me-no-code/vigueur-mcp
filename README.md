@@ -31,14 +31,22 @@ No PISTE account yet? Enable the plugin with empty credentials and ask Claude to
 - `vigueur_status` — checks your PISTE credentials and which sources are reachable.
   Example: "Run vigueur_status: is my Légifrance access working?"
 - `legifrance_get_article` — reads one article of a French code and says whether it is in force.
-  Use `at_date` to ask what applied on a past date.
+  Use `at_date` to ask what applied on a past date, and `include_neighbours` to also see the previous and next articles.
   Example: "What does art. L1234-1 of the Code du travail say, and was it in force on 2019-03-01?"
 - `legifrance_get_article_history` — lists the versions of an article and the texts that amended it.
   Example: "Quelles lois ont modifié l'article 1240 du Code civil ?"
 - `legifrance_search_legislation` — searches codes, laws (LODA), the Journal officiel (JORF) and collective agreements (KALI).
   Example: "Cherche « préavis » dans le Code du travail."
-- `legifrance_list_changes` — lists what changed in a code between two dates.
-  Example: "Qu'est-ce qui a changé dans le Code civil depuis le 1er janvier 2026 ?"
+- `legifrance_list_changes` — lists what changed in a code between two dates; with `text`, the change log of a law or decree.
+  Example: "Qu'est-ce qui a changé dans le Code civil depuis le 1er janvier 2026 ?" or "Quelles modifications de la loi Informatique et Libertés depuis 2018 ?"
+- `legifrance_get_text` — reads a law, decree or other text (by nature and number, NOR or id): outline or articles, and whether it is in force.
+  Example: "Que dit la loi Informatique et Libertés à son article 1er ?"
+- `legifrance_browse_code` — shows the table of contents of a code, section by section.
+  Example: "Montre-moi le sommaire du Code de la consommation."
+- `legifrance_latest_jo` — shows the latest Journal officiel and what it published.
+  Example: "Qu'a publié le Journal officiel aujourd'hui pour le ministère du travail ?"
+- `legifrance_list_reference_values` — lists the valid values (codes, JORF natures, emitters) to use as filters.
+  Example: "Quelles natures de textes existe-t-il au Journal officiel ?"
 
 ## Development
 

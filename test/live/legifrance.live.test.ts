@@ -86,4 +86,66 @@ describe.skipIf(!process.env.VIGUEUR_LIVE)('Légifrance tools against PISTE (liv
       text,
     ).toBeGreaterThanOrEqual(1);
   }, 30_000);
+
+  it('gets the outline of loi 78-17', async () => {
+    const text = await call('legifrance_get_text', { nature: 'loi', number: '78-17' });
+    expect(text).toMatch(/informatique/i);
+    expect(text).toContain('section_id');
+  }, 30_000);
+
+  it('finds a text by NOR', async () => {
+    const text = await call('legifrance_get_text', { nor: 'JUSC1522466R' });
+    expect(text).toContain('2016-131');
+  }, 30_000);
+
+  it('gets the LOLF as a text outline (LOI_ORGANIQUE nature)', async () => {
+    const text = await call('legifrance_get_text', {
+      nature: 'loi_organique',
+      number: '2001-692',
+    });
+    expect(text).toContain('2001-692');
+    expect(text).toContain('section_id');
+    expect(text).not.toMatch(/not found|several texts/i);
+  }, 30_000);
+
+  it('reports the decree 2005-1309 as repealed without rendering articles', async () => {
+    const text = await call('legifrance_get_text', { nature: 'decret', number: '2005-1309' });
+    expect(text).toContain('in force on');
+    expect(text).toContain('ceased 2019-06-01');
+    expect(text).not.toContain('Article 1');
+  }, 30_000);
+
+  it('browses the Code civil root', async () => {
+    const text = await call('legifrance_browse_code', { code: 'Code civil' });
+    expect(text.match(/section_id/g)?.length ?? 0, text).toBeGreaterThanOrEqual(3);
+  }, 30_000);
+
+  it('shows neighbouring articles of Code civil 1240', async () => {
+    const text = await call('legifrance_get_article', {
+      code: 'Code civil',
+      number: '1240',
+      include_neighbours: true,
+    });
+    expect(text).toContain('Previous:');
+    expect(text).toContain('Next:');
+  }, 30_000);
+
+  it('shows the latest Journal officiel', async () => {
+    const text = await call('legifrance_latest_jo', {});
+    expect(text).toContain('JORF n°');
+    expect(text).toContain('Published');
+  }, 30_000);
+
+  it('lists JORF natures', async () => {
+    const text = await call('legifrance_list_reference_values', { kind: 'jorf_natures' });
+    expect(text).toContain('DECRET');
+  }, 30_000);
+
+  it('lists the change log of loi 78-17', async () => {
+    const text = await call('legifrance_list_changes', { text: 'loi 78-17', since: '2018-01-01' });
+    expect(
+      text.split('\n').filter((line) => line.startsWith('- ')).length,
+      text,
+    ).toBeGreaterThanOrEqual(1);
+  }, 30_000);
 });
