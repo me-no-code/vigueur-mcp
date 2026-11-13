@@ -1,5 +1,9 @@
 import type {
   CallContext,
+  CaseLawHit,
+  CaseLawQuery,
+  CaseLawRepository,
+  CaseLawSearchPage,
   JudilibreDecision,
   JudilibreHit,
   JudilibreJurisdiction,
@@ -7,6 +11,7 @@ import type {
   JudilibreRepository,
   JudilibreSearchPage,
   JudilibreTaxonomyId,
+  LegifranceDecision,
   TaxonomyEntry,
 } from '../../src/services/case-law/ports.js';
 
@@ -77,4 +82,39 @@ export function decisionOf(over: Partial<JudilibreDecision> = {}): JudilibreDeci
     files: [],
     ...over,
   };
+}
+
+export interface FakeLegifranceOptions {
+  total?: number;
+  hits?: CaseLawHit[];
+  decisions?: Record<string, LegifranceDecision>;
+}
+
+export interface FakeLegifrance {
+  repo: CaseLawRepository;
+  calls: {
+    search: Array<{ query: CaseLawQuery; ctx?: CallContext }>;
+    getDecision: string[];
+  };
+}
+
+/** An in-memory `CaseLawRepository` that records every call. */
+export function fakeLegifrance(opts: FakeLegifranceOptions = {}): FakeLegifrance {
+  const calls: FakeLegifrance['calls'] = { search: [], getDecision: [] };
+  const repo: CaseLawRepository = {
+    async searchCaseLaw(query, ctx): Promise<CaseLawSearchPage> {
+      calls.search.push({ query, ctx });
+      return {
+        total: opts.total ?? opts.hits?.length ?? 0,
+        page: query.page,
+        pageSize: query.pageSize,
+        hits: opts.hits ?? [],
+      };
+    },
+    async getDecision(id) {
+      calls.getDecision.push(id);
+      return opts.decisions?.[id] ?? null;
+    },
+  };
+  return { repo, calls };
 }

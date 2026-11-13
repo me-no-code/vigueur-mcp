@@ -128,14 +128,11 @@ describe('searchCaseLaw request', () => {
   });
 
   it('maps the sorts of each collection', async () => {
-    const sorts: [CaseLawCollection, 'newest' | 'oldest' | 'relevance', string][] = [
+    const sorts: [CaseLawCollection, 'newest' | 'relevance', string][] = [
       ['judicial', 'newest', 'DATE_DESC'],
-      ['judicial', 'oldest', 'DATE_ASC'],
       ['administrative', 'newest', 'DATE_DESC'],
-      ['constitutional', 'oldest', 'DATE_ASC'],
       ['financial', 'newest', 'DATE_DESC'],
       ['cnil', 'newest', 'DATE_DECISION_DESC'],
-      ['cnil', 'oldest', 'DATE_DECISION_ASC'],
       ['cnil', 'relevance', 'PERTINENCE'],
       ['financial', 'relevance', 'PERTINENCE'],
       ['constitutional', 'relevance', 'PERTINENCE'],

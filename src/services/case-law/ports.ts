@@ -149,7 +149,8 @@ export interface CaseLawQuery {
   chamber?: CassChamber;
   /** Judicial, administrative and financial. */
   publication?: 'published' | 'unpublished';
-  sort: 'relevance' | 'newest' | 'oldest';
+  /** No `oldest`: Légifrance's ascending sorts do not return the oldest decisions first. */
+  sort: 'relevance' | 'newest';
   /** 1-based. */
   page: number;
   /** 1..100. */

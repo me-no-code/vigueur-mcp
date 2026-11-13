@@ -41,10 +41,10 @@ interface Fond {
   numberField: string;
   hasEcli: boolean;
   dateFacet: string;
-  sorts: Readonly<Record<'newest' | 'oldest', string>>;
+  sorts: Readonly<Record<'newest', string>>;
 }
 
-const DATED: Fond['sorts'] = { newest: 'DATE_DESC', oldest: 'DATE_ASC' };
+const DATED: Fond['sorts'] = { newest: 'DATE_DESC' };
 
 /** The fond, its number field, its date facet and its sort names. */
 const FONDS: Readonly<Record<CaseLawCollection, Fond>> = {
@@ -74,7 +74,7 @@ const FONDS: Readonly<Record<CaseLawCollection, Fond>> = {
     numberField: 'NUM_DELIB',
     hasEcli: false,
     dateFacet: 'DATE_DELIB',
-    sorts: { newest: 'DATE_DECISION_DESC', oldest: 'DATE_DECISION_ASC' },
+    sorts: { newest: 'DATE_DECISION_DESC' },
   },
   financial: {
     fond: 'JUFI',
