@@ -1,10 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
 import { compose } from '../../../src/compose.js';
-import type { LatestJoView, ReferenceView } from '../../../src/services/legislation/jo.js';
+import {
+  createLatestJo,
+  type LatestJoView,
+  type ReferenceView,
+} from '../../../src/services/legislation/jo.js';
 import type { JoIssue, JoText } from '../../../src/services/legislation/ports.js';
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
 import { renderLatestJo } from '../../../src/tools/legifrance/latest-jo.js';
 import { renderReferenceValues } from '../../../src/tools/legifrance/reference-values.js';
+import { fakePisteHttp } from '../../helpers/fake-piste-http.js';
 import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
 import { connectClient, firstText } from '../../helpers/mcp-client.js';
 
@@ -116,6 +122,39 @@ function jo(n: number): LatestJoView {
   };
 }
 
+/** All pages of a view, following the page count of the first. */
+function allPages(view: LatestJoView): string[] {
+  const first = renderLatestJo(view, { page: 1 });
+  const count = Number(/page 1 of (\d+)/.exec(first)?.[1]);
+  return Array.from({ length: count }, (_, i) => renderLatestJo(view, { page: i + 1 }));
+}
+
+describe('legifrance_latest_jo, fixture 47 read as production answers count 1', () => {
+  // Fixture 47 was recorded with nbElement 3; production answers nbElement 1 with the latest
+  // issue only (JORF n°0264, 108 texts): the view is built from that one issue.
+  async function latestIssue(): Promise<LatestJoView> {
+    const client = createLegifranceClient(
+      fakePisteHttp([{ path: '/consult/lastNJo', fixture: '47-lastNJo-3' }]).http,
+    );
+    const repo = {
+      ...client,
+      latestJo: async (count: number) => (await client.latestJo(count)).slice(0, count),
+    };
+    return createLatestJo(repo)({ count: 1 });
+  }
+
+  it('fits in one page under the cap', async () => {
+    const view = await latestIssue();
+    expect(view.issues.map((i) => i.title)).toEqual(['JORF n°0264 du 11 novembre 2026']);
+    expect(view.totalTexts).toBe(108);
+    const text = renderLatestJo(view, { page: 1 });
+    expect(text).toContain('— page 1 of 1.');
+    expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+    expect(text).not.toContain('Next page');
+    expect(text.split('\n').filter((l) => l.startsWith('- '))).toHaveLength(108);
+  });
+});
+
 describe('renderLatestJo paging', () => {
   it('a huge issue splits into pages under the cap, each with header, group path and source', () => {
     const view = jo(400);
@@ -132,6 +171,56 @@ describe('renderLatestJo paging', () => {
       lines += t.split('\n').filter((l) => l.startsWith('- ')).length;
     }
     expect(lines).toBe(400);
+  });
+
+  it('many groups and issues: pages stay under the cap and well filled, every text once', () => {
+    const issue = (n: number): JoIssue => ({
+      id: `JORFCONT00000000000${n}`,
+      title: `JORF n°000${n} du ${n} janvier 2026`,
+      number: `000${n}`,
+      publishedOn: `2026-01-0${n}`,
+      eliPath: `/eli/jo/2026/01/0${n}/000${n}`,
+      groups: Array.from({ length: 40 }, (_, g) => ({
+        path: [`Ministère ${'m'.repeat(80)} ${g}`, `Direction ${'d'.repeat(80)} ${g}`],
+        texts: Array.from({ length: 1 + (g % 4) }, (_, i) => ({
+          id: `JORFTEXT${String(n * 10_000 + g * 10 + i).padStart(12, '0')}`,
+          title: `Décret ${'t'.repeat(200)} ${n}-${g}-${i}`,
+          nature: 'DECRET',
+          ministry: `Ministère ${g}`,
+          emitter: null,
+        })),
+      })),
+    });
+    const issues = [issue(1), issue(2), issue(3)];
+    const total = issues.flatMap((i) => i.groups ?? []).reduce((n, g) => n + g.texts.length, 0);
+    const view: LatestJoView = {
+      issues,
+      filter: {
+        nature: 'decret',
+        emitter: 'minist',
+        matchedEmitters: Array.from({ length: 40 }, (_, i) => `Ministère ${'x'.repeat(90)} ${i}`),
+      },
+      totalTexts: total,
+      available: { natures: ['DECRET'], emitters: [] },
+    };
+    const pages = allPages(view);
+    expect(pages.length).toBeGreaterThan(2);
+    const ids: string[] = [];
+    for (const [i, page] of pages.entries()) {
+      expect(page.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+      if (i < pages.length - 1) expect(page.length).toBeGreaterThan(MAX_TOOL_TEXT * 0.9);
+      expect(page).toMatch(/^### JORF n°000\d/m);
+      expect(
+        page
+          .split('\n\n')
+          .find((b) => b.includes('\n- '))
+          ?.startsWith('#### '),
+      ).toBe(true);
+      expect(page).toContain('Source: https://www.legifrance.gouv.fr/eli/jo/2026/01/0');
+      ids.push(...[...page.matchAll(/jorf\/id\/(JORFTEXT\d{12})/g)].map((m) => m[1] as string));
+    }
+    expect(ids).toHaveLength(total);
+    expect(new Set(ids).size).toBe(total);
   });
 });
 

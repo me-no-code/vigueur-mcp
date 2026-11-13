@@ -136,7 +136,7 @@ export function registerListChangesTool(
   server.registerTool(
     'legifrance_list_changes',
     {
-      title: 'List changes to a French code',
+      title: 'List changes to a French code, law or decree',
       description: DESCRIPTION,
       inputSchema,
       annotations: {

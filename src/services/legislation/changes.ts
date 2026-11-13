@@ -1,7 +1,8 @@
 import type { IsoDate } from '../../domain/dates.js';
-import { createGetText, type GetTextInput, type TextNature } from './get-text.js';
+import { createGetText, type GetTextInput } from './get-text.js';
 import type { CallContext, ChangeEntry, LegislationRepository } from './ports.js';
 import { invalid, requireIsoDate, resolveCode, todayInParis } from './resolve.js';
+import { parseTextRef } from './text-ref.js';
 
 export interface ChangesView {
   /** Decided by the input (`code` vs `text`), never by id prefix. */
@@ -22,33 +23,13 @@ const byDateThenNumber = (a: ChangeEntry, b: ChangeEntry) =>
   a.date.localeCompare(b.date) ||
   (a.articleNum ?? '').localeCompare(b.articleNum ?? '', 'fr', { numeric: true });
 
-const NATURES: Array<[string, TextNature]> = [
-  ['loi organique', 'loi_organique'],
-  ['loi_organique', 'loi_organique'],
-  ['loi', 'loi'],
-  ['ordonnance', 'ordonnance'],
-  ['decret', 'decret'],
-  ['arrete', 'arrete'],
-];
 const FORMS =
   'a LEGITEXT… or JORFTEXT… id, a NOR (e.g. JUSX1234567A), or "<nature> <number>" such as "loi 78-17" or "décret 2019-1088" (natures: loi, loi organique, ordonnance, décret, arrêté)';
 
 function parseTextInput(raw: string): GetTextInput {
-  const s = raw.trim();
-  if (/^(LEGITEXT|JORFTEXT)\d{12}$/i.test(s)) return { id: s.toUpperCase() };
-  if (/^[A-Za-z]{4}\d{7}[A-Za-z]$/.test(s)) return { nor: s.toUpperCase() };
-  const folded = s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036F]/g, '')
-    .toLowerCase();
-  for (const [word, nature] of NATURES) {
-    if (folded.startsWith(word)) {
-      const rest = s.slice(word.length);
-      const number = rest.replace(/^\s+(n[°o]\.?\s*)?/i, '');
-      if (/^\s/.test(rest) && /^\d[\d-]*$/.test(number)) return { nature, number };
-    }
-  }
-  throw invalid(`Cannot read "${raw}" as a text. Accepted: ${FORMS}.`);
+  const ref = parseTextRef(raw);
+  if (ref === null) throw invalid(`Cannot read "${raw}" as a text. Accepted: ${FORMS}.`);
+  return ref;
 }
 
 /**
@@ -107,6 +88,10 @@ export function createListChanges(
       } else if (res.kind === 'ambiguous') {
         throw invalid(
           `"${text}" matches several texts: ${list(res.candidates.map((c) => ({ title: c.title, id: c.textId })))}. Use the LEGITEXT id or the NOR.`,
+        );
+      } else if (res.kind === 'other_nature') {
+        throw invalid(
+          `No ${res.input} on Légifrance, but these texts carry the number ${res.number}: ${list(res.candidates.map((c) => ({ title: c.title, id: c.textId })))}. Use the LEGITEXT id of the one you mean.`,
         );
       } else {
         const [only] = res.candidates;

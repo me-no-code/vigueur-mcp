@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { jorfUrl, lodaUrl } from '../../domain/links.js';
-import { statusAt } from '../../domain/status-at.js';
+import { coversDate, type StatusAt, statusAt } from '../../domain/status-at.js';
 import type {
   GetTextInput,
   GetTextResult,
@@ -138,7 +138,7 @@ function hitLine(h: LegislationHit): string {
 }
 
 /** Whether the text stopped or has yet to start applying; never a sentinel date (they are null). */
-function verdictPhrase(c: NotInForceText): string {
+function verdictPhrase(c: NotInForceText, asOf: string): string {
   switch (c.verdict) {
     case 'ended':
       return c.on === null ? 'no longer in force' : `no longer in force — ceased ${c.on}`;
@@ -146,16 +146,18 @@ function verdictPhrase(c: NotInForceText): string {
       return c.on === null ? 'not yet in force' : `not yet in force — enters into force ${c.on}`;
     case 'undetermined':
       return 'in-force dates not determinable from Légifrance';
+    case 'no_version':
+      return `Légifrance has no version of this text on ${asOf} — try a later at_date`;
   }
 }
 
-function notInForceLine(c: NotInForceText): string {
+function notInForceLine(c: NotInForceText, asOf: string): string {
   return candidateLine([
     c.title,
     c.nature,
     opt(c.nor, (n) => `NOR ${n}`),
     opt(c.publishedOn, (d) => `Published ${d}`),
-    verdictPhrase(c),
+    verdictPhrase(c, asOf),
     `id ${c.textId}`,
     textUrl(c.textId),
   ]);
@@ -213,7 +215,25 @@ function framed(v: TextView, blocks: string[]): string {
   ].join('\n\n');
 }
 
-const inForceOn = (a: TextArticle, v: TextView) => statusAt(a, v.asOf).inForce;
+/**
+ * How an article stands on the date, by the rule the text's verdict uses (`textForceAt`): in
+ * force only when its dates cover the date. An article without a start date that has not ended
+ * is `undated`: Légifrance gives no in-force dates for it, so its text is shown under that label
+ * but it is never counted or labelled as in force. Otherwise it is not in force (`statusAt` says
+ * why) and its text is withheld.
+ */
+type ArticleOn =
+  | { kind: 'in_force'; status: StatusAt }
+  | { kind: 'undated' }
+  | { kind: 'not_in_force'; status: StatusAt };
+
+function articleOn(a: TextArticle, v: TextView): ArticleOn {
+  const status = statusAt(a, v.asOf);
+  if (coversDate(a, v.asOf)) return { kind: 'in_force', status };
+  return status.inForce ? { kind: 'undated' } : { kind: 'not_in_force', status };
+}
+
+const inForceOn = (a: TextArticle, v: TextView) => articleOn(a, v).kind === 'in_force';
 
 interface Counts {
   total: number;
@@ -292,15 +312,20 @@ interface Slice {
 
 function statusLine(a: TextArticle, v: TextView): string {
   if (asPublished(v)) return `As published · id ${a.id}`;
-  const status = renderStatusAt(statusAt(a, v.asOf), v.asOf, {
-    validToUndetermined: a.validToUndetermined,
-  });
+  const on = articleOn(a, v);
+  const status =
+    on.kind === 'undated'
+      ? 'Légifrance gives no in-force dates for this article'
+      : renderStatusAt(on.status, v.asOf, { validToUndetermined: a.validToUndetermined });
   return `${status}${a.rawStatus ? ` (${a.rawStatus})` : ''} · id ${a.id}`;
 }
 
-/** The article text; a version not in force on the date is never shown as the law of that date. */
+/**
+ * The article text; a version not in force on the date is never shown as the law of that date.
+ * An undated one is shown under its status line, which says Légifrance gives it no dates.
+ */
 function bodyOf(a: TextArticle, v: TextView): string {
-  if (!asPublished(v) && !inForceOn(a, v)) {
+  if (!asPublished(v) && articleOn(a, v).kind === 'not_in_force') {
     return `(Text not shown: not in force on ${v.asOf}. Read it with an "at_date" inside its validity, or with legifrance_get_article and its id.)`;
   }
   return a.text === '' ? '(Légifrance has no text for this article.)' : a.text;
@@ -383,10 +408,19 @@ export function renderGetText(result: GetTextResult, opts: TextRenderOptions): s
       ].join('\n');
     case 'not_in_force':
       return [
-        `No ${asked} in force on ${result.asOf}.`,
-        ...result.candidates.map(notInForceLine),
+        result.candidates.length > 0 && result.candidates.every((c) => c.verdict === 'undetermined')
+          ? `Légifrance gives no in-force dates for ${asked} on ${result.asOf}.`
+          : `No ${asked} in force on ${result.asOf}.`,
+        ...result.candidates.map((c) => notInForceLine(c, result.asOf)),
         ...(result.more ? [MORE] : []),
         'To read it, pass its id with an at_date inside its validity.',
+      ].join('\n');
+    case 'other_nature':
+      return [
+        `Légifrance files no ${opts.input.nature === undefined ? 'text' : NATURE_LABELS[opts.input.nature]} numbered ${result.number}; these texts carry that number:`,
+        ...result.candidates.map(hitLine),
+        ...(result.more ? [MORE] : []),
+        'Pass one of these ids to read it.',
       ].join('\n');
     case 'not_found': {
       const byNumber = opts.input.id === undefined && opts.input.nor === undefined;

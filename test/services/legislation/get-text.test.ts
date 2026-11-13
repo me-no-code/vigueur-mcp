@@ -142,6 +142,69 @@ describe('getText routes', () => {
     });
   });
 
+  describe('a LEGITEXT read on a date Légifrance has no version for', () => {
+    /** `getText` answers only on `days` (Légifrance's unknown-id 400 otherwise). */
+    const onlyOn = (days: string[], text = record(LOI)) =>
+      setup({
+        overrides: {
+          async getText(textId, asOf) {
+            return textId === text.id && days.includes(asOf) ? structuredClone(text) : null;
+          },
+        },
+      });
+
+    it('null on at_date, found today → not_in_force with verdict no_version, no date invented', async () => {
+      const { run, calls } = onlyOn([TODAY]);
+      const r = await run({ id: LOI, atDate: '1970-01-01' });
+      expect(r).toEqual({
+        kind: 'not_in_force',
+        input: LOI,
+        asOf: '1970-01-01',
+        candidates: [
+          {
+            textId: LOI,
+            textCid: LOI,
+            title: 'Loi relative à l’informatique',
+            nature: 'LOI',
+            nor: 'JUSX7800001L',
+            publishedOn: '1978-01-07',
+            verdict: 'no_version',
+            on: null,
+          },
+        ],
+        more: false,
+      });
+      expect(calls.getText.map((c) => c.args)).toEqual([
+        [LOI, '1970-01-01'],
+        [LOI, TODAY],
+      ]);
+    });
+
+    it('null on at_date and today → not_found', async () => {
+      const { run, calls } = onlyOn([]);
+      expect(await run({ id: LOI, atDate: '1970-01-01' })).toEqual({
+        kind: 'not_found',
+        input: LOI,
+      });
+      expect(calls.getText).toHaveLength(2);
+    });
+
+    it('no retry without at_date, nor when at_date is today', async () => {
+      for (const atDate of [undefined, TODAY]) {
+        const { run, calls } = onlyOn([]);
+        expect(await run({ id: LOI, atDate })).toEqual({ kind: 'not_found', input: LOI });
+        expect(calls.getText.map((c) => c.args)).toEqual([[LOI, TODAY]]);
+      }
+    });
+
+    it('forwards ctx to the retry', async () => {
+      const ctx = { signal: new AbortController().signal };
+      const { run, calls } = onlyOn([TODAY]);
+      await run({ id: LOI, atDate: '1970-01-01' }, ctx);
+      expect(calls.getText.map((c) => c.ctx)).toEqual([ctx, ctx]);
+    });
+  });
+
   it('atDate with a JORFTEXT or a NOR is invalid_input', async () => {
     const { run } = setup({ texts: [record(JORF)] });
     expect(await rejects(run({ id: JORF, atDate: '2020-01-01' }))).toMatch(/at_date|atDate/i);
@@ -166,17 +229,165 @@ describe('getText by nature and number', () => {
     expect(r.kind).toBe('found');
   });
 
-  it('maps every nature', async () => {
-    const { run, calls } = setup();
+  it('a number typed with "n°" (or no, nº, spaces) is searched without it', async () => {
+    for (const number of ['n° 78-17', 'N°78-17', 'no 78-17', 'n\u00BA 78 - 17']) {
+      const { run, calls } = setup({ texts: [record(LOI)], searchHits: [hit(LOI)] });
+      const r = await run({ nature: 'loi', number });
+      expect(calls.searchLegislation[0]?.args[0]).toMatchObject({ textNumber: '78-17' });
+      expect(r.kind).toBe('found');
+    }
+  });
+
+  it('maps every nature; an organic law is filed as LOI in LODA (fixture 119)', async () => {
     for (const [nature, api] of [
-      ['loi_organique', 'LOI_ORGANIQUE'],
+      ['loi_organique', 'LOI'],
       ['ordonnance', 'ORDONNANCE'],
       ['decret', 'DECRET'],
       ['arrete', 'ARRETE'],
     ] as const) {
+      const { run, calls } = setup();
       await run({ nature, number: '1' });
-      expect(calls.searchLegislation.at(-1)?.args[0].nature).toBe(api);
+      expect(calls.searchLegislation[0]?.args[0].nature).toBe(api);
     }
+  });
+
+  describe('organic laws: searched as LOI, told apart by their title', () => {
+    const organic: LegislationHit = {
+      ...hit(LOI),
+      textCid: 'JORFTEXT000000394028',
+      title: 'Loi organique n° 2001-692 du 1 août 2001 relative aux lois de finances',
+    };
+    const ordinary: LegislationHit = {
+      ...hit(LOI_2),
+      textCid: 'JORFTEXT000000000002',
+      title: 'LOI n° 2001-692 du 1 août 2001 de test',
+    };
+
+    it('loi_organique keeps only the hits titled "Loi organique"', async () => {
+      const { run, calls } = setup({
+        texts: [record(LOI), record(LOI_2)],
+        searchHits: [ordinary, organic],
+      });
+      const r = await run({ nature: 'loi_organique', number: '2001-692' });
+      expect(r.kind).toBe('found');
+      expect(calls.getText.map((c) => c.args[0])).toEqual([LOI]);
+      expect(calls.searchLegislation).toHaveLength(1);
+    });
+
+    it('a plain loi keeps organic laws: an organic law is a law', async () => {
+      const { run, calls } = setup({ texts: [record(LOI)], searchHits: [organic] });
+      const r = await run({ nature: 'loi', number: '2001-692' });
+      expect(r.kind).toBe('found');
+      expect(calls.getText.map((c) => c.args[0])).toEqual([LOI]);
+    });
+
+    it('loi_organique with the number of an ordinary law lists it as another nature', async () => {
+      const { run, calls } = setup({ texts: [record(LOI_2)], searchHits: [ordinary] });
+      const r = await run({ nature: 'loi_organique', number: '2001-692' });
+      expect(r).toEqual({
+        kind: 'other_nature',
+        input: 'loi organique 2001-692',
+        number: '2001-692',
+        candidates: [ordinary],
+        more: false,
+      });
+      expect(calls.searchLegislation).toHaveLength(3);
+      expect(calls.getText).toHaveLength(0);
+    });
+  });
+
+  describe('safety net: a text of another nature is listed, never "not found"', () => {
+    const decree: LegislationHit = {
+      ...hit(LOI),
+      textCid: 'JORFTEXT000000241445',
+      title: 'Décret n° 2005-1309 du 20 octobre 2005',
+      nature: 'DECRET',
+    };
+    const onlyWithoutNature = (hits: LegislationHit[], total = hits.length) =>
+      setup({
+        overrides: {
+          async searchLegislation(q) {
+            const found = q.nature === undefined ? hits : [];
+            return {
+              total: q.nature === undefined ? total : 0,
+              page: 1,
+              pageSize: 10,
+              hits: found,
+            };
+          },
+        },
+      });
+
+    it('both nature searches empty, the number-only search finds → other_nature', async () => {
+      const { run, calls } = onlyWithoutNature([decree, { ...decree, textId: LOI_2 }]);
+      const r = await run({ nature: 'loi', number: '2005-1309' });
+      expect(r).toEqual({
+        kind: 'other_nature',
+        input: 'loi 2005-1309',
+        number: '2005-1309',
+        candidates: [{ ...decree, textId: LOI_2 }],
+        more: false,
+      });
+      expect(calls.getText).toHaveLength(0);
+    });
+
+    it('the safety-net search has no nature and every status', async () => {
+      const { run, calls } = onlyWithoutNature([decree]);
+      await run({ nature: 'loi', number: '2005-1309' });
+      expect(calls.searchLegislation.map((c) => c.args[0])).toEqual([
+        {
+          collection: 'loda',
+          textNumber: '2005-1309',
+          nature: 'LOI',
+          atDate: TODAY,
+          includeHistorical: false,
+          page: 1,
+          pageSize: 10,
+        },
+        {
+          collection: 'loda',
+          textNumber: '2005-1309',
+          nature: 'LOI',
+          atDate: TODAY,
+          includeHistorical: true,
+          page: 1,
+          pageSize: 10,
+        },
+        {
+          collection: 'loda',
+          textNumber: '2005-1309',
+          atDate: TODAY,
+          includeHistorical: true,
+          page: 1,
+          pageSize: 10,
+        },
+      ]);
+      expect('nature' in (calls.searchLegislation[2]?.args[0] ?? {})).toBe(false);
+    });
+
+    it('announces more when the number-only search has more results than its page', async () => {
+      const { run } = onlyWithoutNature([decree], 12);
+      expect(await run({ nature: 'loi', number: '2005-1309' })).toMatchObject({
+        kind: 'other_nature',
+        more: true,
+      });
+    });
+
+    it('all three searches empty → not_found', async () => {
+      const { run, calls } = setup();
+      expect(await run({ nature: 'arrete', number: '2005-1309' })).toEqual({
+        kind: 'not_found',
+        input: 'arrete 2005-1309',
+      });
+      expect(calls.searchLegislation).toHaveLength(3);
+    });
+
+    it('forwards ctx to the safety-net search', async () => {
+      const ctx = { signal: new AbortController().signal };
+      const { run, calls } = setup();
+      await run({ nature: 'loi', number: '1' }, ctx);
+      expect(calls.searchLegislation.map((c) => c.ctx)).toEqual([ctx, ctx, ctx]);
+    });
   });
 
   it('two distinct texts → ambiguous, nothing fetched', async () => {

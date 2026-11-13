@@ -52,6 +52,16 @@ export function textNumberSearch(fond: 'LODA_DATE' | 'LODA_ETAT', num: string) {
   };
 }
 
+/** Whether a `/search` body's NATURE / TEXT_NATURE filter is one of `natures` (`undefined`: none). */
+function natureIn(body: unknown, natures: ReadonlyArray<string | undefined>): boolean {
+  const filtres = asJson(asJson(body).recherche).filtres;
+  const filter = (Array.isArray(filtres) ? filtres : [])
+    .map(asJson)
+    .find((f) => f.facette === 'NATURE' || f.facette === 'TEXT_NATURE');
+  const valeurs = filter?.valeurs;
+  return natures.includes(Array.isArray(valeurs) ? valeurs.join(',') : undefined);
+}
+
 /** A request whose body field `key` equals `value` (e.g. `/consult/getArticle` by `id`). */
 export const bodyField =
   (key: string, value: string) =>
@@ -195,10 +205,35 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     when: textNumberSearch('LODA_DATE', '78-17'),
     fixture: '30-search-loda-date-num-78-17',
   },
+  // Loi 78-17 read on 1970-01-01, before it existed: production answers the unknown-id 400 (the
+  // client turned it into "no such text"; the 400 body was not recorded), so the
+  // recorded unknown-id body answers it.
+  {
+    path: '/consult/lawDecree',
+    when: (b) =>
+      bodyField('textId', 'LEGITEXT000006068624')(b) && bodyField('date', '1970-01-01')(b),
+    fixture: '65-err-lawDecree-unknown',
+    status: 400,
+  },
   {
     path: '/consult/lawDecree',
     when: bodyField('textId', 'LEGITEXT000006068624'),
     fixture: '48-lawDecree-loi-78-17',
+  },
+  // The LOLF (loi organique 2001-692). Recorded 2026-11-13 from production (HTTP 200) with the
+  // project's client: POST /search LODA_DATE, NUM EXACTE "2001-692", DATE_VERSION 2026-11-13, no
+  // nature (119) — LODA files organic laws under nature LOI: the same search with NATURE
+  // ["LOI_ORGANIQUE"] answered 0 results, with NATURE ["LOI"] this same single result; and POST
+  // /consult/lawDecree {"textId":"LEGITEXT000005631294","date":"2026-11-13"} (120).
+  {
+    path: '/search',
+    when: (b) => textNumberSearch('LODA_DATE', '2001-692')(b) && natureIn(b, [undefined, 'LOI']),
+    fixture: '119-search-loda-date-num-2001-692',
+  },
+  {
+    path: '/consult/lawDecree',
+    when: bodyField('textId', 'LEGITEXT000005631294'),
+    fixture: '120-lawDecree-lolf-2001-692-today',
   },
   // Ordonnance 2016-131 as published in the Journal officiel, by NOR and by JORFTEXT id.
   {

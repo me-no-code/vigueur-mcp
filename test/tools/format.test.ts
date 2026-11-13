@@ -5,6 +5,7 @@ import {
   isoDateSchema,
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
+  pageByBudget,
   paginateText,
   presentOrUndefined,
   renderStatusAt,
@@ -168,5 +169,43 @@ describe('callSignal', () => {
     mcp.abort();
     expect(signal.aborted).toBe(true);
     expect(deadlineHit(signal)).toBe(false);
+  });
+});
+
+describe('pageByBudget', () => {
+  it('cuts by budget and item count, at least one item a page, stable page numbers', () => {
+    const items = ['aaaa', 'bbbb', 'cccc', 'dddddddddddd', 'e'];
+    const page = (n: number) =>
+      pageByBudget(items, n, (s) => s.length, { maxItems: 2, budget: 8 }).items;
+    expect([page(1), page(2), page(3), page(4)]).toEqual([
+      ['aaaa', 'bbbb'],
+      ['cccc'],
+      ['dddddddddddd'],
+      ['e'],
+    ]);
+    expect(() => page(5)).toThrow('past the last page');
+  });
+
+  it('costs an item with the item before it on the page, and again when it opens a page', () => {
+    const seen: Array<[string, string | undefined]> = [];
+    // An item costs 10 when it opens a page (a repeated header), 3 after another item.
+    const paged = pageByBudget(
+      ['a', 'b', 'c', 'd'],
+      2,
+      (item, previous) => {
+        seen.push([item, previous]);
+        return previous === undefined ? 10 : 3;
+      },
+      { maxItems: 10, budget: 15 },
+    );
+    expect(paged.items).toEqual(['c', 'd']);
+    expect(paged.pageCount).toBe(2);
+    expect(seen).toEqual([
+      ['a', undefined],
+      ['b', 'a'],
+      ['c', 'b'],
+      ['c', undefined],
+      ['d', 'c'],
+    ]);
   });
 });

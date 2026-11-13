@@ -341,6 +341,12 @@ describe('legifrance_list_changes (fixtures)', () => {
     }
   });
 
+  it('is titled for codes, laws and decrees alike', async () => {
+    const { client } = await connectOnly();
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'legifrance_list_changes');
+    expect(tool?.title).toBe('List changes to a French code, law or decree');
+  });
+
   it('has no response_format input (it never changed the answer)', async () => {
     const { client } = await connectOnly();
     const tool = (await client.listTools()).tools.find((t) => t.name === 'legifrance_list_changes');

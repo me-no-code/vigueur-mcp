@@ -50,8 +50,10 @@ const inputSchema = z.object({
 });
 
 const MAX_ITEMS = 1_000;
-const BUDGET = MAX_TOOL_TEXT - 6_000;
+/** Room kept below the cap for rounding. */
+const SAFETY = 200;
 const LISTED_VALUES = 10;
+const NO_TOC = 'Table of contents not available for this issue.';
 
 type Item =
   | { kind: 'issue'; issue: JoIssue }
@@ -66,7 +68,36 @@ const issueHeader = (issue: JoIssue): string =>
     `Published ${issue.publishedOn ?? 'date n/a'}${issue.eliPath === null ? '' : ` · ${joIssueUrl(issue.eliPath)}`}`,
   ].join('\n');
 
-const pathCost = (path: string[]) => path.join(' › ').length + 8;
+/** The heading line a group's block opens with, `null` for texts outside any group. */
+const groupHeading = (path: string[]): string | null =>
+  path.length === 0 ? null : `#### ${path.join(' › ')}`;
+
+/**
+ * What an item adds to its page after `previous` (`undefined`: it opens the page), as the renderer
+ * lays it out: an issue header is a block; a text opens a block (group heading + line) when it
+ * starts a group, else adds a line to the block. A page starting inside an issue repeats the
+ * issue header, and every page repeats the group heading of its first text: those are charged
+ * where they are printed, not on every text.
+ */
+function itemCost(item: Item, previous: Item | undefined): number {
+  if (item.kind === 'issue') {
+    return (
+      issueHeader(item.issue).length + 2 + (item.issue.groups === null ? NO_TOC.length + 2 : 0)
+    );
+  }
+  const line = textLine(item.text).length;
+  if (previous === undefined || previous.issue.id !== item.issue.id) {
+    return issueHeader(item.issue).length + 2 + opened(item.path, line);
+  }
+  if (previous.kind === 'issue' || previous.group !== item.group) return opened(item.path, line);
+  return line + 1;
+}
+
+/** A new block: the group heading (if any) and the first line, plus the block separator. */
+function opened(path: string[], line: number): number {
+  const heading = groupHeading(path);
+  return (heading === null ? 0 : heading.length + 1) + line + 2;
+}
 
 function listed(values: readonly string[]): string {
   const shown = values.slice(0, LISTED_VALUES).join('; ');
@@ -84,16 +115,6 @@ export function renderLatestJo(view: LatestJoView, opts: { page: number }): stri
       for (const text of g.texts) items.push({ kind: 'text', issue, group, path: g.path, text });
     });
   }
-  const paged = pageByBudget(
-    items,
-    opts.page,
-    (i) =>
-      i.kind === 'issue'
-        ? issueHeader(i.issue).length + 2
-        : textLine(i.text).length + 1 + pathCost(i.path) + issueHeader(i.issue).length,
-    { maxItems: MAX_ITEMS, budget: BUDGET },
-  );
-
   const { nature, emitter, matchedEmitters } = view.filter;
   const filters = [
     nature === null ? null : `nature "${nature}"`,
@@ -108,10 +129,41 @@ export function renderLatestJo(view: LatestJoView, opts: { page: number }): stri
             : ''
         }`;
   const n = view.issues.length;
-  const header = [
-    `## Journal officiel — ${n} ${n === 1 ? 'issue' : 'issues'}, ${view.totalTexts} ${view.totalTexts === 1 ? 'text' : 'texts'}${filterLine === null ? '' : ' matching'} — page ${opts.page} of ${paged.pageCount}. Dates are publication dates.`,
+  const headerOf = (page: number, pageCount: number) => [
+    `## Journal officiel — ${n} ${n === 1 ? 'issue' : 'issues'}, ${view.totalTexts} ${view.totalTexts === 1 ? 'text' : 'texts'}${filterLine === null ? '' : ' matching'} — page ${page} of ${pageCount}. Dates are publication dates.`,
     ...(filterLine === null ? [] : [filterLine]),
   ];
+  const tailOf = (page: number, hasMore: boolean) => {
+    const tail: string[] = [];
+    if (view.totalTexts === 0) {
+      if (filterLine !== null) {
+        tail.push('No text matches these filters in the selected issue(s).');
+        if (view.available.natures.length > 0)
+          tail.push(`Natures available in these issues: ${listed(view.available.natures)}.`);
+        if (view.available.emitters.length > 0)
+          tail.push(`Emitters available in these issues: ${listed(view.available.emitters)}.`);
+      } else if (n > 0) {
+        tail.push('No text is listed in the selected issue(s).');
+      }
+    }
+    if (n === 0) tail.push('No Journal officiel issue found.');
+    if (hasMore) tail.push(nextPageHint(page));
+    return tail;
+  };
+  const footerOf = (issues: readonly JoIssue[]) => {
+    const sources = issues.flatMap((i) => (i.eliPath === null ? [] : [joIssueUrl(i.eliPath)]));
+    return `Source: ${sources.length > 0 ? sources.join(' ; ') : LEGIFRANCE_BASE_URL}`;
+  };
+
+  // The frame every page repeats, at its longest (largest page numbers, every issue's link, the
+  // next-page hint), plus the separator before the first block: the items' costs fill the rest.
+  const frame =
+    [...headerOf(99_999, 99_999), ...tailOf(99_999, true), footerOf(view.issues)].join('\n\n')
+      .length + 2;
+  const paged = pageByBudget(items, opts.page, itemCost, {
+    maxItems: MAX_ITEMS,
+    budget: MAX_TOOL_TEXT - frame - SAFETY,
+  });
 
   const blocks: string[] = [];
   let issueId: string | null = null;
@@ -123,8 +175,7 @@ export function renderLatestJo(view: LatestJoView, opts: { page: number }): stri
       issueId = item.issue.id;
       groupKey = null;
       pageIssues.push(item.issue);
-      if (item.issue.groups === null)
-        blocks.push('Table of contents not available for this issue.');
+      if (item.issue.groups === null) blocks.push(NO_TOC);
       continue;
     }
     if (issueId !== item.issue.id) {
@@ -135,33 +186,22 @@ export function renderLatestJo(view: LatestJoView, opts: { page: number }): stri
       pageIssues.push(item.issue);
     }
     const line = textLine(item.text);
-    const header4 = item.path.length === 0 ? null : `#### ${item.path.join(' › ')}`;
+    const heading = groupHeading(item.path);
     if (groupKey !== item.group || blocks.length === 0) {
       groupKey = item.group;
-      blocks.push(header4 === null ? line : `${header4}\n${line}`);
+      blocks.push(heading === null ? line : `${heading}\n${line}`);
     } else {
       const last = blocks.length - 1;
       blocks[last] = `${blocks[last]}\n${line}`;
     }
   }
 
-  const tail: string[] = [];
-  if (view.totalTexts === 0) {
-    if (filterLine !== null) {
-      tail.push('No text matches these filters in the selected issue(s).');
-      if (view.available.natures.length > 0)
-        tail.push(`Natures available in these issues: ${listed(view.available.natures)}.`);
-      if (view.available.emitters.length > 0)
-        tail.push(`Emitters available in these issues: ${listed(view.available.emitters)}.`);
-    } else if (n > 0) {
-      tail.push('No text is listed in the selected issue(s).');
-    }
-  }
-  if (n === 0) tail.push('No Journal officiel issue found.');
-  if (paged.hasMore) tail.push(nextPageHint(opts.page));
-  const sources = pageIssues.flatMap((i) => (i.eliPath === null ? [] : [joIssueUrl(i.eliPath)]));
-  const footer = `Source: ${sources.length > 0 ? sources.join(' ; ') : LEGIFRANCE_BASE_URL}`;
-  return [...header, ...blocks, ...tail, footer].join('\n\n');
+  return [
+    ...headerOf(opts.page, paged.pageCount),
+    ...blocks,
+    ...tailOf(opts.page, paged.hasMore),
+    footerOf(pageIssues),
+  ].join('\n\n');
 }
 
 export function registerLatestJoTool(

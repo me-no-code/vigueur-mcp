@@ -123,24 +123,28 @@ export interface ListPage<T> {
 
 /**
  * Page `page` (1-based) of `items`: pages hold at most `maxItems` items and about `budget`
- * characters (`cost` of each item), at least one item. The split depends on the items only, so
- * `page` numbers stay stable between calls. A page past the end is an `invalid_input` error.
+ * characters, at least one item. `cost(item, previous)` is what `item` adds to its page after
+ * `previous`, the item before it on the same page: `undefined` when the item opens a page, so
+ * what every page start repeats (a heading, say) is charged there only. The split depends on the
+ * items only, so `page` numbers stay stable between calls. A page past the end is an
+ * `invalid_input` error.
  */
 export function pageByBudget<T>(
   items: readonly T[],
   page: number,
-  cost: (item: T) => number,
+  cost: (item: T, previous: T | undefined) => number,
   limits: { maxItems: number; budget: number },
 ): ListPage<T> {
   const pages: T[][] = [];
   let current: T[] = [];
   let used = 0;
   for (const item of items) {
-    const c = cost(item);
+    let c = cost(item, current.at(-1));
     if (current.length > 0 && (current.length >= limits.maxItems || used + c > limits.budget)) {
       pages.push(current);
       current = [];
       used = 0;
+      c = cost(item, undefined);
     }
     current.push(item);
     used += c;

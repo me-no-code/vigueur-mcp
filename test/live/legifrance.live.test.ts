@@ -108,6 +108,15 @@ describe.skipIf(!process.env.VIGUEUR_LIVE)('Légifrance tools against PISTE (liv
     expect(text).not.toMatch(/not found|several texts/i);
   }, 30_000);
 
+  it('says loi 78-17 has no version on 1970-01-01 instead of "not found"', async () => {
+    const text = await call('legifrance_get_text', {
+      id: 'LEGITEXT000006068624',
+      at_date: '1970-01-01',
+    });
+    expect(text).toContain('no version of this text on 1970-01-01');
+    expect(text).not.toContain('on Légifrance. Check it');
+  }, 30_000);
+
   it('reports the decree 2005-1309 as repealed without rendering articles', async () => {
     const text = await call('legifrance_get_text', { nature: 'decret', number: '2005-1309' });
     expect(text).toContain('in force on');

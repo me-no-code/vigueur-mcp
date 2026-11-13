@@ -1,5 +1,6 @@
 import type { IsoDate } from '../../domain/dates.js';
 import { jorfUrl, lodaUrl } from '../../domain/links.js';
+import { foldKey } from '../../domain/text.js';
 import { type TextForce, textForceAt } from '../../domain/text-force.js';
 import { VigueurError } from '../../shared/errors.js';
 import type {
@@ -11,8 +12,9 @@ import type {
   TextSection,
 } from './ports.js';
 import { blankToNull, invalid, requireIsoDate, todayInParis } from './resolve.js';
+import { normaliseTextNumber, type TextNature } from './text-ref.js';
 
-export type TextNature = 'loi' | 'loi_organique' | 'ordonnance' | 'decret' | 'arrete';
+export type { TextNature } from './text-ref.js';
 
 export interface GetTextInput {
   id?: string;
@@ -40,7 +42,8 @@ export interface NotInForceText {
   nature: string | null;
   nor: string | null;
   publishedOn: IsoDate | null;
-  verdict: 'ended' | 'not_yet' | 'undetermined';
+  /** `no_version`: Légifrance has the text but no version of it on `asOf` (read before it existed). */
+  verdict: 'ended' | 'not_yet' | 'undetermined' | 'no_version';
   /** Ceased on (ended) or enters into force on (not_yet); null otherwise, never a sentinel. */
   on: IsoDate | null;
 }
@@ -57,14 +60,33 @@ export type GetTextResult =
       candidates: NotInForceText[];
       more: boolean;
     }
+  /** No text of the asked nature carries `number`, but texts of other natures do: listed, never read. */
+  | {
+      kind: 'other_nature';
+      input: string;
+      number: string;
+      candidates: LegislationHit[];
+      more: boolean;
+    }
   | { kind: 'not_found'; input: string };
 
+/**
+ * The LODA nature each nature is searched with. LODA files organic laws under `LOI` (production
+ * probe, fixture 119: `LOI_ORGANIQUE` finds nothing there although the JORF lists it), so they are
+ * searched as `LOI` and told apart by their title (`TITLE_PREFIX`).
+ */
 const API_NATURE: Record<TextNature, string> = {
   loi: 'LOI',
-  loi_organique: 'LOI_ORGANIQUE',
+  loi_organique: 'LOI',
   ordonnance: 'ORDONNANCE',
   decret: 'DECRET',
   arrete: 'ARRETE',
+};
+
+/** The folded title a hit must start with when its LODA nature is broader than the one asked. A
+ * plain `loi` has none: an organic law is a law. */
+const TITLE_PREFIX: Partial<Record<TextNature, string>> = {
+  loi_organique: foldKey('Loi organique'),
 };
 
 const TEXT_ID = /^(LEGITEXT|JORFTEXT)\d{12}$/;
@@ -126,9 +148,10 @@ function view(
 
 /**
  * Reads a whole law, decree or JORF text by id, NOR, or nature + number. A number shared by
- * several texts is `ambiguous` (candidates listed); nothing found is `not_found` with the input
- * echoed. A close match is never substituted. JORFTEXT and NOR are read as published: `atDate`
- * is rejected for them.
+ * several texts is `ambiguous` (candidates listed); a number only texts of another nature carry is
+ * `other_nature` (listed); `not_found`, with the input echoed, only when Légifrance has nothing.
+ * A close match is never substituted. JORFTEXT and NOR are read as published: `atDate` is
+ * rejected for them.
  */
 export function createGetText(
   repo: LegislationRepository,
@@ -138,7 +161,10 @@ export function createGetText(
   return async (input, ctx) => {
     const id = blankToNull(input.id);
     const nor = blankToNull(input.nor)?.toUpperCase() ?? null;
-    const number = blankToNull(input.number);
+    // "n° 78-17" is number 78-17: Légifrance files the number alone.
+    const number = blankToNull(
+      input.number === undefined ? undefined : normaliseTextNumber(input.number),
+    );
     const nature = input.nature ?? null;
     const sectionCid = blankToNull(input.sectionCid);
     const byNumber = nature !== null || number !== null;
@@ -169,7 +195,8 @@ export function createGetText(
         '"at_date" does not apply to a JORFTEXT id or a NOR: the text is read as published. Use a LEGITEXT id or nature + number for the version in force on a date.',
       );
     }
-    const asOf = input.atDate === undefined ? today() : requireIsoDate(input.atDate, '"at_date"');
+    const now = today();
+    const asOf = input.atDate === undefined ? now : requireIsoDate(input.atDate, '"at_date"');
 
     const found = (
       record: TextRecord | null,
@@ -203,19 +230,31 @@ export function createGetText(
     if (id !== null) {
       if (id.startsWith('JORFTEXT')) return found(await repo.getJorfText(id, ctx), id, jorfUrl);
       const record = await repo.getText(id, asOf, ctx);
-      return record === null ? { kind: 'not_found', input: id } : readLegitext(record, id);
+      if (record !== null) return readLegitext(record, id);
+      // Légifrance answers "unknown id" for a real text read on a date it has no version for
+      // (loi 78-17 on 1970-01-01). One read on today tells the two apart; no date is guessed.
+      if (asOf === now) return { kind: 'not_found', input: id };
+      const current = await repo.getText(id, now, ctx);
+      if (current === null) return { kind: 'not_found', input: id };
+      return notInForce(id, [candidate(current, { verdict: 'no_version', on: null })], false);
     }
 
     const echo = `${(nature ?? '').replace(/_/g, ' ')} ${number}`;
-    const query = {
+    const byNumberOnly = {
       collection: 'loda' as const,
       textNumber: number ?? '',
-      nature: API_NATURE[nature as TextNature],
       atDate: asOf,
-      includeHistorical: false,
       page: 1,
       pageSize: 10,
     };
+    const query = {
+      ...byNumberOnly,
+      nature: API_NATURE[nature as TextNature],
+      includeHistorical: false,
+    };
+    const prefix = TITLE_PREFIX[nature as TextNature];
+    const ofNature = (hits: LegislationHit[]) =>
+      prefix === undefined ? hits : hits.filter((h) => foldKey(h.title).startsWith(prefix));
     const fetchListed = async (hit: LegislationHit) => {
       const record = await repo.getText(hit.textId, asOf, ctx);
       if (record === null) {
@@ -229,7 +268,7 @@ export function createGetText(
     };
 
     const first = await repo.searchLegislation(query, ctx);
-    const inForce = oneHitPerText(first.hits);
+    const inForce = oneHitPerText(ofNature(first.hits));
     if (inForce.length > 1) {
       return { kind: 'ambiguous', candidates: inForce, more: first.total > first.hits.length };
     }
@@ -239,8 +278,22 @@ export function createGetText(
     // The in-force search lists no dates and does not filter by force, so a miss proves nothing.
     // Look at every status and decide from the dates the historical search carries: dates, not labels, decide.
     const page = await repo.searchLegislation({ ...query, includeHistorical: true }, ctx);
-    const all = oneHitPerText(page.hits);
-    if (all.length === 0) return { kind: 'not_found', input: echo };
+    const all = oneHitPerText(ofNature(page.hits));
+    if (all.length === 0) {
+      // Nothing of this nature, in force or not. A text filed under another nature (or a nature
+      // mapped wrongly) may still carry the number: one search on the number alone, every status,
+      // lists it rather than calling the text missing.
+      const any = await repo.searchLegislation({ ...byNumberOnly, includeHistorical: true }, ctx);
+      const candidates = oneHitPerText(any.hits);
+      if (candidates.length === 0) return { kind: 'not_found', input: echo };
+      return {
+        kind: 'other_nature',
+        input: echo,
+        number: number ?? '',
+        candidates,
+        more: any.total > any.hits.length,
+      };
+    }
     const more = page.total > page.hits.length;
     const covering = all.filter((h) => textForceAt([h], asOf).verdict === 'in_force');
     if (covering.length > 1) return { kind: 'ambiguous', candidates: covering, more };
@@ -270,7 +323,10 @@ function allArticles(record: TextRecord): TextArticle[] {
   return out;
 }
 
-function candidate(record: TextRecord, force: Exclude<TextForce, { verdict: 'in_force' }>) {
+function candidate(
+  record: TextRecord,
+  force: Exclude<TextForce, { verdict: 'in_force' }> | { verdict: 'no_version'; on: null },
+) {
   return {
     textId: record.id,
     textCid: record.cid,

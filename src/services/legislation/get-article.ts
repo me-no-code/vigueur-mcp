@@ -64,6 +64,8 @@ export interface Neighbour {
   num: string;
   /** First 200 characters of the article's text. */
   excerpt: string;
+  /** The text is longer than the excerpt. */
+  truncated: boolean;
   url: string;
 }
 
@@ -193,6 +195,7 @@ async function neighbourOf(
     id,
     num: record.version.number,
     excerpt: record.version.text.slice(0, EXCERPT_LENGTH),
+    truncated: record.version.text.length > EXCERPT_LENGTH,
     url: articleUrlFor(id),
   };
 }

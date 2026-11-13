@@ -152,7 +152,8 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
       [
         '#### Neighbouring articles',
         '- Previous: none',
-        "- Next: art. 1241 — Chacun est responsable du dommage qu'il a causé non seulement par son fait, mais encore par sa négligence ou par son imprudence.… · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032041565",
+        // Art. 1241 is 128 characters long: shown whole, so no "…".
+        "- Next: art. 1241 — Chacun est responsable du dommage qu'il a causé non seulement par son fait, mais encore par sa négligence ou par son imprudence. · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032041565",
       ].join('\n'),
     );
     expect(text).not.toContain('⚠️');
@@ -490,12 +491,19 @@ describe('renderGetArticle', () => {
   });
 
   it('neighbours: one line each, excerpt on one line, before the warnings and the footer', () => {
-    const neighbour = (n: string, excerpt: string) => ({
+    const neighbour = (n: string, excerpt: string, truncated = true) => ({
       id: `LEGIARTI00000000000${n}`,
       num: n,
       excerpt,
+      truncated,
       url: `https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI00000000000${n}`,
     });
+    const whole = render(
+      found({ neighbours: { previous: null, next: neighbour('8', 'Article court.', false) } }),
+    );
+    expect(whole).toContain(
+      '- Next: art. 8 — Article court. · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000008',
+    );
     const text = render(
       found({
         neighbours: { previous: neighbour('6', 'Premier alinéa.\n\nSecond   alinéa'), next: null },

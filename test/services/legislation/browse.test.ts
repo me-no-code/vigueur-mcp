@@ -272,6 +272,9 @@ describe('article neighbours', () => {
     expect(r.article.neighbours?.previous).toMatchObject({ id: ids[0], num: '101' });
     expect(r.article.neighbours?.next?.id).toBe(ids[2]);
     expect(r.article.neighbours?.next?.excerpt).toHaveLength(200);
+    expect(r.article.neighbours?.next?.truncated).toBe(true);
+    expect(r.article.neighbours?.previous?.excerpt).toBe('Texte 1');
+    expect(r.article.neighbours?.previous?.truncated).toBe(false);
     expect(r.article.neighbours?.previous?.url).toContain(ids[0] as string);
     expect(calls.getSectionLinks).toHaveLength(1);
   });

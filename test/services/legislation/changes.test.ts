@@ -168,14 +168,33 @@ describe('createListChanges for a text', () => {
   });
 
   it.each([
-    ['Décret n° 2019-1088', 'DECRET', '2019-1088'],
-    ['loi organique 2020-1', 'LOI_ORGANIQUE', '2020-1'],
-    ['arrêté 2021-5', 'ARRETE', '2021-5'],
-    ['ordonnance 2016-131', 'ORDONNANCE', '2016-131'],
-  ])('parses "%s" as nature + number', async (input, nature, number) => {
-    const { result, calls } = runText({ texts: [loi()], searchHits: [hit(LEGI)] }, input);
+    ['Décret n° 2019-1088', 'DECRET', '2019-1088', 'Décret n° 2019-1088'],
+    ['Décret  n° 2019-1088', 'DECRET', '2019-1088', 'Décret n° 2019-1088'],
+    ['De\u0301cret n° 2019-1088', 'DECRET', '2019-1088', 'Décret n° 2019-1088'], // NFD "é"
+    ['loi  organique nº 2020-1', 'LOI', '2020-1', 'Loi organique n° 2020-1'],
+    // LODA files organic laws under LOI: told apart by their title.
+    ['loi organique 2020-1', 'LOI', '2020-1', 'Loi organique n° 2020-1'],
+    ['arrêté 2021-5', 'ARRETE', '2021-5', 'Arrêté du 5 mai 2021'],
+    ['ordonnance 2016-131', 'ORDONNANCE', '2016-131', 'Ordonnance n° 2016-131'],
+  ])('parses "%s" as nature + number', async (input, nature, number, title) => {
+    const { result, calls } = runText(
+      { texts: [loi()], searchHits: [hit(LEGI, { title })] },
+      input,
+    );
     await result;
     expect(calls.searchLegislation[0]?.args[0]).toMatchObject({ nature, textNumber: number });
+  });
+
+  it('a number carried only by a text of another nature is invalid_input listing it', async () => {
+    const { result, calls } = runText(
+      { texts: [loi()], searchHits: [hit(LEGI, { title: 'Loi n° 78-17' })] },
+      'loi organique 78-17',
+    );
+    const err = await result.catch((e) => e);
+    expect(err).toMatchObject({ kind: 'invalid_input' });
+    expect(err.message).toContain('No loi organique 78-17 on Légifrance');
+    expect(err.message).toContain(`Loi n° 78-17 (${LEGI})`);
+    expect(calls.listChanges).toHaveLength(0);
   });
 
   it('a LEGITEXT id is read by LEGITEXT: textId stays the LEGITEXT', async () => {

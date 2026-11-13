@@ -108,6 +108,13 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
     expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
   });
 
+  it('loi "n° 78-17": the "n°" typed with the number is not part of it', async () => {
+    const { result, text } = await call({ nature: 'loi', number: 'n° 78-17' });
+    expect(result.isError).toBeFalsy();
+    expect(text).toContain(LOI_78_17);
+    expect(text).toContain(LOI_78_17_SOURCE);
+  });
+
   it('loi 78-17 articles: bounded pages, each with the header and the link, every article once', async () => {
     const client = await composedClient();
     const pages = await readAllPages(client, { nature: 'loi', number: '78-17', part: 'articles' });
@@ -256,12 +263,60 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
     expect(text).not.toMatch(/2999|2222/);
   });
 
+  it('loi organique 2001-692 (LOLF): found although LODA files it as LOI', async () => {
+    const { result, text } = await call({ nature: 'loi_organique', number: '2001-692' });
+    expect(result.isError).toBeFalsy();
+    expect(text).toContain(
+      '### Loi organique n° 2001-692 du 1 août 2001 relative aux lois de finances',
+    );
+    expect(text).toContain('LOI · Légifrance status: Vigueur · NOR ECOX0104681L');
+    expect(text).toContain('Published: 2001-08-02 (Journal officiel publication date)');
+    expect(text).toMatch(/^Version in force on \d{4}-\d{2}-\d{2} \(consolidated\)$/m);
+    expect(text).toContain('section_id');
+    expect(text).toContain('Source: https://www.legifrance.gouv.fr/loda/id/LEGITEXT000005631294');
+    expect(text).not.toMatch(/No loi organique|Several texts|carry that number/);
+  });
+
+  it('loi 78-17 by id on 1970-01-01: no version then, not "not found"', async () => {
+    const { result, text } = await call({ id: 'LEGITEXT000006068624', at_date: '1970-01-01' });
+    expect(result.isError).toBeFalsy();
+    expect(text).toContain('No text LEGITEXT000006068624 in force on 1970-01-01.');
+    expect(text).toContain(
+      "- Loi n° 78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers et aux libertés · LOI",
+    );
+    expect(text).toContain(
+      'Légifrance has no version of this text on 1970-01-01 — try a later at_date · id LEGITEXT000006068624 · https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006068624',
+    );
+    expect(text).not.toContain('on Légifrance. Check it');
+    expect(text).not.toContain('#### Art.');
+  });
+
   it('décret 2005-1309 by id on 2015-01-01: the version then in force', async () => {
     const { result, text } = await call({ id: 'LEGITEXT000006052581', at_date: '2015-01-01' });
     expect(result.isError).toBeFalsy();
     expect(text).toContain('Version in force on 2015-01-01 (consolidated)');
     expect(text).toContain('Légifrance status: Vigueur');
     expect(text).toContain('Source: https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006052581');
+  });
+
+  it('décret 2005-1309 on 2015-01-01: art. 82 has no in-force dates — text shown, never ✅, not counted', async () => {
+    // Fixture 118: 131 articles, 127 covering 2015-01-01 by their dates (the rule of the text's
+    // verdict); art. 82 is labelled VIGUEUR with a 2999 → 2999 window, i.e. no dates at all.
+    const outline = await call({ id: 'LEGITEXT000006052581', at_date: '2015-01-01' });
+    expect(outline.text).toContain('131 articles (127 in force on 2015-01-01)');
+
+    const client = await composedClient();
+    const pages = await readAllPages(client, {
+      id: 'LEGITEXT000006052581',
+      at_date: '2015-01-01',
+      part: 'articles',
+    });
+    for (const page of pages) expect(page).toContain('131 articles (127 in force on 2015-01-01)');
+    const all = pages.join('\n\n');
+    expect(all).toContain(
+      '#### Art. 82\nLégifrance gives no in-force dates for this article (VIGUEUR) · id LEGIARTI000006551791\na modifié les dispositions suivantes',
+    );
+    expect(all).not.toMatch(/✅[^\n]*· id LEGIARTI000006551791/);
   });
 
   it('is listed with its description, annotations and no output schema', async () => {
@@ -562,6 +617,96 @@ describe('renderGetText: texts that are not found, ambiguous or not in force', (
     );
   });
 
+  it('no version on the date: says so and points to a later at_date, no date invented', () => {
+    const text = outline(
+      {
+        kind: 'not_in_force',
+        input: 'LEGITEXT000000000001',
+        asOf: '1970-01-01',
+        candidates: [candidate({ verdict: 'no_version', on: null })],
+        more: false,
+      },
+      { id: 'LEGITEXT000000000001', atDate: '1970-01-01' },
+    );
+    expect(text).toBe(
+      [
+        'No text LEGITEXT000000000001 in force on 1970-01-01.',
+        '- Décret n° 2000-1 du 1er janvier 2000 · DECRET · NOR ABCD0000001D · Published 2000-01-02 · Légifrance has no version of this text on 1970-01-01 — try a later at_date · id LEGITEXT000000000001 · https://www.legifrance.gouv.fr/loda/id/LEGITEXT000000000001',
+        'To read it, pass its id with an at_date inside its validity.',
+      ].join('\n'),
+    );
+  });
+
+  it('every candidate undetermined: Légifrance gives no in-force dates, not "no text in force"', () => {
+    const undetermined = candidate({ verdict: 'undetermined', on: null });
+    const text = outline(
+      {
+        kind: 'not_in_force',
+        input: 'decret 2000-1',
+        asOf: TODAY,
+        candidates: [undetermined, { ...undetermined, textId: 'LEGITEXT000000000002' }],
+        more: false,
+      },
+      DECRET_2000_1,
+    );
+    expect(text.split('\n')[0]).toBe(
+      'Légifrance gives no in-force dates for décret 2000-1 on 2026-11-12.',
+    );
+    expect(text).not.toContain('No décret 2000-1 in force');
+    expect(text).toContain('in-force dates not determinable from Légifrance');
+    const mixed = outline(
+      {
+        kind: 'not_in_force',
+        input: 'decret 2000-1',
+        asOf: TODAY,
+        candidates: [undetermined, candidate({ textId: 'LEGITEXT000000000002' })],
+        more: false,
+      },
+      DECRET_2000_1,
+    );
+    expect(mixed.split('\n')[0]).toBe('No décret 2000-1 in force on 2026-11-12.');
+  });
+
+  it('another nature: the texts carrying the number, with ids and links, and how to read one', () => {
+    const text = outline(
+      {
+        kind: 'other_nature',
+        input: 'loi 2000-1',
+        number: '2000-1',
+        candidates: [hit(1), hit(2, { nor: null, publishedOn: null })],
+        more: false,
+      },
+      { nature: 'loi', number: '2000-1' },
+    );
+    expect(text).toBe(
+      [
+        'Légifrance files no loi numbered 2000-1; these texts carry that number:',
+        '- Décret n° 2000-1 du 1er janvier 2000 (1) · DECRET · NOR ABCD0000001D · Published 2000-01-02 · id LEGITEXT000000000001 · https://www.legifrance.gouv.fr/loda/id/LEGITEXT000000000001',
+        '- Décret n° 2000-1 du 1er janvier 2000 (2) · DECRET · id LEGITEXT000000000002 · https://www.legifrance.gouv.fr/loda/id/LEGITEXT000000000002',
+        'Pass one of these ids to read it.',
+      ].join('\n'),
+    );
+  });
+
+  it('another nature with more matches says so', () => {
+    const text = outline(
+      {
+        kind: 'other_nature',
+        input: 'loi organique 2000-1',
+        number: '2000-1',
+        candidates: [hit(1)],
+        more: true,
+      },
+      { nature: 'loi_organique', number: '2000-1' },
+    );
+    expect(text).toContain(
+      'Légifrance files no loi organique numbered 2000-1; these texts carry that number:',
+    );
+    expect(text).toContain(
+      'Légifrance lists more matches than shown; refine with nature or a Légifrance id.',
+    );
+  });
+
   it('not in force with more matches says so', () => {
     const text = outline({
       kind: 'not_in_force',
@@ -690,6 +835,35 @@ describe('renderGetText: a found text', () => {
     });
     expect(articles(foundText(r))).toContain(
       '#### Art. 1\n⛔ Not in force on 2026-11-12: in force 2010-01-01 → 2020-01-01 (ABROGE) · id LEGIARTI000000000001\n(Text not shown: not in force on 2026-11-12. Read it with an "at_date" inside its validity, or with legifrance_get_article and its id.)',
+    );
+  });
+
+  it('an article with no in-force dates: its text under that label, never ✅, not counted', () => {
+    const r = record({
+      articles: [
+        article(1),
+        article(82, {
+          validFrom: null,
+          validTo: null,
+          text: 'a modifié les dispositions suivantes',
+        }),
+      ],
+    });
+    const text = articles(foundText(r));
+    expect(text).toContain(
+      '#### Art. 82\nLégifrance gives no in-force dates for this article (VIGUEUR) · id LEGIARTI000000000082\na modifié les dispositions suivantes',
+    );
+    expect(text).toContain('2 articles (1 in force on 2026-11-12)');
+    expect(text.match(/✅/g)).toHaveLength(1);
+    expect(outline(foundText(r))).toContain('2 articles (1 in force on 2026-11-12)');
+  });
+
+  it('an article with no start date but an end before the date: ended, text withheld', () => {
+    const r = record({
+      articles: [article(1, { validFrom: null, validTo: '2020-01-01', rawStatus: 'ABROGE' })],
+    });
+    expect(articles(foundText(r))).toContain(
+      '#### Art. 1\n⛔ Not in force on 2026-11-12: ended 2020-01-01 (ABROGE) · id LEGIARTI000000000001\n(Text not shown: not in force on 2026-11-12.',
     );
   });
 

@@ -166,11 +166,14 @@ function headerOf(a: ArticleView): string {
   return lines.join('\n');
 }
 
-/** One neighbour on one line: the excerpt's line breaks and runs of spaces become single spaces. */
+/**
+ * One neighbour on one line: the excerpt's line breaks and runs of spaces become single spaces;
+ * "…" marks an excerpt cut short of the article's text.
+ */
 function neighbourLine(label: string, n: Neighbour | null): string {
   if (n === null) return `- ${label}: none`;
   const excerpt = n.excerpt.replace(/\s+/g, ' ').trim();
-  return `- ${label}: art. ${n.num || '?'} — ${excerpt}… · ${n.url}`;
+  return `- ${label}: art. ${n.num || '?'} — ${excerpt}${n.truncated ? '…' : ''} · ${n.url}`;
 }
 
 function trailerOf(a: ArticleView, opts: RenderOptions): string[] {
