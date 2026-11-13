@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGetArticleHistory } from '../../../src/services/legislation/history.js';
-import type { HistoryEntry } from '../../../src/services/legislation/ports.js';
+import type { ArticleRecord, HistoryEntry } from '../../../src/services/legislation/ports.js';
 import { VigueurError } from '../../../src/shared/errors.js';
 import { fakeLegislation, hitOf, lineage, makeArticle } from '../../helpers/fake-legislation.js';
 
@@ -37,6 +37,13 @@ const EVENTS: HistoryEntry[] = [
 const kindOf = (r: object) => ('kind' in r ? r.kind : 'history');
 
 describe('createGetArticleHistory', () => {
+  it('an article Légifrance places in no text → unexpected_response', async () => {
+    const { repo } = fakeLegislation({ articles: [{ ...(NEW as ArticleRecord), textId: null }] });
+    const run = createGetArticleHistory(repo, { today });
+    const err = await run({ code: 'Code civil', number: '1382' }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ kind: 'unexpected_response', details: { source: 'legifrance' } });
+  });
+
   it('returns versions in validFrom order and the concordance of first and current, per version', async () => {
     const { repo, calls } = fakeLegislation({
       articles: [NEW, OLD].filter((a) => a !== undefined),

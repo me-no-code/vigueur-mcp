@@ -106,6 +106,8 @@ export interface LegislationHit {
   kind: 'article' | 'text';
   id: string;
   textId: string;
+  /** The JORFTEXT cid shared by every consolidated container of one text; null when absent. */
+  textCid: string | null;
   title: string;
   articleNumber: string | null;
   status: LegalStatus;

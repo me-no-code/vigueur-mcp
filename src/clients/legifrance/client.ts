@@ -227,7 +227,7 @@ function mapArticle(a: Obj, asOf: IsoDate): ArticleRecord {
   const end = parseApiDate(a.dateFin);
   const validFrom = start.date ?? listed?.validFrom ?? null;
   if (validFrom === null) {
-    throw new VigueurError('upstream_unavailable', `Légifrance: article ${id} has no start date.`, {
+    throw new VigueurError('unexpected_response', `Légifrance: article ${id} has no start date.`, {
       source: 'legifrance',
     });
   }

@@ -255,7 +255,7 @@ export function ownSummary(record: ArticleRecord): VersionSummary {
   };
 }
 
-/** The article a search listed; Légifrance not returning it is an upstream failure. */
+/** The article a search listed; Légifrance not returning it is an unexpected response. */
 export async function fetchListed(
   repo: LegislationRepository,
   hit: ArticleHit,
@@ -265,8 +265,8 @@ export async function fetchListed(
   const record = await repo.getArticle(hit.id, asOf, ctx);
   if (record === null) {
     throw new VigueurError(
-      'upstream_unavailable',
-      `Légifrance lists article ${hit.num} (${hit.id}) but did not return it. Try again later.`,
+      'unexpected_response',
+      `Légifrance lists article ${hit.num} (${hit.id}) but did not return it.`,
       { source: 'legifrance' },
     );
   }

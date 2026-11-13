@@ -594,7 +594,7 @@ describe('getArticle', () => {
       reply('/consult/getArticle', article({ dateDebut: ms('2999-01-01'), articleVersions: [] })),
     ]);
     const err = await rejection(repo.getArticle('LEGIARTI000000000001', '2026-11-12'));
-    expect(err.kind).toBe('upstream_unavailable');
+    expect(err.kind).toBe('unexpected_response');
     expect(err.message).toBe('Légifrance: article LEGIARTI000000000001 has no start date.');
   });
 

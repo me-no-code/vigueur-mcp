@@ -168,7 +168,7 @@ export function createGetArticleHistory(
 
     if (record.textId === null) {
       throw new VigueurError(
-        'upstream_unavailable',
+        'unexpected_response',
         `Légifrance did not say which code article ${record.version.number} belongs to, so its history cannot be read.`,
         { source: 'legifrance' },
       );

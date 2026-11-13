@@ -8,8 +8,10 @@ import type {
   CodeInfo,
   Concordance,
   HistoryEntry,
+  LegislationHit,
   LegislationQuery,
   LegislationRepository,
+  TextRecord,
   VersionSummary,
 } from '../../src/services/legislation/ports.js';
 
@@ -185,6 +187,10 @@ export interface FakeLegislationSeed {
   concordance?: Readonly<Record<string, Concordance>>;
   /** `getArticleHistory` result by article cid (default `[]`). */
   history?: Readonly<Record<string, HistoryEntry[]>>;
+  /** Whole texts: `getText` / `getJorfText` serve them by id, `getJorfTextByNor` by NOR (`null` otherwise). */
+  texts?: readonly TextRecord[];
+  /** `searchLegislation` returns these hits (one page; default none). */
+  searchHits?: readonly LegislationHit[];
   /** Replaces the seeded behaviour of individual methods; calls are still recorded. */
   overrides?: Partial<LegislationRepository>;
 }
@@ -229,19 +235,23 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
       return structuredClone(seed.concordance?.[articleId] ?? { from: [], to: [] });
     },
     async searchLegislation(query) {
-      return { total: 0, page: query.page, pageSize: query.pageSize, hits: [] };
+      const hits = structuredClone([...(seed.searchHits ?? [])]);
+      return { total: hits.length, page: query.page, pageSize: query.pageSize, hits };
     },
     async listChanges() {
       return { entries: [], undeterminedCount: 0, detailMissingYears: [] };
     },
-    async getText() {
-      return null;
+    async getText(textId) {
+      const found = (seed.texts ?? []).find((t) => t.id === textId);
+      return found ? structuredClone(found) : null;
     },
-    async getJorfText() {
-      return null;
+    async getJorfText(textCid) {
+      const found = (seed.texts ?? []).find((t) => t.id === textCid || t.cid === textCid);
+      return found ? structuredClone(found) : null;
     },
-    async getJorfTextByNor() {
-      return null;
+    async getJorfTextByNor(nor) {
+      const found = (seed.texts ?? []).find((t) => t.nor === nor);
+      return found ? structuredClone(found) : null;
     },
     async latestJo() {
       return [];

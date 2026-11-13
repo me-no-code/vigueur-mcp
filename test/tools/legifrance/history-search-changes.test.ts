@@ -98,6 +98,7 @@ const hit = (n: number): LegislationHit => ({
   kind: 'article',
   id: `LEGIARTI${String(n).padStart(12, '0')}`,
   textId: 'LEGITEXT000006070721',
+  textCid: null,
   title: 'Code civil',
   articleNumber: String(n),
   status: 'in_force',

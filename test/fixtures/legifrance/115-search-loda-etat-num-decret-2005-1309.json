@@ -1,0 +1,147 @@
+{
+  "executionTime": 65,
+  "results": [
+    {
+      "titles": [
+        {
+          "id": "LEGITEXT000006052581_28-03-2007",
+          "cid": "JORFTEXT000000241445",
+          "title": "Décret n°2005-1309 du 20 octobre 2005 pris pour l'application de la loi n° 78-17 du 6 janvier 1978 relative à l'informatique, aux fichiers et aux libertés.",
+          "legalStatus": "VIGUEUR",
+          "startDate": "2005-10-22T00:00:00.000+0000",
+          "endDate": "2019-06-01T00:00:00.000+0000",
+          "nature": "DECRET"
+        }
+      ],
+      "text": null,
+      "type": "data_text_arti",
+      "nature": "DECRET",
+      "origin": null,
+      "etat": "VIGUEUR",
+      "solution": null,
+      "moreArticlesCount": 0,
+      "date": null,
+      "sections": [],
+      "num": "2005-1309",
+      "jorfText": null,
+      "numParution": null,
+      "datePublication": null,
+      "dossiersLegislatifs": [],
+      "nor": "JUSC0520586D",
+      "motsCles": [],
+      "appellations": [],
+      "idAttachment": null,
+      "sizeAttachment": null,
+      "moreArticle": false,
+      "additionalResult": {},
+      "raisonSociale": null,
+      "idcc": null,
+      "descriptionFusionHtml": null,
+      "dateSignature": null,
+      "dateDiffusion": null,
+      "reference": null,
+      "themes": [],
+      "conforme": false,
+      "resumePrincipal": [],
+      "autreResume": []
+    }
+  ],
+  "facets": [
+    {
+      "facetElem": "TEXT_LEGAL_STATUS",
+      "field": "textTitles.etat",
+      "values": {
+        "ABROGE": 1,
+        "ABROGE_DIFF": 0,
+        "ANNULE": 0,
+        "DENONCE": 0,
+        "DISJOINT": 0,
+        "INITIALE": 0,
+        "MODIFIE": 1,
+        "MODIFIE_MORT_NE": 0,
+        "PERIME": 0,
+        "REMPLACE": 0,
+        "SANS_ETAT": 0,
+        "SUBSTITUE": 0,
+        "TRANSFERE": 0,
+        "VIGUEUR": 0,
+        "VIGUEUR_DIFF": 0,
+        "VIGUEUR_ETEN": 0,
+        "VIGUEUR_NON_ETEN": 0
+      },
+      "childs": {},
+      "totalElement": 0
+    },
+    {
+      "facetElem": "ARTICLE_LEGAL_STATUS",
+      "field": "articles.etat",
+      "values": {
+        "ABROGE": 180,
+        "ABROGE_DIFF": 0,
+        "ANNULE": 0,
+        "DENONCE": 0,
+        "DEPLACE": 0,
+        "DISJOINT": 0,
+        "INITIALE": 0,
+        "MODIFIE": 196,
+        "MODIFIE_MORT_NE": 0,
+        "PERIME": 0,
+        "REMPLACE": 0,
+        "SANS_ETAT": 0,
+        "SUBSTITUE": 0,
+        "TRANSFERE": 10,
+        "VIGUEUR": 0,
+        "VIGUEUR_DIFF": 0,
+        "VIGUEUR_ETEN": 0,
+        "VIGUEUR_NON_ETEN": 0
+      },
+      "childs": {},
+      "totalElement": 386
+    },
+    {
+      "facetElem": "FOND",
+      "field": "origine",
+      "values": {
+        "ACCO": 405024,
+        "CETAT": 573613,
+        "CIRC": 10632,
+        "CNIL": 26883,
+        "CODE": 76,
+        "CONSTIT": 7423,
+        "JORF": 1132063,
+        "JUFI": 3514,
+        "JURI": 606350,
+        "KALI": 22275,
+        "LEGI": 119427
+      },
+      "childs": {},
+      "totalElement": 0
+    },
+    {
+      "facetElem": "TEXT_NATURE",
+      "field": "textTitles.nature",
+      "values": {
+        "ACCORD_FONCTION_PUBLIQUE": 0,
+        "ARRETE": 0,
+        "AVIS": 0,
+        "CIRCULAIRE": 0,
+        "CODE": 0,
+        "CONSTITUTION": 0,
+        "CONVENTION": 0,
+        "DECISION": 0,
+        "DECLARATION": 0,
+        "DECRET": 1,
+        "DECRET_LOI": 0,
+        "DELIBERATION": 0,
+        "LOI": 0,
+        "ORDONNANCE": 0
+      },
+      "childs": {},
+      "totalElement": 0
+    }
+  ],
+  "totalResultNumber": 1,
+  "totalArticleResultNumber": 0,
+  "typePagination": "ARTICLE",
+  "descriptionFusionHtml": null
+}

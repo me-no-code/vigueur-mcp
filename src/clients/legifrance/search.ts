@@ -187,6 +187,7 @@ const clean = (s: string) => cleanTitle(stripMarks(s));
 /** The text a result belongs to: the title entry carrying a LEGITEXT / JORFTEXT / KALITEXT id. */
 function textOf(result: Obj): {
   id: string;
+  cid: string | null;
   title: string;
   validFrom: IsoDate | null;
   validTo: IsoDate | null;
@@ -196,6 +197,7 @@ function textOf(result: Obj): {
     if (id !== null && TEXT_ID.test(id)) {
       return {
         id: stripIdSuffix(id),
+        cid: optStr(t, 'cid'),
         title: clean(str(t, 'title')),
         validFrom: parseApiDate(t.startDate).date,
         validTo: parseApiDate(t.endDate).date,
@@ -211,7 +213,14 @@ function mapResult(result: Obj, q: LegislationQuery): LegislationHit[] {
   const publishedOn = parseApiDate(result.datePublication).date;
   const nor = optStr(result, 'nor');
   const wanted = given(q.articleNumber) ? numKey(q.articleNumber) : null;
-  const common = { textId: text.id, title: text.title, nature, publishedOn, nor };
+  const common = {
+    textId: text.id,
+    textCid: text.cid,
+    title: text.title,
+    nature,
+    publishedOn,
+    nor,
+  };
 
   const hits: LegislationHit[] = [];
   let sawArticle = false;

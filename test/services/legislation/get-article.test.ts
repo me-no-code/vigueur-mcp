@@ -215,11 +215,11 @@ describe('createGetArticle — resolution outcomes', () => {
     expect(calls.getArticle.map((c) => c.args)).toEqual([[L1234_1_TRAVAIL.version.id, TODAY]]);
   });
 
-  it('fails as upstream_unavailable when a listed hit cannot be fetched', async () => {
+  it('fails as unexpected_response when a listed hit cannot be fetched (Légifrance answered)', async () => {
     const { getArticle } = setup({ overrides: { getArticle: async () => null } });
-    await expect(getArticle({ code: 'Code civil', number: '1240' })).rejects.toMatchObject({
-      kind: 'upstream_unavailable',
-    });
+    const err = await getArticle({ code: 'Code civil', number: '1240' }).catch((e: unknown) => e);
+    expect(err).toMatchObject({ kind: 'unexpected_response', details: { source: 'legifrance' } });
+    expect((err as Error).message).not.toContain('Try again');
   });
 
   it('reports a repealed article as not in force, never as not found', async () => {

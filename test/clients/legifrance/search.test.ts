@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
 import type { LegislationQuery } from '../../../src/services/legislation/ports.js';
@@ -91,6 +92,71 @@ describe('searchLegislation request', () => {
       id: 'LEGITEXT000006068624',
       status: 'in_force',
       nature: 'LOI',
+    });
+  });
+
+  it('lists both LEGITEXT containers of a repealed decree in the in-force search, without dates', async () => {
+    const { repo } = setup('114-search-loda-date-num-decret-2005-1309');
+    const page = await repo.searchLegislation({
+      ...base,
+      collection: 'loda',
+      textNumber: '2005-1309',
+      nature: 'DECRET',
+    });
+    expect(page.total).toBe(2);
+    expect(page.hits).toHaveLength(2);
+    expect(page.hits[0]).toMatchObject({
+      textId: 'LEGITEXT000006052580',
+      status: 'amended',
+      validFrom: null,
+      validTo: null,
+    });
+    expect(page.hits[1]).toMatchObject({
+      textId: 'LEGITEXT000006052581',
+      status: 'repealed',
+      validFrom: null,
+      validTo: null,
+    });
+    expect(page.hits.map((h) => h.textCid)).toEqual([
+      'JORFTEXT000000241445',
+      'JORFTEXT000000241445',
+    ]);
+    const raw = JSON.parse(
+      readFileSync(
+        'test/fixtures/legifrance/114-search-loda-date-num-decret-2005-1309.json',
+        'utf8',
+      ),
+    ) as { results: Array<{ titles: Array<{ cid: string }> }> };
+    expect(raw.results.map((r) => r.titles[0]?.cid)).toEqual([
+      'JORFTEXT000000241445',
+      'JORFTEXT000000241445',
+    ]);
+  });
+
+  it('finds the repealed decree in the historical loda fond with its dates', async () => {
+    const { repo, calls } = setup('115-search-loda-etat-num-decret-2005-1309');
+    const page = await repo.searchLegislation({
+      ...base,
+      collection: 'loda',
+      includeHistorical: true,
+      textNumber: '2005-1309',
+      nature: 'DECRET',
+    });
+    expect(bodyOf(calls)).toMatchObject({
+      fond: 'LODA_ETAT',
+      recherche: {
+        champs: [champ('NUM', 'EXACTE', '2005-1309')],
+        filtres: [{ facette: 'TEXT_NATURE', valeurs: ['DECRET'] }],
+      },
+    });
+    expect(page.total).toBe(1);
+    // Légifrance labels it VIGUEUR although its dates end in 2019: the dates are authoritative.
+    expect(page.hits).toHaveLength(1);
+    expect(page.hits[0]).toMatchObject({
+      textId: 'LEGITEXT000006052581',
+      status: 'in_force',
+      validFrom: '2005-10-22',
+      validTo: '2019-06-01',
     });
   });
 
