@@ -188,6 +188,43 @@ export interface TextRecord {
   articles: TextArticle[];
 }
 
+export interface TocArticle {
+  id: string;
+  cid: string;
+  num: string | null;
+  status: LegalStatus;
+  rawStatus: string;
+}
+
+export interface TocNode {
+  cid: string;
+  title: string;
+  status: LegalStatus;
+  validFrom: IsoDate | null;
+  validTo: IsoDate | null;
+  children: TocNode[];
+  articles: TocArticle[];
+}
+
+/** A code's table of contents as of a date, in official order. */
+export interface CodeToc {
+  codeId: string;
+  codeTitle: string;
+  asOf: IsoDate;
+  root: TocNode;
+}
+
+export interface SectionLinks {
+  cid: string;
+  title: string;
+  articles: Array<{
+    id: string;
+    status: LegalStatus;
+    validFrom: IsoDate | null;
+    validTo: IsoDate | null;
+  }>;
+}
+
 export interface LegislationRepository {
   listCodes(ctx?: CallContext): Promise<CodeInfo[]>;
   /** Versions in force on `date` numbered `num`, in one code or (codeTitle null) in every code. */
@@ -217,4 +254,8 @@ export interface LegislationRepository {
   getJorfText(textCid: string, ctx?: CallContext): Promise<TextRecord | null>;
   /** The JORF text carrying this NOR; `null` when unknown. */
   getJorfTextByNor(nor: string, ctx?: CallContext): Promise<TextRecord | null>;
+  /** A code's table of contents on `asOf` (compact, cached). */
+  getCodeToc(codeId: string, asOf: IsoDate, ctx?: CallContext): Promise<CodeToc>;
+  /** Article links of a section (version valid today); `null` for a root LEGITEXT. */
+  getSectionLinks(sectionCid: string, ctx?: CallContext): Promise<SectionLinks | null>;
 }

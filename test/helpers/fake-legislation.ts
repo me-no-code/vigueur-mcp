@@ -156,6 +156,8 @@ export interface RepositoryArgs {
   getText: [textId: string, asOf: IsoDate];
   getJorfText: [textCid: string];
   getJorfTextByNor: [nor: string];
+  getCodeToc: [codeId: string, asOf: IsoDate];
+  getSectionLinks: [sectionCid: string];
 }
 
 export interface RecordedCall<A> {
@@ -237,6 +239,21 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     async getJorfTextByNor() {
       return null;
     },
+    async getCodeToc(codeId, asOf) {
+      const root = {
+        cid: codeId,
+        title: '',
+        status: 'in_force' as const,
+        validFrom: null,
+        validTo: null,
+        children: [],
+        articles: [],
+      };
+      return { codeId, codeTitle: '', asOf, root };
+    },
+    async getSectionLinks() {
+      return null;
+    },
   };
   const impl: LegislationRepository = { ...seeded, ...seed.overrides };
 
@@ -252,6 +269,8 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     getText: [],
     getJorfText: [],
     getJorfTextByNor: [],
+    getCodeToc: [],
+    getSectionLinks: [],
   };
 
   const repo: LegislationRepository = {
@@ -298,6 +317,14 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     getJorfTextByNor(nor, ctx) {
       calls.getJorfTextByNor.push({ args: [nor], ctx });
       return impl.getJorfTextByNor(nor, ctx);
+    },
+    getCodeToc(codeId, asOf, ctx) {
+      calls.getCodeToc.push({ args: [codeId, asOf], ctx });
+      return impl.getCodeToc(codeId, asOf, ctx);
+    },
+    getSectionLinks(sectionCid, ctx) {
+      calls.getSectionLinks.push({ args: [sectionCid], ctx });
+      return impl.getSectionLinks(sectionCid, ctx);
     },
   };
 

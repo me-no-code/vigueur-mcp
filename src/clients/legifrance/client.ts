@@ -33,6 +33,7 @@ import {
 import { searchLegislation } from './search.js';
 import { mapPisteStatus } from './status-map.js';
 import { getJorfText, getJorfTextByNor, getText } from './texts.js';
+import { createTocClient } from './toc.js';
 import { cleanTitle, htmlToText, parseApiDate, stripIdSuffix, stripMarks } from './wire.js';
 
 const DEFAULT_CODES_TTL_MS = 24 * 60 * 60 * 1000;
@@ -344,6 +345,7 @@ export function createLegifranceClient(
 ): LegislationRepository {
   const now = opts.now ?? (() => new Date());
   const codesTtlMs = opts.codesTtlMs ?? DEFAULT_CODES_TTL_MS;
+  const toc = createTocClient(http, now);
   let codes: { fetchedAt: number; list: CodeInfo[] } | null = null;
 
   const post = <T>(
@@ -405,6 +407,14 @@ export function createLegifranceClient(
 
     getJorfTextByNor(nor, ctx) {
       return getJorfTextByNor(http, nor, ctx);
+    },
+
+    getCodeToc(codeId, asOf, ctx) {
+      return toc.getCodeToc(codeId, asOf, ctx);
+    },
+
+    getSectionLinks(sectionCid, ctx) {
+      return toc.getSectionLinks(sectionCid, ctx);
     },
 
     getConcordance(articleId, ctx) {
