@@ -168,6 +168,36 @@ export interface TextSection {
 }
 
 /** A whole law, decree or JORF text, sections and articles in official order. */
+/** One text listed in a Journal officiel issue; empty wire strings are `null`. */
+export interface JoText {
+  id: string;
+  title: string;
+  nature: string | null;
+  ministry: string | null;
+  emitter: string | null;
+}
+
+/** The texts of one level of an issue's table of contents; `path` runs outer to inner. */
+export interface JoGroup {
+  path: string[];
+  texts: JoText[];
+}
+
+/** A Journal officiel issue; `publishedOn` is the publication date. `groups` is null when not read. */
+export interface JoIssue {
+  id: string;
+  title: string;
+  number: string | null;
+  publishedOn: IsoDate | null;
+  eliPath: string | null;
+  groups: JoGroup[] | null;
+}
+
+export interface FacetValue {
+  value: string;
+  count: number;
+}
+
 export interface TextRecord {
   id: string;
   cid: string;
@@ -254,6 +284,18 @@ export interface LegislationRepository {
   getJorfText(textCid: string, ctx?: CallContext): Promise<TextRecord | null>;
   /** The JORF text carrying this NOR; `null` when unknown. */
   getJorfTextByNor(nor: string, ctx?: CallContext): Promise<TextRecord | null>;
+  /** The latest `count` (1 to 10) issues of the Journal officiel, newest first, with their texts. */
+  latestJo(count: number, ctx?: CallContext): Promise<JoIssue[]>;
+  /** Issues published in `from..to` (inclusive); `groups` is null: read one with `joIssue`. */
+  joIssuesBetween(from: IsoDate, to: IsoDate, ctx?: CallContext): Promise<JoIssue[]>;
+  /** One issue with its texts; `null` when unknown. */
+  joIssue(id: string, ctx?: CallContext): Promise<JoIssue | null>;
+  /** Natures and emitters of the JORF texts published in `from..to`, by count then value. */
+  jorfFacets(
+    from: IsoDate,
+    to: IsoDate,
+    ctx?: CallContext,
+  ): Promise<{ natures: FacetValue[]; emitters: FacetValue[] }>;
   /** A code's table of contents on `asOf` (compact, cached). */
   getCodeToc(codeId: string, asOf: IsoDate, ctx?: CallContext): Promise<CodeToc>;
   /** Article links of a section (version valid today); `null` for a root LEGITEXT. */

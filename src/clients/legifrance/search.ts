@@ -98,6 +98,30 @@ function buildChamps(q: LegislationQuery) {
   return champs;
 }
 
+const publicationDates = (start: IsoDate, end: IsoDate): Filter => ({
+  facette: 'DATE_PUBLICATION',
+  dates: { start, end },
+});
+
+/**
+ * The one JORF body without a text criterion: `*` on champ ALL matches everything, so the
+ * answer is carried by the filters and the facets.
+ */
+export function buildJorfFilterOnlyBody(start: IsoDate, end: IsoDate, pageSize: number) {
+  return {
+    fond: 'JORF',
+    recherche: {
+      champs: [champ('ALL', 'UN_DES_MOTS', '*')],
+      filtres: [publicationDates(start, end)],
+      pageNumber: 1,
+      pageSize,
+      operateur: 'ET',
+      sort: 'PUBLICATION_DATE_DESC',
+      typePagination: 'DEFAUT',
+    },
+  };
+}
+
 function buildFond(q: LegislationQuery): { fond: string; filtres: Filter[] } {
   const filtres: Filter[] = [];
   const historical = q.includeHistorical;
@@ -123,10 +147,7 @@ function buildFond(q: LegislationQuery): { fond: string; filtres: Filter[] } {
     case 'jorf':
       if (given(q.nature)) filtres.push({ facette: 'NATURE', valeurs: [q.nature.trim()] });
       if (q.publishedFrom !== undefined || q.publishedTo !== undefined) {
-        filtres.push({
-          facette: 'DATE_PUBLICATION',
-          dates: { start: q.publishedFrom ?? '1800-01-01', end: q.publishedTo ?? q.atDate },
-        });
+        filtres.push(publicationDates(q.publishedFrom ?? '1800-01-01', q.publishedTo ?? q.atDate));
       }
       return { fond: 'JORF', filtres };
     case 'kali':

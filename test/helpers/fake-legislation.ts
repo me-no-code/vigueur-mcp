@@ -156,6 +156,10 @@ export interface RepositoryArgs {
   getText: [textId: string, asOf: IsoDate];
   getJorfText: [textCid: string];
   getJorfTextByNor: [nor: string];
+  latestJo: [count: number];
+  joIssuesBetween: [from: IsoDate, to: IsoDate];
+  joIssue: [id: string];
+  jorfFacets: [from: IsoDate, to: IsoDate];
   getCodeToc: [codeId: string, asOf: IsoDate];
   getSectionLinks: [sectionCid: string];
 }
@@ -239,6 +243,18 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     async getJorfTextByNor() {
       return null;
     },
+    async latestJo() {
+      return [];
+    },
+    async joIssuesBetween() {
+      return [];
+    },
+    async joIssue() {
+      return null;
+    },
+    async jorfFacets() {
+      return { natures: [], emitters: [] };
+    },
     async getCodeToc(codeId, asOf) {
       const root = {
         cid: codeId,
@@ -269,6 +285,10 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     getText: [],
     getJorfText: [],
     getJorfTextByNor: [],
+    latestJo: [],
+    joIssuesBetween: [],
+    joIssue: [],
+    jorfFacets: [],
     getCodeToc: [],
     getSectionLinks: [],
   };
@@ -317,6 +337,22 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     getJorfTextByNor(nor, ctx) {
       calls.getJorfTextByNor.push({ args: [nor], ctx });
       return impl.getJorfTextByNor(nor, ctx);
+    },
+    latestJo(count, ctx) {
+      calls.latestJo.push({ args: [count], ctx });
+      return impl.latestJo(count, ctx);
+    },
+    joIssuesBetween(from, to, ctx) {
+      calls.joIssuesBetween.push({ args: [from, to], ctx });
+      return impl.joIssuesBetween(from, to, ctx);
+    },
+    joIssue(id, ctx) {
+      calls.joIssue.push({ args: [id], ctx });
+      return impl.joIssue(id, ctx);
+    },
+    jorfFacets(from, to, ctx) {
+      calls.jorfFacets.push({ args: [from, to], ctx });
+      return impl.jorfFacets(from, to, ctx);
     },
     getCodeToc(codeId, asOf, ctx) {
       calls.getCodeToc.push({ args: [codeId, asOf], ctx });

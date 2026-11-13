@@ -16,6 +16,7 @@ import type {
 import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
 import { listChanges } from './chrono.js';
+import { getJoIssue, getJoIssuesBetween, getJorfFacets, getLatestJo } from './jo.js';
 import {
   asObj,
   cleanNum,
@@ -407,6 +408,22 @@ export function createLegifranceClient(
 
     getJorfTextByNor(nor, ctx) {
       return getJorfTextByNor(http, nor, ctx);
+    },
+
+    latestJo(count, ctx) {
+      return getLatestJo(http, count, ctx);
+    },
+
+    joIssuesBetween(from, to, ctx) {
+      return getJoIssuesBetween(http, from, to, ctx);
+    },
+
+    joIssue(id, ctx) {
+      return getJoIssue(http, id, ctx);
+    },
+
+    jorfFacets(from, to, ctx) {
+      return getJorfFacets(http, from, to, ctx);
     },
 
     getCodeToc(codeId, asOf, ctx) {
