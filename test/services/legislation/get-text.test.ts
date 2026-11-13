@@ -398,7 +398,7 @@ describe('getText by nature and number', () => {
     expect(calls.getText).toHaveLength(0);
   });
 
-  it('two in-force hits sharing one cid (décret 2005-1309 in production) → ambiguous, no fallback', async () => {
+  it('two in-force hits with no cid and different ids are two texts → ambiguous, no fallback', async () => {
     const a = {
       ...hit(LOI),
       title: 'Décret 2005-1309',

@@ -169,7 +169,6 @@ export interface TextSection {
   articles: TextArticle[];
 }
 
-/** A whole law, decree or JORF text, sections and articles in official order. */
 /** One text listed in a Journal officiel issue; empty wire strings are `null`. */
 export interface JoText {
   id: string;
@@ -200,6 +199,7 @@ export interface FacetValue {
   count: number;
 }
 
+/** A whole law, decree or JORF text, sections and articles in official order. */
 export interface TextRecord {
   id: string;
   cid: string;

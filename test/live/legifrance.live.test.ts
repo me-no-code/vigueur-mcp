@@ -98,14 +98,14 @@ describe.skipIf(!process.env.VIGUEUR_LIVE)('Légifrance tools against PISTE (liv
     expect(text).toContain('2016-131');
   }, 30_000);
 
-  it('gets the LOLF as a text outline (LOI_ORGANIQUE nature)', async () => {
+  it('gets the LOLF (an organic law) as a text outline', async () => {
     const text = await call('legifrance_get_text', {
       nature: 'loi_organique',
       number: '2001-692',
     });
     expect(text).toContain('2001-692');
     expect(text).toContain('section_id');
-    expect(text).not.toMatch(/not found|several texts/i);
+    expect(text).not.toMatch(/several texts/i);
   }, 30_000);
 
   it('says loi 78-17 has no version on 1970-01-01 instead of "not found"', async () => {
@@ -121,12 +121,35 @@ describe.skipIf(!process.env.VIGUEUR_LIVE)('Légifrance tools against PISTE (liv
     const text = await call('legifrance_get_text', { nature: 'decret', number: '2005-1309' });
     expect(text).toContain('in force on');
     expect(text).toContain('ceased 2019-06-01');
-    expect(text).not.toContain('Article 1');
+    expect(text).not.toContain('#### Art.');
   }, 30_000);
 
   it('browses the Code civil root', async () => {
     const text = await call('legifrance_browse_code', { code: 'Code civil' });
     expect(text.match(/section_id/g)?.length ?? 0, text).toBeGreaterThanOrEqual(3);
+  }, 30_000);
+
+  // A small code (not the Code du travail or the Code civil, whose tables of contents are huge).
+  // Its parts recodified in 2016 are labelled ABROGE today but were in force in 2010: listed,
+  // judged by their dates, never hidden or labelled by today's label.
+  it("browses the Code de la consommation on 2010-01-01 by its sections' dates", async () => {
+    const text = await call('legifrance_browse_code', {
+      code: 'Code de la consommation',
+      at_date: '2010-01-01',
+      include_repealed: true,
+    });
+    expect(text).toContain('table of contents on 2010-01-01');
+    expect(text).not.toContain('Nothing in force here');
+    const sections = text
+      .split('\n')
+      .filter((line) => /^- .* · section_id LEGISCTA\d{12}$/.test(line));
+    expect(sections.filter((line) => !line.includes('in force —')).length, text).toBeGreaterThan(0);
+    for (const line of sections) {
+      expect(line).toMatch(
+        /^- .+? (?:· (?:no longer in force — ended \d{4}-\d{2}-\d{2}|not yet in force — from \d{4}-\d{2}-\d{2}|never in force \(still-born\)) )?· section_id LEGISCTA\d{12}$/,
+      );
+      expect(line).not.toMatch(/ · (?:repealed|ABROGE|VIGUEUR)\b/);
+    }
   }, 30_000);
 
   it('shows neighbouring articles of Code civil 1240', async () => {

@@ -8,6 +8,14 @@ import { describe, expect, it } from 'vitest';
 // Spawns the built entry point: run `npm run build` first (`npm test` does it via pretest).
 const ENTRY = fileURLToPath(new URL('../dist/index.js', import.meta.url));
 
+/**
+ * A healthy server answers in well under a second. The kill timer is generous because a second
+ * `npm test` running at the same time rebuilds `dist/` (its pretest) while this one spawns it.
+ */
+const KILL_AFTER_MS = 30_000;
+/** Each test may wait for the kill timer, plus room to report why. */
+const TEST_TIMEOUT_MS = KILL_AFTER_MS + 5_000;
+
 /** The test process environment without any PISTE_* variable. */
 function envWithoutPiste(): Record<string, string> {
   const env: Record<string, string> = {};
@@ -24,10 +32,14 @@ interface InitializeExchange {
 }
 
 /** Sends one raw `initialize` line, waits for the `id: 1` response, then closes stdin. */
-function initializeOverStdio(env: Record<string, string>): Promise<InitializeExchange> {
+function initializeOverStdio(
+  env: Record<string, string>,
+  args: string[] = [ENTRY],
+): Promise<InitializeExchange> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [ENTRY], { env, stdio: ['pipe', 'pipe', 'pipe'] });
-    const killTimer = setTimeout(() => child.kill('SIGKILL'), 10_000);
+    const started = performance.now();
+    const child = spawn(process.execPath, args, { env, stdio: ['pipe', 'pipe', 'pipe'] });
+    const killTimer = setTimeout(() => child.kill('SIGKILL'), KILL_AFTER_MS);
     let stdout = '';
     let stderr = '';
     let response: InitializeExchange['response'] | undefined;
@@ -54,10 +66,17 @@ function initializeOverStdio(env: Record<string, string>): Promise<InitializeExc
       }
     });
     child.on('error', reject);
-    child.on('close', () => {
+    // A child that dies early closes its stdin under our write: reported by 'close' below.
+    child.stdin.on('error', () => {});
+    child.on('close', (code, signal) => {
       clearTimeout(killTimer);
       if (!response) {
-        reject(new Error(`no initialize response; stdout=${stdout} stderr=${stderr}`));
+        const elapsed = Math.round(performance.now() - started);
+        reject(
+          new Error(
+            `no initialize response after ${elapsed} ms (exit code ${code ?? 'none'}, signal ${signal ?? 'none'}); stdout=${stdout} stderr=${stderr}`,
+          ),
+        );
         return;
       }
       resolve({ stdoutLines: stdout.split('\n').filter((l) => l.trim() !== ''), stderr, response });
@@ -79,45 +98,70 @@ function initializeOverStdio(env: Record<string, string>): Promise<InitializeExc
 }
 
 describe('stdio entry point', () => {
-  it('unconfigured: answers initialize and writes nothing but JSON-RPC to stdout', async () => {
-    const { stdoutLines, stderr, response } = await initializeOverStdio(envWithoutPiste());
+  it(
+    'a server that exits without answering is reported with its run time and exit code',
+    async () => {
+      const error = await initializeOverStdio(envWithoutPiste(), ['-e', 'process.exit(3)']).catch(
+        (e: unknown) => e,
+      );
+      expect(String(error)).toMatch(
+        /no initialize response after \d+ ms \(exit code 3, signal none\); stdout= stderr=/,
+      );
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-    for (const line of stdoutLines) expect(() => JSON.parse(line)).not.toThrow();
-    expect(response.result?.serverInfo?.name).toBe('vigueur');
-    expect(stderr).toContain('ready on stdio');
-    expect(stderr).toContain('PISTE not configured');
-  });
+  it(
+    'unconfigured: answers initialize and writes nothing but JSON-RPC to stdout',
+    async () => {
+      const { stdoutLines, stderr, response } = await initializeOverStdio(envWithoutPiste());
 
-  it('configured: never echoes the credentials on stdout or stderr', async () => {
-    const { stdoutLines, stderr, response } = await initializeOverStdio({
-      ...envWithoutPiste(),
-      PISTE_CLIENT_ID: 'smoke-id',
-      PISTE_CLIENT_SECRET: 'smoke-secret-xyz',
-      PISTE_ENV: 'sandbox',
-    });
+      for (const line of stdoutLines) expect(() => JSON.parse(line)).not.toThrow();
+      expect(response.result?.serverInfo?.name).toBe('vigueur');
+      expect(stderr).toContain('ready on stdio');
+      expect(stderr).toContain('PISTE not configured');
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-    for (const line of stdoutLines) expect(() => JSON.parse(line)).not.toThrow();
-    expect(response.result?.serverInfo?.name).toBe('vigueur');
-    const output = `${stdoutLines.join('\n')}\n${stderr}`;
-    expect(output).not.toContain('smoke-secret-xyz');
-    expect(output).not.toContain('smoke-id');
-    expect(stderr).toContain('PISTE env: sandbox');
-  });
+  it(
+    'configured: never echoes the credentials on stdout or stderr',
+    async () => {
+      const { stdoutLines, stderr, response } = await initializeOverStdio({
+        ...envWithoutPiste(),
+        PISTE_CLIENT_ID: 'smoke-id',
+        PISTE_CLIENT_SECRET: 'smoke-secret-xyz',
+        PISTE_ENV: 'sandbox',
+      });
 
-  it('serves an SDK stdio client: lists vigueur_status', async () => {
-    const transport = new StdioClientTransport({
-      command: process.execPath,
-      args: [ENTRY],
-      env: envWithoutPiste(),
-      stderr: 'pipe',
-    });
-    const client = new Client({ name: 'stdio-test', version: '1.0.0' });
-    await client.connect(transport);
-    try {
-      const { tools } = await client.listTools();
-      expect(tools.map((t) => t.name)).toEqual(['vigueur_status']);
-    } finally {
-      await client.close();
-    }
-  });
+      for (const line of stdoutLines) expect(() => JSON.parse(line)).not.toThrow();
+      expect(response.result?.serverInfo?.name).toBe('vigueur');
+      const output = `${stdoutLines.join('\n')}\n${stderr}`;
+      expect(output).not.toContain('smoke-secret-xyz');
+      expect(output).not.toContain('smoke-id');
+      expect(stderr).toContain('PISTE env: sandbox');
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'serves an SDK stdio client: lists vigueur_status',
+    async () => {
+      const transport = new StdioClientTransport({
+        command: process.execPath,
+        args: [ENTRY],
+        env: envWithoutPiste(),
+        stderr: 'pipe',
+      });
+      const client = new Client({ name: 'stdio-test', version: '1.0.0' });
+      await client.connect(transport);
+      try {
+        const { tools } = await client.listTools();
+        expect(tools.map((t) => t.name)).toEqual(['vigueur_status']);
+      } finally {
+        await client.close();
+      }
+    },
+    TEST_TIMEOUT_MS,
+  );
 });
