@@ -1,0 +1,91 @@
+{
+  "executionTime": 9,
+  "results": [
+    {
+      "titles": [
+        {
+          "id": "CNILTEXT000053716494",
+          "cid": "CNILTEXT000053716494",
+          "title": "Délibération n° 2026-023 du 12 mars 2026 portant avis sur un projet de loi renforçant la sécurité du quotidien",
+          "legalStatus": null,
+          "startDate": null,
+          "endDate": null,
+          "nature": null
+        }
+      ],
+      "text": null,
+      "type": "data_cnil",
+      "nature": "deliberation",
+      "origin": "CNIL",
+      "etat": "VIGUEUR",
+      "solution": null,
+      "moreArticlesCount": 0,
+      "date": null,
+      "sections": [],
+      "num": "<mark>2026-023</mark>",
+      "jorfText": null,
+      "numParution": null,
+      "datePublication": "2026-03-26T00:00:00.000+0000",
+      "dossiersLegislatifs": [],
+      "nor": null,
+      "motsCles": [],
+      "appellations": [],
+      "idAttachment": null,
+      "sizeAttachment": null,
+      "moreArticle": false,
+      "additionalResult": {},
+      "raisonSociale": null,
+      "idcc": null,
+      "descriptionFusionHtml": null,
+      "dateSignature": null,
+      "dateDiffusion": null,
+      "reference": null,
+      "themes": [],
+      "conforme": false,
+      "resumePrincipal": [],
+      "autreResume": []
+    }
+  ],
+  "facets": [
+    {
+      "facetElem": "NATURE_DELIB",
+      "field": "natureDelib",
+      "values": {
+        "Avis": 1
+      },
+      "childs": {},
+      "totalElement": 0
+    },
+    {
+      "facetElem": "TYPE",
+      "field": "nature",
+      "values": {
+        "Délibération": 1
+      },
+      "childs": {},
+      "totalElement": 0
+    },
+    {
+      "facetElem": "FOND",
+      "field": "origine",
+      "values": {
+        "ACCO": 405024,
+        "CETAT": 573613,
+        "CIRC": 10632,
+        "CNIL": 26883,
+        "CONSTIT": 7423,
+        "JORF": 1132063,
+        "JUFI": 3514,
+        "JURI": 606350,
+        "KALI": 22275,
+        "LEGI": 119503
+      },
+      "childs": {},
+      "totalElement": 0
+    }
+  ],
+  "totalResultNumber": 1,
+  "totalArticleResultNumber": 0,
+  "typePagination": "DEFAUT",
+  "descriptionFusionHtml": null
+}

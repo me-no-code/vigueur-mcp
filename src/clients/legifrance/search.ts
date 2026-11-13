@@ -80,7 +80,8 @@ function validate(q: LegislationQuery): void {
   }
 }
 
-function champ(typeChamp: string, typeRecherche: string, valeur: string) {
+/** One search field with a single criterion. */
+export function champ(typeChamp: string, typeRecherche: string, valeur: string) {
   return {
     typeChamp,
     criteres: [{ typeRecherche, valeur: valeur.trim(), operateur: 'ET' }],

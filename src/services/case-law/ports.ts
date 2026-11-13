@@ -1,5 +1,6 @@
 import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
+import type { CaseLawCollection } from '../../domain/decisions.js';
 import type { CallContext } from '../legislation/ports.js';
 
 export type { CallContext } from '../legislation/ports.js';
@@ -128,4 +129,54 @@ export interface JudilibreRepository {
     context: JudilibreJurisdiction,
     ctx?: CallContext,
   ): Promise<TaxonomyEntry[]>;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Légifrance case law (JURI, CETAT, CONSTIT, CNIL, JUFI)
+
+export interface CaseLawQuery {
+  collection: CaseLawCollection;
+  text?: string;
+  /** Normalised (`normalizeCaseNumber`). */
+  number?: string;
+  /** Normalised (`normalizeEcli`). */
+  ecli?: string;
+  dateFrom?: IsoDate;
+  dateTo?: IsoDate;
+  /** Judicial only. */
+  court?: 'cassation' | 'appeal' | 'first_instance';
+  /** Judicial only. */
+  chamber?: CassChamber;
+  /** Judicial, administrative and financial. */
+  publication?: 'published' | 'unpublished';
+  sort: 'relevance' | 'newest' | 'oldest';
+  /** 1-based. */
+  page: number;
+  /** 1..100. */
+  pageSize: number;
+}
+
+export interface CaseLawHit {
+  id: string;
+  collection: CaseLawCollection;
+  title: string;
+  court: string | null;
+  chamber: string | null;
+  nature: string | null;
+  decisionDate: IsoDate | null;
+  numbers: string[];
+  publication: string | null;
+  solution: string | null;
+  snippet: string | null;
+}
+
+export interface CaseLawSearchPage {
+  total: number;
+  page: number;
+  pageSize: number;
+  hits: CaseLawHit[];
+}
+
+export interface CaseLawRepository {
+  searchCaseLaw(q: CaseLawQuery, ctx?: CallContext): Promise<CaseLawSearchPage>;
 }

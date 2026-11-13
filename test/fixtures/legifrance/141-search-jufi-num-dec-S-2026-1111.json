@@ -1,0 +1,100 @@
+{
+  "executionTime": 17,
+  "results": [
+    {
+      "titles": [
+        {
+          "id": "JUFITEXT000055005642",
+          "cid": "JUFITEXT000055005642",
+          "title": "COUR DES COMPTES - CHAMBRE DU CONTENTIEUX - Arrêt - 16/10/2026 - Commune de Grand-Champ (Morbihan) - Affaire n° 162 - n° S-2026-1111",
+          "legalStatus": null,
+          "startDate": null,
+          "endDate": null,
+          "nature": null
+        }
+      ],
+      "text": null,
+      "type": "data_juri",
+      "nature": "arret",
+      "origin": "JUFI",
+      "etat": null,
+      "solution": null,
+      "moreArticlesCount": 0,
+      "date": null,
+      "sections": [],
+      "num": null,
+      "jorfText": null,
+      "numParution": null,
+      "datePublication": null,
+      "dossiersLegislatifs": [],
+      "nor": null,
+      "motsCles": [],
+      "appellations": [],
+      "idAttachment": null,
+      "sizeAttachment": null,
+      "moreArticle": false,
+      "additionalResult": {},
+      "raisonSociale": null,
+      "idcc": null,
+      "descriptionFusionHtml": null,
+      "dateSignature": null,
+      "dateDiffusion": null,
+      "reference": null,
+      "themes": [],
+      "conforme": false,
+      "resumePrincipal": [],
+      "autreResume": []
+    }
+  ],
+  "facets": [
+    {
+      "facetElem": "JURIDICTION_NATURE",
+      "field": "natureJuridiction",
+      "values": {
+        "Cour d'appel financière": 0,
+        "Chambres régionales ou territoriales des comptes": 0,
+        "Tribunaux administratifs": 0,
+        "Cour de discipline budgétaire et financière": 0,
+        "Tribunal des conflits": 0,
+        "Cour des comptes": 0,
+        "COURS_COMPTES": 1,
+        "Cours administratives d'appel": 0,
+        "Conseil d'État": 0
+      },
+      "childs": {},
+      "totalElement": 0
+    },
+    {
+      "facetElem": "FOND",
+      "field": "origine",
+      "values": {
+        "ACCO": 405024,
+        "CETAT": 573613,
+        "CIRC": 10632,
+        "CNIL": 26883,
+        "CODE": 76,
+        "CONSTIT": 7423,
+        "JORF": 1132062,
+        "JUFI": 3514,
+        "JURI": 606350,
+        "KALI": 22275,
+        "LEGI": 119427
+      },
+      "childs": {},
+      "totalElement": 0
+    },
+    {
+      "facetElem": "PUBLICATION_RECUEIL",
+      "field": "publicationRecueil",
+      "values": {
+        "NON_PUBLIE": 1
+      },
+      "childs": {},
+      "totalElement": 0
+    }
+  ],
+  "totalResultNumber": 1,
+  "totalArticleResultNumber": 0,
+  "typePagination": "DEFAUT",
+  "descriptionFusionHtml": null
+}
