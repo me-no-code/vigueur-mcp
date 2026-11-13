@@ -144,6 +144,50 @@ export interface ChangeLog {
   detailMissingYears: string[];
 }
 
+/** One article of a whole text; dates are version dates, `validTo` null = open or undetermined. */
+export interface TextArticle {
+  id: string;
+  num: string | null;
+  status: LegalStatus;
+  rawStatus: string;
+  validFrom: IsoDate | null;
+  validTo: IsoDate | null;
+  validToUndetermined: boolean;
+  text: string;
+}
+
+export interface TextSection {
+  id: string;
+  cid: string;
+  title: string;
+  status: LegalStatus;
+  validFrom: IsoDate | null;
+  validTo: IsoDate | null;
+  sections: TextSection[];
+  articles: TextArticle[];
+}
+
+/** A whole law, decree or JORF text, sections and articles in official order. */
+export interface TextRecord {
+  id: string;
+  cid: string;
+  title: string;
+  nature: string | null;
+  status: LegalStatus | null;
+  /** Légifrance's French label, verbatim ("Vigueur", "Sans état juridique"). */
+  jurisState: string | null;
+  nor: string | null;
+  jorfLabel: string | null;
+  publishedOn: IsoDate | null;
+  signedOn: IsoDate | null;
+  validFrom: IsoDate | null;
+  validTo: IsoDate | null;
+  visa: string | null;
+  nota: string | null;
+  sections: TextSection[];
+  articles: TextArticle[];
+}
+
 export interface LegislationRepository {
   listCodes(ctx?: CallContext): Promise<CodeInfo[]>;
   /** Versions in force on `date` numbered `num`, in one code or (codeTitle null) in every code. */
@@ -167,4 +211,10 @@ export interface LegislationRepository {
   searchLegislation(query: LegislationQuery, ctx?: CallContext): Promise<LegislationSearchPage>;
   /** Changes to a code with entry into force in `from..to` (inclusive). */
   listChanges(textCid: string, from: IsoDate, to: IsoDate, ctx?: CallContext): Promise<ChangeLog>;
+  /** A LEGITEXT as consolidated on `asOf`; `null` when Légifrance has no such text. */
+  getText(textId: string, asOf: IsoDate, ctx?: CallContext): Promise<TextRecord | null>;
+  /** A JORFTEXT in its initial version; `null` when unknown. */
+  getJorfText(textCid: string, ctx?: CallContext): Promise<TextRecord | null>;
+  /** The JORF text carrying this NOR; `null` when unknown. */
+  getJorfTextByNor(nor: string, ctx?: CallContext): Promise<TextRecord | null>;
 }

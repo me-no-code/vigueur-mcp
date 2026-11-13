@@ -153,6 +153,9 @@ export interface RepositoryArgs {
   getConcordance: [articleId: string];
   searchLegislation: [query: LegislationQuery];
   listChanges: [codeId: string, from: IsoDate, to: IsoDate];
+  getText: [textId: string, asOf: IsoDate];
+  getJorfText: [textCid: string];
+  getJorfTextByNor: [nor: string];
 }
 
 export interface RecordedCall<A> {
@@ -225,6 +228,15 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     async listChanges() {
       return { entries: [], undeterminedCount: 0, detailMissingYears: [] };
     },
+    async getText() {
+      return null;
+    },
+    async getJorfText() {
+      return null;
+    },
+    async getJorfTextByNor() {
+      return null;
+    },
   };
   const impl: LegislationRepository = { ...seeded, ...seed.overrides };
 
@@ -237,6 +249,9 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     getConcordance: [],
     searchLegislation: [],
     listChanges: [],
+    getText: [],
+    getJorfText: [],
+    getJorfTextByNor: [],
   };
 
   const repo: LegislationRepository = {
@@ -271,6 +286,18 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     listChanges(codeId, from, to, ctx) {
       calls.listChanges.push({ args: [codeId, from, to], ctx });
       return impl.listChanges(codeId, from, to, ctx);
+    },
+    getText(textId, asOf, ctx) {
+      calls.getText.push({ args: [textId, asOf], ctx });
+      return impl.getText(textId, asOf, ctx);
+    },
+    getJorfText(textCid, ctx) {
+      calls.getJorfText.push({ args: [textCid], ctx });
+      return impl.getJorfText(textCid, ctx);
+    },
+    getJorfTextByNor(nor, ctx) {
+      calls.getJorfTextByNor.push({ args: [nor], ctx });
+      return impl.getJorfTextByNor(nor, ctx);
     },
   };
 

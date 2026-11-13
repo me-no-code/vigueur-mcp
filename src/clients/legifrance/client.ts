@@ -32,6 +32,7 @@ import {
 } from './request.js';
 import { searchLegislation } from './search.js';
 import { mapPisteStatus } from './status-map.js';
+import { getJorfText, getJorfTextByNor, getText } from './texts.js';
 import { cleanTitle, htmlToText, parseApiDate, stripIdSuffix, stripMarks } from './wire.js';
 
 const DEFAULT_CODES_TTL_MS = 24 * 60 * 60 * 1000;
@@ -392,6 +393,18 @@ export function createLegifranceClient(
 
     listChanges(textCid, from, to, ctx) {
       return listChanges(http, textCid, from, to, now(), ctx);
+    },
+
+    getText(textId, asOf, ctx) {
+      return getText(http, textId, asOf, ctx);
+    },
+
+    getJorfText(textCid, ctx) {
+      return getJorfText(http, textCid, ctx);
+    },
+
+    getJorfTextByNor(nor, ctx) {
+      return getJorfTextByNor(http, nor, ctx);
     },
 
     getConcordance(articleId, ctx) {
