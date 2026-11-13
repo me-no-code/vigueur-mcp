@@ -33,3 +33,27 @@ export function codeSectionUrl(legitextId: string, legiscta: string): string {
 export function joIssueUrl(eliPath: string): string {
   return `${LEGIFRANCE_BASE_URL}${eliPath}`;
 }
+
+const DECISION_PATHS: Readonly<Record<string, string>> = {
+  JURITEXT: 'juri',
+  CETATEXT: 'ceta',
+  CONSTEXT: 'cons',
+  CNILTEXT: 'cnil',
+  JUFITEXT: 'jufi',
+};
+const DECISION_ID = /^[A-Z]{8}\d{12}$/;
+/** Official Légifrance page of a case-law decision; the id prefix decides the path. */
+export function decisionUrl(id: string): string {
+  const prefix = id.slice(0, 8);
+  // `Object.hasOwn`: an inherited key such as `toString` is not a prefix.
+  const path =
+    DECISION_ID.test(id) && Object.hasOwn(DECISION_PATHS, prefix)
+      ? DECISION_PATHS[prefix]
+      : undefined;
+  if (path === undefined) throw new Error(`Not a Légifrance decision id: ${id}`);
+  return `${LEGIFRANCE_BASE_URL}/${path}/id/${id}`;
+}
+/** Official Cour de cassation page of a Judilibre decision. */
+export function judilibreDecisionUrl(id: string): string {
+  return `https://www.courdecassation.fr/decision/${id}`;
+}
