@@ -37,6 +37,8 @@ export interface GetArticleInput {
   /** Légifrance article id (`LEGIARTI…` / `KALIARTI…`); excludes `number`; `code` is then ignored. */
   id?: string;
   atDate?: IsoDate;
+  /** Also give the previous and next article of the same section. */
+  includeNeighbours?: boolean;
 }
 
 export interface RelocationView extends Relocation {
@@ -57,6 +59,14 @@ export interface PeriodRelocation {
   movedTo: ArticleRef[];
 }
 
+export interface Neighbour {
+  id: string;
+  num: string;
+  /** First 200 characters of the article's text. */
+  excerpt: string;
+  url: string;
+}
+
 export interface ArticleView {
   record: ArticleRecord;
   asOf: IsoDate;
@@ -64,6 +74,7 @@ export interface ArticleView {
   warnings: string[];
   url: string;
   relocation: RelocationView | null;
+  neighbours?: { previous: Neighbour | null; next: Neighbour | null };
 }
 
 export type GetArticleResult =
@@ -157,11 +168,79 @@ async function relocationOf(
   return { ...relocation, from, successor };
 }
 
+const EXCERPT_LENGTH = 200;
+const NEIGHBOURS_WARNING = (reason: string) =>
+  `Could not read the neighbouring articles (${reason}).`;
+
+async function neighbourOf(
+  repo: LegislationRepository,
+  id: string,
+  asOf: IsoDate,
+  warnings: string[],
+  ctx: CallContext | undefined,
+): Promise<Neighbour | null> {
+  const record = await bestEffort(
+    async () => {
+      const r = await repo.getArticle(id, asOf, ctx);
+      if (r === null) throw new Error('not returned by Légifrance');
+      return r;
+    },
+    warnings,
+    (reason) => `Could not read the neighbouring article ${id} (${reason}).`,
+  );
+  if (record === null) return null;
+  return {
+    id,
+    num: record.version.number,
+    excerpt: record.version.text.slice(0, EXCERPT_LENGTH),
+    url: articleUrlFor(id),
+  };
+}
+
+/** The articles just before and after this one in its section (links valid on `asOf`). */
+async function neighboursOf(
+  repo: LegislationRepository,
+  record: ArticleRecord,
+  asOf: IsoDate,
+  warnings: string[],
+  ctx: CallContext | undefined,
+): Promise<{ previous: Neighbour | null; next: Neighbour | null }> {
+  const none = { previous: null, next: null };
+  if (record.sectionCid === null) {
+    warnings.push('Neighbouring articles unavailable: the article has no known section.');
+    return none;
+  }
+  const sectionCid = record.sectionCid;
+  const links = await bestEffort(
+    async () => {
+      const l = await repo.getSectionLinks(sectionCid, ctx);
+      if (l === null) throw new Error('its section is unknown to Légifrance');
+      return l;
+    },
+    warnings,
+    NEIGHBOURS_WARNING,
+  );
+  if (links === null) return none;
+  const ids = links.articles.filter((a) => statusAt(a, asOf).inForce).map((a) => a.id);
+  const at = ids.indexOf(record.version.id);
+  if (at < 0) {
+    warnings.push('Neighbouring articles unavailable: the article was not found in its section.');
+    return none;
+  }
+  const [previousId, nextId] = [ids[at - 1], ids[at + 1]];
+  const [previous, next] = await Promise.all([
+    previousId === undefined ? null : neighbourOf(repo, previousId, asOf, warnings, ctx),
+    nextId === undefined ? null : neighbourOf(repo, nextId, asOf, warnings, ctx),
+  ]);
+  return { previous, next };
+}
+
 async function found(
   repo: LegislationRepository,
   record: ArticleRecord,
   asOf: IsoDate,
   ctx: CallContext | undefined,
+  includeNeighbours = false,
 ): Promise<GetArticleResult> {
   const warnings = consistencyWarnings(record.version, record.modifications, asOf);
   if (record.version.validToUndetermined === true) {
@@ -181,6 +260,9 @@ async function found(
     url: articleUrlFor(record.version.id),
     relocation,
   };
+  if (includeNeighbours) {
+    article.neighbours = await neighboursOf(repo, record, asOf, warnings, ctx);
+  }
   return { kind: 'found', article };
 }
 
@@ -189,6 +271,7 @@ async function byId(
   id: string,
   asOf: IsoDate,
   ctx: CallContext | undefined,
+  includeNeighbours: boolean,
 ): Promise<GetArticleResult> {
   if (!ARTICLE_ID.test(id)) {
     throw invalid(
@@ -199,7 +282,7 @@ async function byId(
   if (record === null) {
     return { kind: 'not_found', reason: 'unknown_id', num: null, codeTitle: null, didYouMean: [] };
   }
-  return found(repo, record, asOf, ctx);
+  return found(repo, record, asOf, ctx, includeNeighbours);
 }
 
 /** The dated search and the dates disagree: never silently claim "not in force". */
@@ -232,11 +315,18 @@ async function byCitation(
   rawCode: string | null,
   asOf: IsoDate,
   ctx: CallContext | undefined,
+  includeNeighbours: boolean,
 ): Promise<GetArticleResult> {
   const lookup = await resolveCitation(repo, rawNumber, rawCode, asOf, ctx);
   switch (lookup.kind) {
     case 'in_force':
-      return found(repo, await fetchListed(repo, lookup.hit, asOf, ctx), asOf, ctx);
+      return found(
+        repo,
+        await fetchListed(repo, lookup.hit, asOf, ctx),
+        asOf,
+        ctx,
+        includeNeighbours,
+      );
     case 'periods': {
       // Nothing in force on that date, but versions on record: repealed, or not yet in force.
       const { num, codeTitle, periods } = lookup;
@@ -278,7 +368,8 @@ export function createGetArticle(
   return async (input, ctx) => {
     const target = targetOf(input);
     const asOf = input.atDate === undefined ? today() : requireIsoDate(input.atDate);
-    if ('id' in target) return byId(repo, target.id, asOf, ctx);
-    return byCitation(repo, target.number, blankToNull(input.code), asOf, ctx);
+    const neighbours = input.includeNeighbours === true;
+    if ('id' in target) return byId(repo, target.id, asOf, ctx, neighbours);
+    return byCitation(repo, target.number, blankToNull(input.code), asOf, ctx, neighbours);
   };
 }

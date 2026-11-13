@@ -6,11 +6,13 @@ import type {
   ArticleRecord,
   CallContext,
   CodeInfo,
+  CodeToc,
   Concordance,
   HistoryEntry,
   LegislationHit,
   LegislationQuery,
   LegislationRepository,
+  SectionLinks,
   TextRecord,
   VersionSummary,
 } from '../../src/services/legislation/ports.js';
@@ -189,6 +191,10 @@ export interface FakeLegislationSeed {
   history?: Readonly<Record<string, HistoryEntry[]>>;
   /** Whole texts: `getText` / `getJorfText` serve them by id, `getJorfTextByNor` by NOR (`null` otherwise). */
   texts?: readonly TextRecord[];
+  /** `getCodeToc` result by code id (default: an empty root). */
+  tocs?: Readonly<Record<string, CodeToc>>;
+  /** `getSectionLinks` result by section cid (default `null`). */
+  sectionLinks?: Readonly<Record<string, SectionLinks>>;
   /** `searchLegislation` returns these hits (one page; default none). */
   searchHits?: readonly LegislationHit[];
   /** Replaces the seeded behaviour of individual methods; calls are still recorded. */
@@ -266,6 +272,8 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
       return { natures: [], emitters: [] };
     },
     async getCodeToc(codeId, asOf) {
+      const seededToc = seed.tocs?.[codeId];
+      if (seededToc) return seededToc;
       const root = {
         cid: codeId,
         title: '',
@@ -277,8 +285,8 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
       };
       return { codeId, codeTitle: '', asOf, root };
     },
-    async getSectionLinks() {
-      return null;
+    async getSectionLinks(sectionCid) {
+      return seed.sectionLinks?.[sectionCid] ?? null;
     },
   };
   const impl: LegislationRepository = { ...seeded, ...seed.overrides };
