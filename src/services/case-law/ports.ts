@@ -149,7 +149,7 @@ export interface CaseLawQuery {
   chamber?: CassChamber;
   /** Judicial, administrative and financial. */
   publication?: 'published' | 'unpublished';
-  /** No `oldest`: Légifrance's ascending sorts do not return the oldest decisions first. */
+  /** No `oldest`: ascending sorts were found wrong on JURI (they do not return the oldest decisions first) and are unverified on the other fonds. */
   sort: 'relevance' | 'newest';
   /** 1-based. */
   page: number;

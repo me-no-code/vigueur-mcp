@@ -65,7 +65,7 @@ _En français : [Outils](#outils)._
 Facts about the two sources, side by side:
 
 - Judilibre (`judilibre_*`) covers the Cour de cassation, the courts of appeal, the tribunaux judiciaires, the commercial courts and the labour courts, including the Cour de cassation's unreasoned rejections. Its search matches all the words of the query by default (`match` can be set to an exact phrase or to any word).
-- Légifrance (`legifrance_*_case_law`, `legifrance_get_decision`) covers the judicial courts, the administrative courts (including the Conseil d'État), the Conseil constitutionnel, the financial courts and the CNIL.
+- Légifrance (`legifrance_*_case_law`, `legifrance_get_decision`) covers the Cour de cassation and the courts of appeal (the latter only until early 2023), the administrative courts (including the Conseil d'État), the Conseil constitutionnel, the financial courts and the CNIL.
 - Légifrance does not hold every Cour de cassation decision: in particular not its unreasoned rejections and non-admissions. It receives the Cour de cassation decisions it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. A decision missing from Légifrance therefore does not mean it does not exist.
 
 The Judilibre tools need the JUDILIBRE API subscribed on your PISTE application (the `vigueur_status` setup steps include it).
@@ -109,7 +109,7 @@ _In English: [Tools](#tools)._
 Les faits sur les deux sources :
 
 - Judilibre (`judilibre_*`) couvre la Cour de cassation, les cours d'appel, les tribunaux judiciaires, les tribunaux de commerce et les conseils de prud'hommes, y compris les rejets non spécialement motivés de la Cour de cassation. Sa recherche exige tous les mots de la requête par défaut (`match` permet de choisir l'expression exacte ou un mot quelconque).
-- Légifrance (`legifrance_*_case_law`, `legifrance_get_decision`) couvre les juridictions judiciaires, les juridictions administratives (dont le Conseil d'État), le Conseil constitutionnel, les juridictions financières et la CNIL.
+- Légifrance (`legifrance_*_case_law`, `legifrance_get_decision`) couvre la Cour de cassation et les cours d'appel (ces dernières seulement jusqu'au début de 2023), les juridictions administratives (dont le Conseil d'État), le Conseil constitutionnel, les juridictions financières et la CNIL.
 - Légifrance ne détient pas toutes les décisions de la Cour de cassation : notamment pas ses rejets non spécialement motivés ni ses non-admissions. Il reçoit les décisions de la Cour de cassation qu'il détient quelques semaines après Judilibre, et ne contient aucune décision de cour d'appel postérieure au début de 2023. Une décision absente de Légifrance ne signifie donc pas qu'elle n'existe pas.
 
 Les outils Judilibre nécessitent que l'API JUDILIBRE soit souscrite sur votre application PISTE (les étapes de `vigueur_status` l'incluent).
