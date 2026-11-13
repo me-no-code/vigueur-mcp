@@ -231,6 +231,7 @@ describe('createGetArticle — resolution outcomes', () => {
       codeTitle: 'Code du travail',
       asOf: TODAY,
       periods: [hitOf(R4217_2)],
+      warnings: [],
     });
     expect(calls.findArticleAllVersions.map((c) => c.args)).toEqual([
       ['Code du travail', 'R4217-2'],
@@ -610,6 +611,232 @@ describe('createGetArticle — relocation is best effort', () => {
   });
 });
 
+describe('createGetArticle — where content went when no later version exists', () => {
+  // Synthetic target: no sample of R4217-2's concordance exists.
+  const REF_MOVED = {
+    id: 'LEGIARTI000000000400',
+    num: 'R4217-9',
+    codeTitle: 'Code du travail',
+    label: 'Code du travail - art. R4217-9 (V)',
+  };
+  // L800-4 (fixture 73): VIGUEUR, open-ended, single version, but an abrogation link and
+  // concordance links to the 2008 Code du travail (lienConcordes → L1511-1…).
+  const ABROGATION = {
+    kind: 'abrogation' as const,
+    textTitle: 'Ordonnance n°2007-329 du 12 mars 2007 - art. 12',
+    effectiveDate: '2008-05-01',
+  };
+  const L800_4 = makeArticle({
+    id: 'LEGIARTI000006651050',
+    num: 'L800-4',
+    codeTitle: 'Code du travail',
+    validFrom: '2005-01-28',
+    modifications: [ABROGATION],
+  });
+  const REF_L1511_1 = {
+    id: 'LEGIARTI000006901558',
+    num: 'L1511-1',
+    codeTitle: 'Code du travail',
+    label: 'Code du travail - art. L1511-1 (VD)',
+  };
+
+  it('a found version marked in force but recorded as repealed points to where its content went', async () => {
+    const { getArticle, calls } = setup({
+      articles: [L800_4],
+      concordance: { [L800_4.version.id]: { from: [], to: [REF_L1511_1] } },
+    });
+    const result = await getArticle({ code: 'Code du travail', number: 'L800-4' });
+    if (result.kind !== 'found') throw new Error(`expected found, got ${result.kind}`);
+    expect(result.article.statusAt.inForce).toBe(true);
+    expect(result.article.relocation).toEqual({
+      change: 'replaced',
+      movedTo: [REF_L1511_1],
+      evidence: ['concordance'],
+      from: L800_4.versions[0],
+      successor: null,
+    });
+    expect(result.article.warnings).toHaveLength(1); // the label/abrogation inconsistency
+    expect(calls.getConcordance.map((c) => c.args)).toEqual([[L800_4.version.id]]);
+  });
+
+  it('a found version that ended with no later version points to where its content went', async () => {
+    const { getArticle, calls } = setup({
+      concordance: { [R4217_2.version.id]: { from: [], to: [REF_MOVED] } },
+    });
+    const result = await getArticle({ id: R4217_2.version.id, atDate: '2015-01-01' });
+    if (result.kind !== 'found') throw new Error(`expected found, got ${result.kind}`);
+    expect(result.article.relocation).toEqual({
+      change: 'replaced',
+      movedTo: [REF_MOVED],
+      evidence: ['concordance'],
+      from: R4217_2.versions[0],
+      successor: null,
+    });
+    expect(calls.getArticle).toHaveLength(1); // no successor to read
+  });
+
+  it('a found version with no end, no abrogation link and no successor costs no concordance call', async () => {
+    const { getArticle, calls } = setup();
+    const result = await getArticle({ code: 'Code civil', number: '1240' });
+    expect(result.kind === 'found' && result.article.relocation).toBeNull();
+    expect(calls.getConcordance).toEqual([]);
+  });
+
+  it('an ended version whose concordance is empty has no relocation', async () => {
+    const { getArticle } = setup();
+    const result = await getArticle({ id: R4217_2.version.id, atDate: '2015-01-01' });
+    expect(result.kind === 'found' && result.article.relocation).toBeNull();
+  });
+
+  it('a repealed article not in force on the date points to where its last version went', async () => {
+    const { getArticle, calls } = setup({
+      concordance: { [R4217_2.version.id]: { from: [], to: [REF_MOVED] } },
+    });
+    const result = await getArticle({ code: 'Code du travail', number: 'R4217-2' });
+    expect(result).toEqual({
+      kind: 'not_in_force_at_date',
+      num: 'R4217-2',
+      codeTitle: 'Code du travail',
+      asOf: TODAY,
+      periods: [hitOf(R4217_2)],
+      warnings: [],
+      relocation: { from: hitOf(R4217_2), movedTo: [REF_MOVED] },
+    });
+    expect(calls.getConcordance.map((c) => c.args)).toEqual([[R4217_2.version.id]]);
+  });
+
+  it('reads the concordance of the latest real period only, never of a still-born one', async () => {
+    const [first, last, stillborn] = lineage(
+      makeArticle({
+        id: 'LEGIARTI000000000501',
+        num: 'R1',
+        codeTitle: 'Code du travail',
+        status: 'amended',
+        validFrom: '2000-01-01',
+        validTo: '2010-01-01',
+      }),
+      makeArticle({
+        id: 'LEGIARTI000000000502',
+        num: 'R1',
+        codeTitle: 'Code du travail',
+        status: 'repealed',
+        validFrom: '2010-01-01',
+        validTo: '2020-01-01',
+      }),
+      makeArticle({
+        id: 'LEGIARTI000000000503',
+        num: 'R1',
+        codeTitle: 'Code du travail',
+        status: 'stillborn',
+        validFrom: '2022-01-01',
+        validTo: '2021-01-01',
+      }),
+    );
+    const { getArticle, calls } = setup({
+      articles: [first, last, stillborn],
+      concordance: { [last.version.id]: { from: [], to: [REF_MOVED] } },
+    });
+    const result = await getArticle({ code: 'Code du travail', number: 'R1' });
+    expect(result).toMatchObject({
+      kind: 'not_in_force_at_date',
+      relocation: { from: hitOf(last), movedTo: [REF_MOVED] },
+    });
+    expect(calls.getConcordance.map((c) => c.args)).toEqual([[last.version.id]]);
+  });
+
+  it('no concordance call when the latest period has not ended (not yet in force on the date)', async () => {
+    const { getArticle, calls } = setup();
+    const result = await getArticle({ code: 'Code civil', number: '1382', atDate: '1700-01-01' });
+    expect(result.kind).toBe('not_in_force_at_date');
+    expect(result).not.toHaveProperty('relocation');
+    expect(calls.getConcordance).toEqual([]);
+  });
+
+  it('no concordance call when the periods span several codes', async () => {
+    const elsewhere = makeArticle({
+      id: 'LEGIARTI000000000600',
+      num: 'R4217-2',
+      codeTitle: 'Code pénal',
+      status: 'repealed',
+      validFrom: '2008-05-01',
+      validTo: '2026-10-01',
+    });
+    const { getArticle, calls } = setup({ articles: [R4217_2, elsewhere] });
+    const result = await getArticle({ number: 'R4217-2' });
+    expect(result).toMatchObject({ kind: 'not_in_force_at_date', codeTitle: null });
+    expect(calls.getConcordance).toEqual([]);
+  });
+
+  it('a failing concordance call on the not-in-force path is a warning', async () => {
+    const { getArticle } = setup({
+      overrides: {
+        getConcordance: async () => {
+          throw new VigueurError('upstream_unavailable', 'Légifrance: service unavailable.');
+        },
+      },
+    });
+    const result = await getArticle({ code: 'Code du travail', number: 'R4217-2' });
+    expect(result).toMatchObject({
+      kind: 'not_in_force_at_date',
+      warnings: ['Could not check where this content moved (Légifrance: service unavailable).'],
+    });
+    expect(result).not.toHaveProperty('relocation');
+  });
+
+  it('a cancelled concordance call cancels the lookup, on both paths', async () => {
+    const cancelled = new VigueurError('cancelled', 'Légifrance: request cancelled.');
+    const { getArticle } = setup({
+      overrides: {
+        getConcordance: async () => {
+          throw cancelled;
+        },
+      },
+    });
+    await expect(getArticle({ code: 'Code du travail', number: 'R4217-2' })).rejects.toBe(
+      cancelled,
+    );
+    await expect(getArticle({ id: R4217_2.version.id, atDate: '2015-01-01' })).rejects.toBe(
+      cancelled,
+    );
+  });
+});
+
+describe('createGetArticle — not in force per the dated search, but the dates disagree', () => {
+  it('warns when a period covers the date instead of claiming it was not in force', async () => {
+    const { getArticle } = setup({
+      overrides: { findArticleAt: async () => ({ hits: [], truncated: false }) },
+    });
+    const result = await getArticle({
+      code: 'Code du travail',
+      number: 'R4217-2',
+      atDate: '2015-01-01',
+    });
+    expect(result).toMatchObject({
+      kind: 'not_in_force_at_date',
+      warnings: [
+        "Légifrance's dated search found no version for 2015-01-01, but this period covers it: ABROGE 2008-05-01 → 2026-10-01 (LEGIARTI000018532352).",
+      ],
+    });
+  });
+
+  it('a still-born period never covers the date', async () => {
+    const stillborn = makeArticle({
+      id: 'LEGIARTI000000000700',
+      num: 'R9',
+      codeTitle: 'Code du travail',
+      status: 'stillborn',
+      validFrom: '2010-01-01',
+      validTo: '2030-01-01',
+    });
+    const { getArticle } = setup({
+      articles: [stillborn],
+      overrides: { findArticleAt: async () => ({ hits: [], truncated: false }) },
+    });
+    const result = await getArticle({ code: 'Code du travail', number: 'R9' });
+    expect(result).toMatchObject({ kind: 'not_in_force_at_date', warnings: [] });
+  });
+});
+
 describe('createGetArticle — by id', () => {
   it('fetches the version by id at the requested date', async () => {
     const { getArticle, calls } = setup();
@@ -689,9 +916,10 @@ describe('createGetArticle — context and defaults', () => {
     await getArticle({ code: 'Code civil', number: '1382', atDate: '2015-01-01' }, ctx);
     await getArticle({ code: 'Code du travail', number: 'R4217-2' }, ctx);
     const recorded = Object.values(calls).flat();
-    expect(calls.getConcordance).toHaveLength(1);
+    // 1382: concordance of the found version; R4217-2: concordance of its last period.
+    expect(calls.getConcordance).toHaveLength(2);
     expect(calls.findArticleAllVersions).toHaveLength(1);
-    expect(recorded).toHaveLength(8);
+    expect(recorded).toHaveLength(9);
     for (const call of recorded) expect(call.ctx?.signal).toBe(ctx.signal);
   });
 

@@ -64,8 +64,15 @@ describe('legifrance_get_article_history (fixtures)', () => {
       '- 2016-10-01 — amended by Ordonnance n°2016-131 du 10 février 2016 - art. 4',
     );
     expect(text).toContain('#### Versions');
-    expect(text).toContain('per Légifrance concordance');
-    expect(text).toContain('Content moved to:');
+    // The 1240 link belongs to version 1.0 (the tort text), not to the article as a whole.
+    expect(text).toContain(
+      'Per Légifrance concordance — content formerly at art. 1382 (until 2016-10-01) now at: Code civil - art. 1240 (V)',
+    );
+    expect(text).toContain(
+      'Per Légifrance concordance — content now at art. 1382 came from: Code civil - art. 1353 (M)',
+    );
+    expect(text.match(/art\. 1240/g)).toHaveLength(1);
+    expect(text).not.toContain('Content moved to:');
     expect(text).toContain('Source: https://www.legifrance.gouv.fr/codes/article_lc/');
     expect(articleHistoryOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
@@ -301,15 +308,29 @@ function syntheticHistory(events: number): ArticleHistoryView {
     events: list,
     concordance: {
       from: [],
-      to: [
+      moved: [
         {
-          id: 'LEGIARTI000000000002',
-          num: '2',
-          codeTitle: 'Code civil',
-          label: 'Code civil, art. 2',
+          version: {
+            id: 'LEGIARTI000000000001',
+            version: '3.0',
+            status: 'in_force',
+            rawStatus: 'VIGUEUR',
+            validFrom: '2020-01-01',
+            validTo: null,
+            validToUndetermined: false,
+          },
+          to: [
+            {
+              id: 'LEGIARTI000000000002',
+              num: '2',
+              codeTitle: 'Code civil',
+              label: 'Code civil, art. 2',
+            },
+          ],
         },
       ],
     },
+    warnings: [],
   };
 }
 
@@ -321,7 +342,9 @@ describe('article history paging', () => {
     expect(p1.text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
     expect(p1.text).toContain('Next page: "page": 2');
     expect(p1.text).toContain('date not determined — amended by Loi n°0');
-    expect(p1.text).toContain('Content moved to: Code civil, art. 2');
+    expect(p1.text).toContain(
+      'Per Légifrance concordance — content formerly at art. 1 (version since 2020-01-01) now at: Code civil, art. 2',
+    );
     expect(JSON.stringify(p1.output).length).toBeLessThan(JSON_LIMIT);
     const out = p1.output;
     if (out.kind !== 'history') throw new Error('expected history');
@@ -361,6 +384,69 @@ describe('article history paging', () => {
       'In force today (computed from validity dates): version 3.0, since 2020-01-01, until a date not yet determined.',
     );
     expect(text).toContain('| 3.0 | ABROGE_DIFF | 2020-01-01 | not yet determined |');
+  });
+
+  it('scopes each concordance line to the version it describes (Code civil 1240)', () => {
+    const version = (id: string, v: string, from: string, to: string | null) => ({
+      id,
+      version: v,
+      status: to === null ? ('in_force' as const) : ('amended' as const),
+      rawStatus: to === null ? 'VIGUEUR' : 'MODIFIE',
+      validFrom: from,
+      validTo: to,
+      validToUndetermined: false,
+    });
+    const payment = version('LEGIARTI000006437044', '1.0', '1804-03-21', '2016-10-01');
+    const tort = version('LEGIARTI000032041571', '2.0', '2016-10-01', null);
+    const civ = (id: string, num: string, flag: string) => ({
+      id,
+      num,
+      codeTitle: 'Code civil',
+      label: `Code civil - art. ${num} (${flag})`,
+    });
+    const view: ArticleHistoryView = {
+      codeTitle: 'Code civil',
+      num: '1240',
+      current: tort,
+      versions: [payment, tort],
+      events: [],
+      concordance: {
+        from: [civ('LEGIARTI000006438819', '1382', 'M')],
+        moved: [{ version: payment, to: [civ('LEGIARTI000032035241', '1342-3', 'V')] }],
+      },
+      warnings: [],
+    };
+    const { text, output } = renderGetArticleHistory(view, {
+      detailed: false,
+      today: TODAY,
+      requestedId: null,
+      page: 1,
+    });
+    expect(text).toContain(
+      [
+        '#### Concordance',
+        'Per Légifrance concordance — content formerly at art. 1240 (until 2016-10-01) now at: Code civil - art. 1342-3 (V)',
+        'Per Légifrance concordance — content now at art. 1240 came from: Code civil - art. 1382 (M)',
+      ].join('\n'),
+    );
+    expect(articleHistoryOutputSchema.safeParse(output).success).toBe(true);
+  });
+
+  it('shows the warnings of a partial answer', () => {
+    const view = {
+      ...syntheticHistory(1),
+      warnings: ["Could not read Légifrance's concordance of LEGIARTI000000000001 (fetch failed)."],
+    };
+    const { text, output } = renderGetArticleHistory(view, {
+      detailed: false,
+      today: TODAY,
+      requestedId: null,
+      page: 1,
+    });
+    expect(text).toContain(
+      "⚠️ Could not read Légifrance's concordance of LEGIARTI000000000001 (fetch failed).",
+    );
+    expect(articleHistoryOutputSchema.safeParse(output).success).toBe(true);
   });
 
   it('events whose lines are very long page by size, not only by count', () => {

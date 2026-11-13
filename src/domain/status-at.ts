@@ -1,5 +1,5 @@
 import type { IsoDate } from './dates.js';
-import type { ArticleVersion } from './versions.js';
+import type { ArticleVersion, LegalStatus } from './versions.js';
 
 export interface StatusAt {
   inForce: boolean;
@@ -19,6 +19,22 @@ export function statusAt(
     return { inForce: false, reason: 'not_yet_in_force', from, until };
   if (until !== null && date >= until) return { inForce: false, reason: 'ended', from, until };
   return { inForce: true, reason: 'in_force', from, until };
+}
+
+/**
+ * Whether a version applied on `date` by its dates alone (validFrom ≤ date < validTo). A
+ * still-born version never applied; an unknown start is never assumed to cover a date.
+ */
+export function coversDate(
+  v: { status: LegalStatus; validFrom: IsoDate | null; validTo: IsoDate | null },
+  date: IsoDate,
+): boolean {
+  return (
+    v.status !== 'stillborn' &&
+    v.validFrom !== null &&
+    v.validFrom <= date &&
+    (v.validTo === null || date < v.validTo)
+  );
 }
 
 export interface ModificationLink {

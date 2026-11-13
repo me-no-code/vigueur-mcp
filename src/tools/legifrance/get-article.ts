@@ -1,7 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import type { IsoDate } from '../../domain/dates.js';
-import type { ModificationLink } from '../../domain/status-at.js';
+import type { ArticleRef } from '../../domain/relocation.js';
+import { coversDate, type ModificationLink } from '../../domain/status-at.js';
 import type {
   ArticleView,
   GetArticleInput,
@@ -86,14 +87,25 @@ const since = (validFrom: IsoDate | null) =>
   validFrom === null ? 'in force' : `in force since ${validFrom}`;
 const statusLabel = (v: { status: string; rawStatus?: string }) => v.rawStatus || v.status;
 
+/** A move recorded by Légifrance concordance (a source fact); `what` names the text that moved. */
+function movedSentence(
+  what: string,
+  movedTo: readonly ArticleRef[],
+  date: IsoDate | null,
+  today: IsoDate,
+): string {
+  const labels = movedTo.map((m) => m.label).join('; ');
+  return date !== null && date > today
+    ? `Content will move — per Légifrance concordance, ${what} will be at ${labels} from ${date}.`
+    : `Content moved — per Légifrance concordance, ${what} is now at ${labels}${date === null ? '' : ` (since ${date})`}.`;
+}
+
 function relocationSentence(r: RelocationView, num: string, asOf: IsoDate, today: IsoDate): string {
-  const date = r.successor?.validFrom ?? null;
+  // With no later version, the content left when the found version ended.
+  const date = r.successor === null ? r.from.validTo : r.successor.validFrom;
   const future = date !== null && date > today;
   if (r.movedTo.length > 0) {
-    const labels = r.movedTo.map((m) => m.label).join('; ');
-    return future
-      ? `Content will move — per Légifrance concordance, the text of art. ${num} as of ${asOf} will be at ${labels} from ${date}.`
-      : `Content moved — per Légifrance concordance, the text of art. ${num} as of ${asOf} is now at ${labels}${date === null ? '' : ` (since ${date})`}.`;
+    return movedSentence(`the text of art. ${num} as of ${asOf}`, r.movedTo, date, today);
   }
   const on = date === null ? '' : ` on ${date}`;
   const change =
@@ -225,13 +237,34 @@ function renderAmbiguous(num: string, candidates: ArticleHit[], incomplete: bool
   return lines.join('\n');
 }
 
-function renderNotInForce(r: Extract<GetArticleResult, { kind: 'not_in_force_at_date' }>): string {
+function renderNotInForce(
+  r: Extract<GetArticleResult, { kind: 'not_in_force_at_date' }>,
+  today: IsoDate,
+): string {
+  const article = `Art. ${r.num}${r.codeTitle === null ? '' : ` of ${r.codeTitle}`}`;
+  // When a period's dates cover the date, the dated search and the dates disagree: say only
+  // what the search found (a warning names the period), never "was not in force".
+  const heading = r.periods.some((p) => coversDate(p, r.asOf))
+    ? `${article}: Légifrance's dated search found no version in force on ${r.asOf}. Versions on record:`
+    : `${article} exists but was not in force on ${r.asOf}:`;
+  const moved = r.relocation;
   const lines = [
-    `Art. ${r.num}${r.codeTitle === null ? '' : ` of ${r.codeTitle}`} exists but was not in force on ${r.asOf}:`,
+    heading,
     ...r.periods.map(
       (p) =>
         `- ${statusLabel(p)} ${p.validFrom ?? 'unknown'} → ${endCell(p, 'date not yet determined')}${r.codeTitle === null ? ` (${p.codeTitle})` : ''}`,
     ),
+    ...(moved === undefined
+      ? []
+      : [
+          movedSentence(
+            `the text of art. ${r.num} (version ${moved.from.validFrom ?? 'unknown'} → ${endCell(moved.from)})`,
+            moved.movedTo,
+            moved.from.validTo,
+            today,
+          ),
+        ]),
+    ...r.warnings.map((w) => `⚠️ ${w}`),
     'Call again with an "at_date" inside one of these periods to read that version.',
   ];
   return lines.join('\n');
@@ -247,7 +280,7 @@ export function renderGetArticle(
     return { text, output: foundOutput(result.article, textPage) };
   }
   // Lists of at most a page of hits, periods or suggestions: well under MAX_TOOL_TEXT.
-  return { text: renderLookupMiss(result, opts.requestedId), output: result };
+  return { text: renderLookupMiss(result, opts), output: result };
 }
 
 /**
@@ -256,13 +289,14 @@ export function renderGetArticle(
  */
 export function renderLookupMiss(
   result: Exclude<GetArticleResult, { kind: 'found' }>,
-  requestedId: string | null,
+  opts: { requestedId: string | null; today: IsoDate },
 ): string {
+  const { requestedId } = opts;
   switch (result.kind) {
     case 'ambiguous':
       return renderAmbiguous(result.num, result.candidates, result.possiblyIncomplete === true);
     case 'not_in_force_at_date':
-      return renderNotInForce(result);
+      return renderNotInForce(result, opts.today);
     case 'not_found':
       switch (result.reason) {
         case 'unknown_id':

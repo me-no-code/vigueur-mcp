@@ -176,7 +176,11 @@ const articleViewSchema = z.object({
       movedTo: z.array(articleRefSchema),
       evidence: z.array(z.enum(EVIDENCE)),
       from: versionSummarySchema,
-      successor: versionSummarySchema.nullable(),
+      successor: versionSummarySchema
+        .nullable()
+        .describe(
+          'null: the version ended (or is recorded as repealed) with no later version; movedTo then comes from Légifrance concordance alone.',
+        ),
     })
     .nullable(),
 });
@@ -226,6 +230,15 @@ export const getArticleOutputSchema = z.discriminatedUnion('kind', [
     codeTitle: z.string().nullable(),
     asOf: date,
     periods: z.array(articleHitSchema),
+    warnings: z.array(z.string()),
+    relocation: z
+      .object({
+        from: articleHitSchema.describe('The latest period, which ended.'),
+        movedTo: z
+          .array(articleRefSchema)
+          .describe("Where that period's content now lives, per Légifrance concordance."),
+      })
+      .optional(),
   }),
   notFoundSchema,
 ]) satisfies z.ZodType<GetArticleOutput>;
@@ -283,10 +296,26 @@ export const articleHistoryOutputSchema = z.discriminatedUnion('kind', [
         .describe('Version in force today; null when none is.'),
       versions: z.array(versionSummarySchema),
       events: z.array(historyEntrySchema).describe('The events of the current page.'),
-      concordance: z.object({
-        from: z.array(articleRefSchema).describe('Articles whose content now lives here.'),
-        to: z.array(articleRefSchema).describe("Articles where this article's content now lives."),
-      }),
+      concordance: z
+        .object({
+          from: z
+            .array(articleRefSchema)
+            .describe('Articles whose content now lives at this article number.'),
+          moved: z
+            .array(
+              z.object({
+                version: versionSummarySchema.describe('The version whose content moved.'),
+                to: z.array(articleRefSchema).describe("Where that version's content now lives."),
+              }),
+            )
+            .describe(
+              'Where the content of a version moved, scoped to that version: not where the article as a whole went.',
+            ),
+        })
+        .describe(
+          'Per Légifrance concordance, read for the first and the current (else latest) versions only.',
+        ),
+      warnings: z.array(z.string()),
     }),
     paging: pageInfoSchema,
   }),

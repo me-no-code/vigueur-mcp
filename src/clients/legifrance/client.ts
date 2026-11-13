@@ -326,11 +326,12 @@ function mapArticleRef(e: Obj): ArticleRef {
   };
 }
 
+/** A missing or null list is empty: an article may have links in one direction only. */
 function mapConcordance(body: unknown): Concordance {
   const o = asObj(body, 'body');
   return {
-    from: list(o, 'oldTexts', true).map(mapArticleRef),
-    to: list(o, 'newTexts', true).map(mapArticleRef),
+    from: list(o, 'oldTexts').map(mapArticleRef),
+    to: list(o, 'newTexts').map(mapArticleRef),
   };
 }
 

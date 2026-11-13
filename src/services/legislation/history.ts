@@ -1,8 +1,8 @@
 import type { IsoDate } from '../../domain/dates.js';
 import type { ArticleRef } from '../../domain/relocation.js';
+import { coversDate } from '../../domain/status-at.js';
 import { VigueurError } from '../../shared/errors.js';
 import type {
-  ArticleHit,
   ArticleRecord,
   CallContext,
   Concordance,
@@ -13,12 +13,15 @@ import type {
 import {
   type Ambiguous,
   ARTICLE_ID,
+  bestEffort,
   blankToNull,
   byStart,
   dedupeById,
   fetchListed,
   invalid,
+  latestPeriod,
   type NotFound,
+  ownSummary,
   resolveCitation,
   targetOf,
   todayInParis,
@@ -33,11 +36,30 @@ export interface ArticleHistoryView {
   versions: VersionSummary[];
   events: HistoryEntry[];
   /**
-   * Concordance of the first version and of the current (else latest) one, merged and
-   * de-duplicated by article id. Limitation: a per-version concordance would cost one call per
-   * version, so links of intermediate versions are not included.
+   * Légifrance concordance, read for the first version and the current (else latest) one.
+   * Limitation: a per-version concordance costs one call per version, so links of
+   * intermediate versions are not included.
    */
-  concordance: Concordance;
+  concordance: HistoryConcordance;
+  /** E.g. a concordance that could not be read (the history still stands without it). */
+  warnings: string[];
+}
+
+/** Where the content of one version now lives, per Légifrance concordance. */
+export interface VersionMove {
+  version: VersionSummary;
+  to: ArticleRef[];
+}
+
+export interface HistoryConcordance {
+  /**
+   * Articles whose content now lives at this article number, merged by id. Légifrance attaches
+   * these links to every version of the lineage (old 1240 lists 1382 too), so they describe the
+   * number's current content, not one version.
+   */
+  from: ArticleRef[];
+  /** Where a version's content moved, scoped to that version (old 1240's content → 1342-3). */
+  moved: VersionMove[];
 }
 
 export type ArticleHistoryResult = ArticleHistoryView | Ambiguous | NotFound;
@@ -48,24 +70,16 @@ export interface GetArticleHistoryInput {
   id?: string;
 }
 
-function inForceOn(v: VersionSummary, date: IsoDate): boolean {
-  return (
-    v.status !== 'stillborn' &&
-    v.validFrom !== null &&
-    v.validFrom <= date &&
-    (v.validTo === null || date < v.validTo)
-  );
-}
-
-const mergeConcordance = (parts: readonly Concordance[]): Concordance => ({
-  from: dedupeById<ArticleRef>(parts.flatMap((p) => p.from)),
-  to: dedupeById<ArticleRef>(parts.flatMap((p) => p.to)),
-});
-
-/** The latest period of a lineage: greatest start, a still-born version only as a last resort. */
-function latestHit(hits: readonly ArticleHit[]): ArticleHit | undefined {
-  const real = hits.filter((h) => h.status !== 'stillborn');
-  return [...(real.length > 0 ? real : hits)].sort(byStart).at(-1);
+/** Per-version moves; the "came from" links merged (see `HistoryConcordance`). */
+function historyConcordance(
+  read: ReadonlyArray<{ version: VersionSummary; concordance: Concordance | null }>,
+): HistoryConcordance {
+  return {
+    from: dedupeById<ArticleRef>(read.flatMap((r) => r.concordance?.from ?? [])),
+    moved: read.flatMap(({ version, concordance }) =>
+      concordance !== null && concordance.to.length > 0 ? [{ version, to: concordance.to }] : [],
+    ),
+  };
 }
 
 type Resolved = { record: ArticleRecord } | { result: Ambiguous | NotFound };
@@ -116,7 +130,7 @@ async function resolve(
           },
         };
       }
-      const latest = latestHit(periods);
+      const latest = latestPeriod(periods);
       if (latest === undefined) {
         return {
           result: { kind: 'not_found', reason: 'no_article', num, codeTitle, didYouMean: [] },
@@ -132,7 +146,8 @@ async function resolve(
 /**
  * The version stack, amendment events and concordance of an article. Resolves like
  * `getArticle` at today's date; an article not in force today falls back to its latest period,
- * so repealed articles still get their history.
+ * so repealed articles still get their history. The concordance is best effort: a failure
+ * becomes a warning, only a cancellation fails the call.
  */
 export function createGetArticleHistory(
   repo: LegislationRepository,
@@ -146,12 +161,9 @@ export function createGetArticleHistory(
     const { record } = resolved;
 
     const versions = [...record.versions].sort(byStart);
-    const current = versions.find((v) => inForceOn(v, today)) ?? null;
-    const first = versions[0];
-    const latest = current ?? versions.at(-1);
-    const concordanceIds = [
-      ...new Set([first?.id ?? record.version.id, latest?.id ?? record.version.id]),
-    ];
+    const current = versions.find((v) => coversDate(v, today)) ?? null;
+    const own = ownSummary(record);
+    const concordanceOf = dedupeById([versions[0] ?? own, current ?? versions.at(-1) ?? own]);
 
     if (record.codeId === null) {
       throw new VigueurError(
@@ -160,9 +172,17 @@ export function createGetArticleHistory(
         { source: 'legifrance' },
       );
     }
+    // The concordance only adds information: a failure becomes a warning.
+    const warnings: string[] = [];
+    const read = (version: VersionSummary) =>
+      bestEffort(
+        () => repo.getConcordance(version.id, ctx),
+        warnings,
+        (reason) => `Could not read Légifrance's concordance of ${version.id} (${reason}).`,
+      ).then((concordance) => ({ version, concordance }));
     const [events, concordances] = await Promise.all([
       repo.getArticleHistory(record.codeId, record.cid, ctx),
-      Promise.all(concordanceIds.map((id) => repo.getConcordance(id, ctx))),
+      Promise.all(concordanceOf.map(read)),
     ]);
 
     return {
@@ -171,7 +191,8 @@ export function createGetArticleHistory(
       current,
       versions,
       events,
-      concordance: mergeConcordance(concordances),
+      concordance: historyConcordance(concordances),
+      warnings,
     };
   };
 }

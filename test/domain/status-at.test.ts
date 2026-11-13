@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consistencyWarnings, statusAt } from '../../src/domain/status-at.js';
+import { consistencyWarnings, coversDate, statusAt } from '../../src/domain/status-at.js';
 
 describe('statusAt', () => {
   it('in force from validFrom with open end', () => {
@@ -82,5 +82,25 @@ describe('consistencyWarnings', () => {
         'Légifrance marks this version as entering into force, but also records its abrogation by Ordonnance n°2007-329 du 12 mars 2007 (effective 2008-05-01).',
       ],
     );
+  });
+});
+
+describe('coversDate', () => {
+  const v = (over: Partial<Parameters<typeof coversDate>[0]> = {}) => ({
+    status: 'repealed' as const,
+    validFrom: '2008-05-01',
+    validTo: '2026-10-01',
+    ...over,
+  });
+  it('validFrom ≤ date < validTo', () => {
+    expect(coversDate(v(), '2008-05-01')).toBe(true);
+    expect(coversDate(v(), '2026-09-30')).toBe(true);
+    expect(coversDate(v(), '2026-10-01')).toBe(false);
+    expect(coversDate(v(), '2008-04-30')).toBe(false);
+    expect(coversDate(v({ validTo: null }), '2999-12-31')).toBe(true);
+  });
+  it('a still-born version or an unknown start never covers a date', () => {
+    expect(coversDate(v({ status: 'stillborn' }), '2015-01-01')).toBe(false);
+    expect(coversDate(v({ validFrom: null }), '2015-01-01')).toBe(false);
   });
 });

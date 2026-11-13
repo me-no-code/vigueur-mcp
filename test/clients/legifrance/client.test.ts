@@ -786,6 +786,26 @@ describe('getConcordance', () => {
     });
   });
 
+  it('reads a missing or null list as empty', async () => {
+    const ref = { name: 'Code civil - art. 1240 (V)', id: 'LEGIARTI000032041571' };
+    const onlyNew = client([reply('/consult/concordanceLinksArticle', { newTexts: [ref] })]);
+    expect(await onlyNew.repo.getConcordance('LEGIARTI0')).toEqual({
+      from: [],
+      to: [
+        {
+          id: 'LEGIARTI000032041571',
+          num: '1240',
+          codeTitle: 'Code civil',
+          label: 'Code civil - art. 1240 (V)',
+        },
+      ],
+    });
+    const none = client([
+      reply('/consult/concordanceLinksArticle', { oldTexts: null, newTexts: null }),
+    ]);
+    expect(await none.repo.getConcordance('LEGIARTI0')).toEqual({ from: [], to: [] });
+  });
+
   it('parses labels without a flag and leaves unparsable ones null', async () => {
     const { repo } = client([
       reply('/consult/concordanceLinksArticle', {

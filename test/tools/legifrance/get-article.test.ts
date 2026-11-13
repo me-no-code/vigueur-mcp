@@ -669,6 +669,7 @@ describe('renderGetArticle', () => {
           validToUndetermined: false,
         },
       ],
+      warnings: [],
     });
     expect(text).toContain('Art. 5 exists but was not in force on 1990-01-01:');
     expect(text).toContain('- ABROGE 2000-01-01 → 2010-01-01 (Code A)');
@@ -692,8 +693,101 @@ describe('renderGetArticle', () => {
       codeTitle: 'Code A',
       asOf: '1990-01-01',
       periods: [period],
+      warnings: [],
     });
     expect(text).toContain('- ABROGE_DIFF 2000-01-01 → date not yet determined');
+  });
+
+  describe('not in force: where the content went, and dates that disagree', () => {
+    const period = {
+      id: 'LEGIARTI000018532352',
+      num: 'R4217-2',
+      codeId: 'LEGITEXT000006072050',
+      codeTitle: 'Code du travail',
+      status: 'repealed' as const,
+      rawStatus: 'ABROGE',
+      validFrom: '2008-05-01',
+      validTo: '2026-10-01',
+      validToUndetermined: false,
+    };
+    const moved = {
+      id: 'LEGIARTI000000000400',
+      num: 'R4217-9',
+      codeTitle: 'Code du travail',
+      label: 'Code du travail - art. R4217-9 (V)',
+    };
+    const notInForce = (
+      over: Partial<Extract<GetArticleResult, { kind: 'not_in_force_at_date' }>>,
+    ) =>
+      render({
+        kind: 'not_in_force_at_date',
+        num: 'R4217-2',
+        codeTitle: 'Code du travail',
+        asOf: TODAY,
+        periods: [period],
+        warnings: [],
+        ...over,
+      });
+
+    it('past move: labelled per Légifrance concordance, scoped to the last version', () => {
+      const text = notInForce({ relocation: { from: period, movedTo: [moved] } });
+      expect(text).toContain(
+        'Content moved — per Légifrance concordance, the text of art. R4217-2 (version 2008-05-01 → 2026-10-01) is now at Code du travail - art. R4217-9 (V) (since 2026-10-01).',
+      );
+      expect(text).toContain('exists but was not in force on 2026-11-12:');
+    });
+
+    it('future move: future tense', () => {
+      const later = { ...period, validTo: '2027-01-01' };
+      const text = notInForce({
+        asOf: '2000-01-01',
+        periods: [later],
+        relocation: { from: later, movedTo: [moved] },
+      });
+      expect(text).toContain(
+        'Content will move — per Légifrance concordance, the text of art. R4217-2 (version 2008-05-01 → 2027-01-01) will be at Code du travail - art. R4217-9 (V) from 2027-01-01.',
+      );
+    });
+
+    it('a period covering the date: no claim that it was not in force, and a warning', () => {
+      const warning =
+        "Légifrance's dated search found no version for 2015-01-01, but this period covers it: ABROGE 2008-05-01 → 2026-10-01 (LEGIARTI000018532352).";
+      const text = notInForce({ asOf: '2015-01-01', warnings: [warning] });
+      expect(text).not.toContain('was not in force');
+      expect(text).toContain(
+        "Art. R4217-2 of Code du travail: Légifrance's dated search found no version in force on 2015-01-01. Versions on record:",
+      );
+      expect(text).toContain(`⚠️ ${warning}`);
+    });
+
+    it('other warnings are shown without changing the heading', () => {
+      const warning = 'Could not check where this content moved (Légifrance: service unavailable).';
+      const text = notInForce({ warnings: [warning] });
+      expect(text).toContain('exists but was not in force on 2026-11-12:');
+      expect(text).toContain(`⚠️ ${warning}`);
+    });
+  });
+
+  it('found, ended with no later version: the concordance move is dated by its end', () => {
+    const ref = {
+      id: 'LEGIARTI000000000009',
+      num: '8',
+      codeTitle: 'Code civil',
+      label: 'Code civil - art. 8',
+    };
+    const relocation = (validTo: string | null) => ({
+      change: 'replaced' as const,
+      movedTo: [ref],
+      evidence: ['concordance' as const],
+      from: summary({ id: 'LEGIARTI000000000001', validFrom: '2010-01-01', validTo }),
+      successor: null,
+    });
+    expect(render(found({ asOf: '2015-01-01', relocation: relocation('2026-10-01') }))).toContain(
+      'Content moved — per Légifrance concordance, the text of art. 7 as of 2015-01-01 is now at Code civil - art. 8 (since 2026-10-01).',
+    );
+    expect(render(found({ relocation: relocation(null) }))).toContain(
+      'Content moved — per Légifrance concordance, the text of art. 7 as of 2026-11-12 is now at Code civil - art. 8.',
+    );
   });
 
   it('found with an undetermined end: status line, warning and versions table say so', () => {

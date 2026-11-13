@@ -37,7 +37,7 @@ const EVENTS: HistoryEntry[] = [
 const kindOf = (r: object) => ('kind' in r ? r.kind : 'history');
 
 describe('createGetArticleHistory', () => {
-  it('returns versions in validFrom order and merged concordance of first and current', async () => {
+  it('returns versions in validFrom order and the concordance of first and current, per version', async () => {
     const { repo, calls } = fakeLegislation({
       articles: [NEW, OLD].filter((a) => a !== undefined),
       concordance: {
@@ -54,7 +54,12 @@ describe('createGetArticleHistory', () => {
     expect(res.versions.map((v) => v.id)).toEqual([OLD?.version.id, NEW?.version.id]);
     expect(res.current?.id).toBe(NEW?.version.id);
     expect(res.events).toEqual(EVENTS);
-    expect(res.concordance.to.map((r) => r.id)).toEqual(['A', 'B']);
+    // Where content went is scoped to the version that reported it; where the content now
+    // under this number came from is merged.
+    expect(res.concordance.moved.map((m) => [m.version.id, m.to.map((r) => r.id)])).toEqual([
+      [OLD?.version.id, ['A', 'B']],
+      [NEW?.version.id, ['B']],
+    ]);
     expect(res.concordance.from.map((r) => r.id)).toEqual(['C']);
     expect(calls.getConcordance.map((c) => c.args[0]).sort()).toEqual(
       [OLD?.version.id, NEW?.version.id].sort(),
@@ -63,6 +68,51 @@ describe('createGetArticleHistory', () => {
       'LEGITEXT000006070721',
       'LEGIARTI000006438819',
     ]);
+  });
+
+  it('Code civil 1240: the old payment content moved, not the tort article', async () => {
+    // Lineage of 1240: the old payment article (moved to 1342-3, fixture 09's lienConcordes),
+    // then the tort text formerly at 1382 (fixture 14).
+    const [PAYMENT, TORT] = lineage(
+      makeArticle({
+        id: 'LEGIARTI000006437044',
+        num: '1240',
+        status: 'amended',
+        validFrom: '1804-03-21',
+        validTo: '2016-10-01',
+      }),
+      makeArticle({
+        id: 'LEGIARTI000032041571',
+        num: '1240',
+        version: '2.0',
+        cid: 'LEGIARTI000006437044',
+        validFrom: '2016-10-01',
+      }),
+    );
+    const civ = (id: string, num: string, flag: string) => ({
+      id,
+      num,
+      codeTitle: 'Code civil',
+      label: `Code civil - art. ${num} (${flag})`,
+    });
+    const REF_1342_3 = civ('LEGIARTI000032035241', '1342-3', 'V');
+    const REF_1382 = civ('LEGIARTI000006438819', '1382', 'M');
+    const { repo } = fakeLegislation({
+      articles: [PAYMENT, TORT],
+      concordance: {
+        [PAYMENT.version.id]: { from: [REF_1382], to: [REF_1342_3] },
+        [TORT.version.id]: { from: [REF_1382], to: [] },
+      },
+    });
+    const res = await createGetArticleHistory(repo, { today })({
+      code: 'Code civil',
+      number: '1240',
+    });
+    if (!('versions' in res)) throw new Error('expected history');
+    expect(res.concordance).toEqual({
+      from: [REF_1382],
+      moved: [{ version: PAYMENT.versions[0], to: [REF_1342_3] }],
+    });
   });
 
   it('falls back to the latest period for a repealed article', async () => {
@@ -182,6 +232,50 @@ describe('createGetArticleHistory', () => {
         flag ?? undefined,
       );
     });
+  });
+
+  it('a failing concordance call leaves the history, with a warning', async () => {
+    const { repo } = fakeLegislation({
+      articles: [OLD, NEW],
+      history: { LEGIARTI000006438819: EVENTS },
+      overrides: {
+        getConcordance: async (id) => {
+          if (id === OLD.version.id) throw new TypeError('fetch failed');
+          return { from: [ref('C')], to: [] };
+        },
+      },
+    });
+    const res = await createGetArticleHistory(repo, { today })({
+      code: 'Code civil',
+      number: '1382',
+    });
+    if (!('versions' in res)) throw new Error('expected history');
+    expect(res.events).toEqual(EVENTS);
+    expect(res.concordance.from.map((r) => r.id)).toEqual(['C']);
+    expect(res.warnings).toEqual([
+      `Could not read Légifrance's concordance of ${OLD.version.id} (fetch failed).`,
+    ]);
+  });
+
+  it('a cancelled concordance call cancels the history', async () => {
+    const cancelled = new VigueurError('cancelled', 'Légifrance: request cancelled.');
+    const { repo } = fakeLegislation({
+      articles: [OLD, NEW],
+      overrides: {
+        getConcordance: async () => {
+          throw cancelled;
+        },
+      },
+    });
+    await expect(
+      createGetArticleHistory(repo, { today })({ code: 'Code civil', number: '1382' }),
+    ).rejects.toBe(cancelled);
+  });
+
+  it('has no warnings when every call succeeds', async () => {
+    const { repo } = fakeLegislation({ articles: [OLD, NEW] });
+    const res = await createGetArticleHistory(repo, { today })({ id: NEW.version.id });
+    expect('warnings' in res && res.warnings).toEqual([]);
   });
 
   it('rejects missing target and bad id', async () => {

@@ -9,14 +9,21 @@ export function sandboxConfig(): Config {
   return loadConfig({ PISTE_CLIENT_ID: 'id', PISTE_CLIENT_SECRET: 'secret', PISTE_ENV: 'sandbox' });
 }
 
-export interface FixtureRoute {
+export type FixtureRoute = {
   /** Path under the Légifrance prefix, e.g. `/search`. */
   path: string;
   /** Extra condition on the JSON request body; routes are tried in order. */
   when?: (body: unknown) => boolean;
-  /** Fixture name under `test/fixtures/legifrance/`. */
-  fixture: string;
-}
+} & (
+  | {
+      /** Fixture name under `test/fixtures/legifrance/`. */
+      fixture: string;
+    }
+  | {
+      /** A response body built here, for calls no recorded sample covers (say why at the route). */
+      body: () => unknown;
+    }
+);
 
 type Json = Record<string, unknown>;
 const asJson = (v: unknown): Json => (typeof v === 'object' && v !== null ? (v as Json) : {});
@@ -90,11 +97,12 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
   // Article history (Code civil 1382 lineage) and the Code civil change log 2025-2026.
   { path: '/chrono/textCidAndElementCid', fixture: '16-chrono-textCidAndElementCid-1382' },
   { path: '/chrono/textCid', fixture: '24-chrono-textCid-civil-2025-2026' },
-  // Current version of 1382 (same concordance: its content moved to 1240).
+  // Current version of 1382: not recorded. It shows only the 1353 link (the 1240 link belongs
+  // to the old version), so it is answered with the old version's links minus newTexts.
   {
     path: '/consult/concordanceLinksArticle',
     when: bodyField('articleId', 'LEGIARTI000032042379'),
-    fixture: '11-concordanceLinks-1382-old',
+    body: () => ({ ...(loadFixture('11-concordanceLinks-1382-old') as object), newTexts: [] }),
   },
   // L1234-1: Code du travail and Code de la santé publique.
   {
@@ -119,6 +127,12 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     when: numberSearch('CODE_ETAT', 'R4217-2'),
     fixture: '108-search-code-etat-num-abroge-R4217-2',
   },
+  // No sample of R4217-2's concordance: answered as an article with no concordance links.
+  {
+    path: '/consult/concordanceLinksArticle',
+    when: bodyField('articleId', 'LEGIARTI000018532352'),
+    body: () => ({ oldTexts: [], newTexts: [] }),
+  },
 ];
 
 /**
@@ -142,7 +156,9 @@ export function fixtureFetch(routes: readonly FixtureRoute[] = LEGIFRANCE_FIXTUR
       const path = req.url.slice(endpoints.legifranceBaseUrl.length);
       const body: unknown = raw === '' ? undefined : JSON.parse(raw);
       const route = routes.find((r) => r.path === path && (r.when?.(body) ?? true));
-      if (route !== undefined) return Response.json(loadFixture(route.fixture));
+      if (route !== undefined) {
+        return Response.json('fixture' in route ? loadFixture(route.fixture) : route.body());
+      }
     }
     const request = `${req.method} ${req.url}${raw === '' ? '' : ` ${raw}`}`;
     unmatched.push(request);

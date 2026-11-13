@@ -9,9 +9,31 @@ import type {
   CallContext,
   CodeInfo,
   LegislationRepository,
+  VersionSummary,
 } from './ports.js';
 
 const MAX_CODE_SUGGESTIONS = 5;
+
+const reasonOf = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/\.$/, '');
+
+/**
+ * Runs a lookup that only adds information: its failure becomes a warning built from the
+ * error message, and the answer stands without it (`null`). A cancellation still cancels.
+ */
+export async function bestEffort<T>(
+  task: () => Promise<T>,
+  warnings: string[],
+  warning: (reason: string) => string,
+): Promise<T | null> {
+  try {
+    return await task();
+  } catch (err) {
+    if (err instanceof VigueurError && err.kind === 'cancelled') throw err;
+    warnings.push(warning(reasonOf(err)));
+    return null;
+  }
+}
 
 export const ARTICLE_ID = /^(LEGIARTI|KALIARTI)\d{12}$/;
 
@@ -146,6 +168,12 @@ export function dedupeById<T extends { id: string }>(items: readonly T[]): T[] {
   return [...byId.values()];
 }
 
+/** The latest period of a lineage: greatest start, a still-born version only as a last resort. */
+export function latestPeriod(hits: readonly ArticleHit[]): ArticleHit | undefined {
+  const real = hits.filter((h) => h.status !== 'stillborn');
+  return [...(real.length > 0 ? real : hits)].sort(byStart).at(-1);
+}
+
 /** The code every hit belongs to, when they share one. */
 function sharedCodeTitle(hits: readonly ArticleHit[]): string | null {
   const titles = new Set(hits.map((h) => h.codeTitle));
@@ -205,6 +233,22 @@ export async function resolveCitation(
     codeTitle: codeTitle ?? sharedCodeTitle(periods),
     periods,
     truncated: all.truncated,
+  };
+}
+
+/** The record's own entry of its version stack (built from the version when not listed). */
+export function ownSummary(record: ArticleRecord): VersionSummary {
+  const listed = record.versions.find((v) => v.id === record.version.id);
+  if (listed) return listed;
+  const { id, status, rawStatus, validFrom, validTo, validToUndetermined } = record.version;
+  return {
+    id,
+    version: '',
+    status,
+    rawStatus: rawStatus ?? '',
+    validFrom,
+    validTo,
+    validToUndetermined: validToUndetermined === true,
   };
 }
 

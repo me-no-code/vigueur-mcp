@@ -1,8 +1,12 @@
 import type { IsoDate } from '../../domain/dates.js';
 import { articleUrlFor } from '../../domain/links.js';
-import { assessRelocation, type Relocation } from '../../domain/relocation.js';
-import { consistencyWarnings, type StatusAt, statusAt } from '../../domain/status-at.js';
-import { VigueurError } from '../../shared/errors.js';
+import { type ArticleRef, assessRelocation, type Relocation } from '../../domain/relocation.js';
+import {
+  consistencyWarnings,
+  coversDate,
+  type StatusAt,
+  statusAt,
+} from '../../domain/status-at.js';
 import type {
   ArticleHit,
   ArticleRecord,
@@ -13,10 +17,13 @@ import type {
 import {
   type Ambiguous,
   ARTICLE_ID,
+  bestEffort,
   blankToNull,
   fetchListed,
   invalid,
+  latestPeriod,
   type NotFound,
+  ownSummary,
   requireIsoDate,
   resolveCitation,
   targetOf,
@@ -35,8 +42,19 @@ export interface GetArticleInput {
 export interface RelocationView extends Relocation {
   /** The version that was found. */
   from: VersionSummary;
-  /** The next version of the same lineage, whose content is compared with `from`. */
+  /**
+   * The next version of the same lineage, whose content is compared with `from`. `null` when
+   * the found version ended (or is recorded as repealed) with no later version: `movedTo` then
+   * comes from Légifrance concordance alone and `change` is 'replaced'.
+   */
   successor: VersionSummary | null;
+}
+
+/** Where the content of the latest period of a number went, per Légifrance concordance. */
+export interface PeriodRelocation {
+  /** The latest period: an ended version whose concordance was read. */
+  from: ArticleHit;
+  movedTo: ArticleRef[];
 }
 
 export interface ArticleView {
@@ -58,23 +76,12 @@ export type GetArticleResult =
       asOf: IsoDate;
       /** Oldest first, unknown starts last. */
       periods: ArticleHit[];
+      /** E.g. a period whose dates cover `asOf` although the dated search found none. */
+      warnings: string[];
+      /** Present when the latest period ended and Légifrance concordance says where it went. */
+      relocation?: PeriodRelocation;
     }
   | NotFound;
-
-function ownSummary(record: ArticleRecord): VersionSummary {
-  const listed = record.versions.find((v) => v.id === record.version.id);
-  if (listed) return listed;
-  const { id, status, rawStatus, validFrom, validTo, validToUndetermined } = record.version;
-  return {
-    id,
-    version: '',
-    status,
-    rawStatus: rawStatus ?? '',
-    validFrom,
-    validTo,
-    validToUndetermined: validToUndetermined === true,
-  };
-}
 
 type DatedVersion = VersionSummary & { validFrom: IsoDate };
 
@@ -90,6 +97,32 @@ function successorOf(record: ArticleRecord): DatedVersion | null {
   );
 }
 
+const MOVE_WARNING = (reason: string) => `Could not check where this content moved (${reason}).`;
+
+/**
+ * A found version with no later one: where its content went, from the concordance alone, when
+ * it ended or Légifrance records its abrogation (whatever its status label says).
+ */
+async function endedRelocation(
+  repo: LegislationRepository,
+  record: ArticleRecord,
+  ctx: CallContext | undefined,
+): Promise<RelocationView | null> {
+  const { version } = record;
+  const ended =
+    version.validTo !== null || record.modifications.some((m) => m.kind === 'abrogation');
+  if (!ended) return null;
+  const concordance = await repo.getConcordance(version.id, ctx);
+  if (concordance.to.length === 0) return null;
+  return {
+    change: 'replaced',
+    movedTo: concordance.to,
+    evidence: ['concordance'],
+    from: ownSummary(record),
+    successor: null,
+  };
+}
+
 /** Amended or replaced, and where the content moved (per Légifrance concordance). */
 async function relocationOf(
   repo: LegislationRepository,
@@ -97,7 +130,7 @@ async function relocationOf(
   ctx: CallContext | undefined,
 ): Promise<RelocationView | null> {
   const successor = successorOf(record);
-  if (successor === null) return null;
+  if (successor === null) return endedRelocation(repo, record, ctx);
   const [concordance, later] = await Promise.all([
     repo.getConcordance(record.version.id, ctx),
     repo.getArticle(successor.id, successor.validFrom, ctx),
@@ -124,10 +157,6 @@ async function relocationOf(
   return { ...relocation, from, successor };
 }
 
-const isCancellation = (err: unknown) => err instanceof VigueurError && err.kind === 'cancelled';
-const reasonOf = (err: unknown) =>
-  (err instanceof Error ? err.message : String(err)).replace(/\.$/, '');
-
 async function found(
   repo: LegislationRepository,
   record: ArticleRecord,
@@ -139,13 +168,11 @@ async function found(
     warnings.push('Repeal scheduled; Légifrance has not set its date.');
   }
   // The relocation is extra information: its failure must not hide the article itself.
-  let relocation: RelocationView | null = null;
-  try {
-    relocation = await relocationOf(repo, record, ctx);
-  } catch (err) {
-    if (isCancellation(err)) throw err;
-    warnings.push(`Could not check where this content moved (${reasonOf(err)}).`);
-  }
+  const relocation = await bestEffort(
+    () => relocationOf(repo, record, ctx),
+    warnings,
+    MOVE_WARNING,
+  );
   const article: ArticleView = {
     record,
     asOf,
@@ -175,6 +202,30 @@ async function byId(
   return found(repo, record, asOf, ctx);
 }
 
+/** The dated search and the dates disagree: never silently claim "not in force". */
+function coverWarning(p: ArticleHit, asOf: IsoDate): string {
+  const end = p.validTo ?? (p.validToUndetermined ? 'date not yet determined' : 'no end');
+  return `Légifrance's dated search found no version for ${asOf}, but this period covers it: ${p.rawStatus || p.status} ${p.validFrom} → ${end} (${p.id}).`;
+}
+
+/** Where the content of the latest period went, when that period ended (best effort). */
+async function periodRelocation(
+  repo: LegislationRepository,
+  periods: readonly ArticleHit[],
+  warnings: string[],
+  ctx: CallContext | undefined,
+): Promise<PeriodRelocation | null> {
+  const last = latestPeriod(periods);
+  if (last === undefined || last.status === 'stillborn' || last.validTo === null) return null;
+  const concordance = await bestEffort(
+    () => repo.getConcordance(last.id, ctx),
+    warnings,
+    MOVE_WARNING,
+  );
+  if (concordance === null || concordance.to.length === 0) return null;
+  return { from: last, movedTo: concordance.to };
+}
+
 async function byCitation(
   repo: LegislationRepository,
   rawNumber: string,
@@ -189,7 +240,18 @@ async function byCitation(
     case 'periods': {
       // Nothing in force on that date, but versions on record: repealed, or not yet in force.
       const { num, codeTitle, periods } = lookup;
-      return { kind: 'not_in_force_at_date', num, codeTitle, asOf, periods };
+      const warnings = periods.filter((p) => coversDate(p, asOf)).map((p) => coverWarning(p, asOf));
+      const relocation =
+        codeTitle === null ? null : await periodRelocation(repo, periods, warnings, ctx);
+      return {
+        kind: 'not_in_force_at_date',
+        num,
+        codeTitle,
+        asOf,
+        periods,
+        warnings,
+        ...(relocation !== null && { relocation }),
+      };
     }
     default:
       return lookup;
@@ -200,10 +262,13 @@ async function byCitation(
  * Resolves an article by citation (code + number) or by id, as of a date (default: today in Paris):
  * - a number found in several codes is `ambiguous` (candidates listed, never one picked);
  * - a number with no version in force on the date but other versions on record is
- *   `not_in_force_at_date` (e.g. repealed), never `not_found`;
+ *   `not_in_force_at_date` (e.g. repealed), never `not_found`; when its latest period ended,
+ *   it says where that content went per Légifrance concordance;
  * - a found version followed by another one says whether its content was amended or
- *   replaced, and where it moved per Légifrance concordance. Best effort: a failure of
- *   that check becomes a warning (only a cancellation fails the lookup).
+ *   replaced, and where it moved per Légifrance concordance; one that ended (or is recorded
+ *   as repealed) with no later version says where its content went, per concordance only.
+ *   Best effort: a failure of these checks becomes a warning (only a cancellation fails the
+ *   lookup).
  */
 export function createGetArticle(
   repo: LegislationRepository,

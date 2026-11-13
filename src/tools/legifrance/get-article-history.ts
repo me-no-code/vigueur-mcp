@@ -106,7 +106,7 @@ export function renderGetArticleHistory(
   opts: HistoryRenderOptions,
 ): { text: string; output: ArticleHistoryOutput } {
   if (!('events' in result)) {
-    return { text: renderLookupMiss(result, opts.requestedId), output: result };
+    return { text: renderLookupMiss(result, opts), output: result };
   }
   const view = result;
   const heading = `### ${view.codeTitle ?? 'Code'} — art. ${view.num || '?'}: version history`;
@@ -115,19 +115,24 @@ export function renderGetArticleHistory(
     current === null
       ? 'No version is in force today (computed from validity dates).'
       : `In force today (computed from validity dates): version ${current.version || '?'}, since ${current.validFrom ?? 'an unknown date'}, ${untilPhrase(current.validTo, current.validToUndetermined) ?? 'no end date'}.`;
-  const concordance: string[] = [];
-  if (view.concordance.to.length > 0) {
-    concordance.push(`Content moved to: ${refList(view.concordance.to)}`);
-  }
-  if (view.concordance.from.length > 0) {
-    concordance.push(`Content came from: ${refList(view.concordance.from)}`);
-  }
+  // Each line says which content it is about: a move belongs to the version that reported it.
+  const num = view.num || '?';
+  const concordance = [
+    ...view.concordance.moved.map(
+      ({ version: v, to }) =>
+        `Per Légifrance concordance — content formerly at art. ${num} (${untilPhrase(v.validTo, v.validToUndetermined) ?? `version since ${v.validFrom ?? 'an unknown date'}`}) now at: ${refList(to)}`,
+    ),
+    ...(view.concordance.from.length > 0
+      ? [
+          `Per Légifrance concordance — content now at art. ${num} came from: ${refList(view.concordance.from)}`,
+        ]
+      : []),
+  ];
   const linked = view.current ?? view.versions.at(-1);
   const before = [heading, currentLine, ...(view.versions.length > 0 ? [versionsTable(view)] : [])];
   const after = [
-    ...(concordance.length > 0
-      ? [`#### Concordance (per Légifrance concordance)\n${concordance.join('\n')}`]
-      : []),
+    ...(concordance.length > 0 ? [`#### Concordance\n${concordance.join('\n')}`] : []),
+    ...(view.warnings.length > 0 ? [view.warnings.map((w) => `⚠️ ${w}`).join('\n')] : []),
     ...(linked === undefined ? [] : [`Source: ${articleUrlFor(linked.id)}`]),
   ];
   const frameLength = [...before, ...after].join('\n\n').length;
