@@ -328,6 +328,7 @@ function syntheticChanges(n: number, groups = 60): ChangesView {
   for (const e of entries)
     byTitle.set(e.amendingTitle, [...(byTitle.get(e.amendingTitle) ?? []), e]);
   return {
+    target: 'code',
     textTitle: 'Code du travail',
     textId: 'LEGITEXT000006072050',
     since: '2026-01-01',

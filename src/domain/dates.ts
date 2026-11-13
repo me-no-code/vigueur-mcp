@@ -75,3 +75,11 @@ export function parseFrenchDate(s: string): IsoDate | null {
   const day = text[1] === '1er' ? 1 : Number(text[1]);
   return toIso(Number(text[3]), month, day);
 }
+
+/** The calendar date `days` days before `date` (calendar arithmetic, no time zone involved). */
+export function minusDays(date: IsoDate, days: number): IsoDate {
+  const [y, m, d] = date.split('-').map(Number);
+  const t = new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, (d ?? 1) - days));
+  const p = (n: number, w: number) => String(n).padStart(w, '0');
+  return `${p(t.getUTCFullYear(), 4)}-${p(t.getUTCMonth() + 1, 2)}-${p(t.getUTCDate(), 2)}`;
+}

@@ -1,8 +1,11 @@
 import type { IsoDate } from '../../domain/dates.js';
+import { createGetText, type GetTextInput, type TextNature } from './get-text.js';
 import type { CallContext, ChangeEntry, LegislationRepository } from './ports.js';
 import { invalid, requireIsoDate, resolveCode, todayInParis } from './resolve.js';
 
 export interface ChangesView {
+  /** Decided by the input (`code` vs `text`), never by id prefix. */
+  target: 'code' | 'text';
   textTitle: string;
   textId: string;
   since: IsoDate;
@@ -19,18 +22,48 @@ const byDateThenNumber = (a: ChangeEntry, b: ChangeEntry) =>
   a.date.localeCompare(b.date) ||
   (a.articleNum ?? '').localeCompare(b.articleNum ?? '', 'fr', { numeric: true });
 
+const NATURES: Array<[string, TextNature]> = [
+  ['loi organique', 'loi_organique'],
+  ['loi_organique', 'loi_organique'],
+  ['loi', 'loi'],
+  ['ordonnance', 'ordonnance'],
+  ['decret', 'decret'],
+  ['arrete', 'arrete'],
+];
+const FORMS =
+  'a LEGITEXT… or JORFTEXT… id, a NOR (e.g. JUSX1234567A), or "<nature> <number>" such as "loi 78-17" or "décret 2019-1088" (natures: loi, loi organique, ordonnance, décret, arrêté)';
+
+function parseTextInput(raw: string): GetTextInput {
+  const s = raw.trim();
+  if (/^(LEGITEXT|JORFTEXT)\d{12}$/i.test(s)) return { id: s.toUpperCase() };
+  if (/^[A-Za-z]{4}\d{7}[A-Za-z]$/.test(s)) return { nor: s.toUpperCase() };
+  const folded = s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036F]/g, '')
+    .toLowerCase();
+  for (const [word, nature] of NATURES) {
+    if (folded.startsWith(word)) {
+      const rest = s.slice(word.length);
+      const number = rest.replace(/^\s+(n[°o]\.?\s*)?/i, '');
+      if (/^\s/.test(rest) && /^\d[\d-]*$/.test(number)) return { nature, number };
+    }
+  }
+  throw invalid(`Cannot read "${raw}" as a text. Accepted: ${FORMS}.`);
+}
+
 /**
- * Changes to a code between two dates, grouped by amending text. Codes only for now
- * (LODA texts need their JORFTEXT cid and come later).
+ * Changes to a code or to a law/decree between two dates, grouped by amending text. A text is
+ * resolved with `createGetText`; a repealed one still has a change history.
  */
 export function createListChanges(
   repo: LegislationRepository,
   opts: { today?: () => IsoDate } = {},
 ): (
-  input: { code: string; since: IsoDate; until?: IsoDate },
+  input: { code?: string; text?: string; since: IsoDate; until?: IsoDate },
   ctx?: CallContext,
 ) => Promise<ChangesView> {
   const todayOf = opts.today ?? todayInParis;
+  const getText = createGetText(repo, { today: todayOf });
   return async (input, ctx) => {
     const today = todayOf();
     const since = requireIsoDate(input.since, 'since');
@@ -39,16 +72,55 @@ export function createListChanges(
       throw invalid(`"until" (${until}) is before "since" (${since}).`);
     }
 
-    const resolved = await resolveCode(repo, input.code, ctx);
-    if (resolved.code === null) {
-      const hint =
-        resolved.didYouMean.length > 0
-          ? ` Did you mean: ${resolved.didYouMean.join('; ')}?`
-          : ' Use the exact title of a code, e.g. "Code du travail". Only codes are supported.';
-      throw invalid(`Unknown code "${input.code}".${hint}`);
+    const code = input.code?.trim() || undefined;
+    const text = input.text?.trim() || undefined;
+    if ((code === undefined) === (text === undefined)) {
+      throw invalid('Give exactly one of "code" (a code title) or "text" (a law or decree).');
     }
 
-    const log = await repo.listChanges(resolved.code.id, since, until, ctx);
+    let target: ChangesView['target'];
+    let subject: { id: string; title: string; cid: string };
+    if (code !== undefined) {
+      target = 'code';
+      const resolved = await resolveCode(repo, code, ctx);
+      if (resolved.code === null) {
+        const hint =
+          resolved.didYouMean.length > 0
+            ? ` Did you mean: ${resolved.didYouMean.join('; ')}?`
+            : ' Use the exact title of a code, e.g. "Code du travail". For a law or decree, use "text".';
+        throw invalid(`Unknown code "${code}".${hint}`);
+      }
+      subject = { id: resolved.code.id, title: resolved.code.title, cid: resolved.code.id };
+    } else {
+      target = 'text';
+      const res = await getText(parseTextInput(text as string), ctx);
+      const list = (items: Array<{ title: string; id: string }>) =>
+        items.map((c) => `${c.title} (${c.id})`).join('; ');
+      if (res.kind === 'found') {
+        subject = {
+          id: res.text.record.id,
+          title: res.text.record.title,
+          cid: res.text.record.cid,
+        };
+      } else if (res.kind === 'not_found') {
+        throw invalid(`No text found for "${res.input}". Check the number, nature or id.`);
+      } else if (res.kind === 'ambiguous') {
+        throw invalid(
+          `"${text}" matches several texts: ${list(res.candidates.map((c) => ({ title: c.title, id: c.textId })))}. Use the LEGITEXT id or the NOR.`,
+        );
+      } else {
+        const [only] = res.candidates;
+        if (res.candidates.length === 1 && only?.textCid) {
+          subject = { id: only.textId, title: only.title, cid: only.textCid };
+        } else {
+          throw invalid(
+            `"${text}" matches ${res.candidates.length === 1 ? 'a text with no usable JORFTEXT id' : 'several texts'} not in force on ${res.asOf}: ${list(res.candidates.map((c) => ({ title: c.title, id: c.textId })))}. Use the JORFTEXT id or the NOR.`,
+          );
+        }
+      }
+    }
+
+    const log = await repo.listChanges(subject.cid, since, until, ctx);
     const byTitle = new Map<string, ChangeEntry[]>();
     for (const e of log.entries) {
       const group = byTitle.get(e.amendingTitle);
@@ -67,8 +139,9 @@ export function createListChanges(
       );
 
     return {
-      textTitle: resolved.code.title,
-      textId: resolved.code.id,
+      target,
+      textTitle: subject.title,
+      textId: subject.id,
       since,
       until,
       groups,
