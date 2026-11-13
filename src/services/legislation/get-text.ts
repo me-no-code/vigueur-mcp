@@ -116,7 +116,7 @@ function view(
     focus = findSection(record.sections, sectionCid);
     if (focus === null) {
       throw invalid(
-        `The text has no section "${sectionCid}". Omit "section" to read the whole text.`,
+        `The text has no section "${sectionCid}". Omit "section_id" to read the whole text.`,
       );
     }
     flatten(focus, pathTo(record.sections, focus, []) ?? [], flatArticles);

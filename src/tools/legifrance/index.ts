@@ -8,8 +8,10 @@ import type { CallContext, LegislationSearchPage } from '../../services/legislat
 import { todayInParis } from '../../services/legislation/resolve.js';
 import type { SearchLegislationInput } from '../../services/legislation/search.js';
 import type { SourceModule } from '../../sources.js';
+import { type BrowseCode, registerBrowseCodeTool } from './browse-code.js';
 import { type GetArticle, registerGetArticleTool } from './get-article.js';
 import { registerGetArticleHistoryTool } from './get-article-history.js';
+import { type GetText, registerGetTextTool } from './get-text.js';
 import { registerListChangesTool } from './list-changes.js';
 import { registerSearchLegislationTool } from './search-legislation.js';
 
@@ -28,6 +30,8 @@ export interface LegifranceServices {
     input: { code: string; since: IsoDate; until?: IsoDate },
     ctx?: CallContext,
   ) => Promise<ChangesView>;
+  getText: GetText;
+  browseCode: BrowseCode;
 }
 
 /** The Légifrance tools; `today` (default: today in Paris) sets the tense of upcoming changes; `deadlineMs`
@@ -44,6 +48,8 @@ export function createLegifranceSource(
       registerGetArticleHistoryTool(server, services.getArticleHistory, today, opts.deadlineMs);
       registerSearchLegislationTool(server, services.searchLegislation, today, opts.deadlineMs);
       registerListChangesTool(server, services.listChanges, today, opts.deadlineMs);
+      registerGetTextTool(server, services.getText, opts.deadlineMs);
+      registerBrowseCodeTool(server, services.browseCode, opts.deadlineMs);
     },
   };
 }

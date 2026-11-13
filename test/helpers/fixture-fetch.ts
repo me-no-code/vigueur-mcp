@@ -14,6 +14,8 @@ export type FixtureRoute = {
   path: string;
   /** Extra condition on the JSON request body; routes are tried in order. */
   when?: (body: unknown) => boolean;
+  /** HTTP status of the answer (default 200), e.g. 400 for a recorded Légifrance error body. */
+  status?: number;
 } & (
   | {
       /** Fixture name under `test/fixtures/legifrance/`. */
@@ -39,11 +41,24 @@ export function numberSearch(fond: 'CODE_DATE' | 'CODE_ETAT', num: string) {
   };
 }
 
+/** A by-number `/search` on `fond` for text number `num` (e.g. `78-17`). */
+export function textNumberSearch(fond: 'LODA_DATE' | 'LODA_ETAT', num: string) {
+  return (body: unknown): boolean => {
+    const b = asJson(body);
+    const champs = asJson(b.recherche).champs;
+    const champ = asJson(Array.isArray(champs) ? champs[0] : undefined);
+    const critere = asJson(Array.isArray(champ.criteres) ? champ.criteres[0] : undefined);
+    return b.fond === fond && champ.typeChamp === 'NUM' && critere.valeur === num;
+  };
+}
+
 /** A request whose body field `key` equals `value` (e.g. `/consult/getArticle` by `id`). */
 export const bodyField =
   (key: string, value: string) =>
   (body: unknown): boolean =>
     asJson(body)[key] === value;
+
+const DECRET_2005_1309 = ['LEGITEXT000006052580', 'LEGITEXT000006052581'];
 
 /** `getArticleWithIdAndNum` returns the same payload as `getArticle`. */
 export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
@@ -133,6 +148,79 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     when: bodyField('articleId', 'LEGIARTI000018532352'),
     body: () => ({ oldTexts: [], newTexts: [] }),
   },
+  // Code civil art. 1240's chapter: 1240 first, then 1241.
+  {
+    path: '/consult/getSectionByCid',
+    when: bodyField('cid', 'LEGISCTA000032021488'),
+    fixture: '23-getSectionByCid-civ-ch1',
+  },
+  // Code civil art. 1241. Recorded 2026-11-13 from production (env production, HTTP 200) with
+  // the project's PisteHttp: POST /consult/getArticle {"id":"LEGIARTI000032041565"}, body only.
+  {
+    path: '/consult/getArticle',
+    when: bodyField('id', 'LEGIARTI000032041565'),
+    fixture: '113-getArticle-1241',
+  },
+  // Code du travail table of contents, trimmed to Livre III of the first part.
+  {
+    path: '/consult/legi/tableMatieres',
+    when: bodyField('textId', 'LEGITEXT000006072050'),
+    fixture: '20-tableMatieres-code-travail.trimmed-livre-III',
+  },
+  // Loi 78-17: one in-force hit by number, then its consolidated text.
+  {
+    path: '/search',
+    when: textNumberSearch('LODA_DATE', '78-17'),
+    fixture: '30-search-loda-date-num-78-17',
+  },
+  {
+    path: '/consult/lawDecree',
+    when: bodyField('textId', 'LEGITEXT000006068624'),
+    fixture: '48-lawDecree-loi-78-17',
+  },
+  // Ordonnance 2016-131 as published in the Journal officiel, by NOR and by JORFTEXT id.
+  {
+    path: '/consult/getJoWithNor',
+    when: bodyField('nor', 'JUSC1522466R'),
+    fixture: '40-getJoWithNor-ord-2016-131',
+  },
+  {
+    path: '/consult/jorf',
+    when: bodyField('textCid', 'JORFTEXT000032004939'),
+    fixture: '50-consult-jorf-ord-2016-131',
+  },
+  // An unknown text id: Légifrance answers HTTP 400 "L'expression à valider est fausse."
+  {
+    path: '/consult/lawDecree',
+    when: bodyField('textId', 'LEGITEXT999999999999'),
+    fixture: '65-err-lawDecree-unknown',
+    status: 400,
+  },
+  // Décret 2005-1309 (repealed 2019-06-01): the in-force search lists two LEGITEXT containers of
+  // one cid (114), the all-status search one (115).
+  {
+    path: '/search',
+    when: textNumberSearch('LODA_DATE', '2005-1309'),
+    fixture: '114-search-loda-date-num-decret-2005-1309',
+  },
+  {
+    path: '/search',
+    when: textNumberSearch('LODA_ETAT', '2005-1309'),
+    fixture: '115-search-loda-etat-num-decret-2005-1309',
+  },
+  {
+    path: '/consult/lawDecree',
+    when: (b) =>
+      bodyField('textId', 'LEGITEXT000006052581')(b) && bodyField('date', '2015-01-01')(b),
+    fixture: '118-lawDecree-decret-2005-1309-581-2015',
+  },
+  // Read at any later date, both containers answer the same body but for their jurisState (checked
+  // live on both); only …580's (fixture 116) is recorded, so it answers for both.
+  {
+    path: '/consult/lawDecree',
+    when: (b) => DECRET_2005_1309.includes(String(asJson(b).textId)),
+    fixture: '116-lawDecree-decret-2005-1309-580-today',
+  },
 ];
 
 /**
@@ -157,7 +245,9 @@ export function fixtureFetch(routes: readonly FixtureRoute[] = LEGIFRANCE_FIXTUR
       const body: unknown = raw === '' ? undefined : JSON.parse(raw);
       const route = routes.find((r) => r.path === path && (r.when?.(body) ?? true));
       if (route !== undefined) {
-        return Response.json('fixture' in route ? loadFixture(route.fixture) : route.body());
+        return Response.json('fixture' in route ? loadFixture(route.fixture) : route.body(), {
+          status: route.status ?? 200,
+        });
       }
     }
     const request = `${req.method} ${req.url}${raw === '' ? '' : ` ${raw}`}`;

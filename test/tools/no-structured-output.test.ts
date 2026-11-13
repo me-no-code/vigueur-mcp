@@ -24,7 +24,13 @@ describe('tools answer with text only', () => {
   it('no tool declares an outputSchema', async () => {
     const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name)).toContain('legifrance_get_article');
+    expect(tools.map((t) => t.name)).toEqual(
+      expect.arrayContaining([
+        'legifrance_get_article',
+        'legifrance_get_text',
+        'legifrance_browse_code',
+      ]),
+    );
     for (const tool of tools) expect(tool.outputSchema, tool.name).toBeUndefined();
   });
 
@@ -49,5 +55,39 @@ describe('tools answer with text only', () => {
     expect(text).toContain(
       'Source: https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032041571',
     );
+  });
+
+  it('legifrance_get_article with neighbours returns text only, no structuredContent', async () => {
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
+    const result = await client.callTool({
+      name: 'legifrance_get_article',
+      arguments: { code: 'Code civil', number: '1240', include_neighbours: true },
+    });
+    expect(result.structuredContent).toBeUndefined();
+    expect(firstText(result)).toContain('- Next: art. 1241');
+  });
+
+  it('legifrance_get_text returns the text and its link as text, no structuredContent', async () => {
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
+    for (const part of ['outline', 'articles']) {
+      const result = await client.callTool({
+        name: 'legifrance_get_text',
+        arguments: { nature: 'loi', number: '78-17', part },
+      });
+      expect(result.structuredContent, part).toBeUndefined();
+      expect(firstText(result)).toContain(
+        'Source: https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006068624',
+      );
+    }
+  });
+
+  it('legifrance_browse_code returns the table of contents as text, no structuredContent', async () => {
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
+    const result = await client.callTool({
+      name: 'legifrance_browse_code',
+      arguments: { code: 'Code du travail' },
+    });
+    expect(result.structuredContent).toBeUndefined();
+    expect(firstText(result)).toContain('section_id LEGISCTA000006112874');
   });
 });

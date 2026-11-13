@@ -5,8 +5,10 @@ import { createPisteHttp } from './clients/piste/http.js';
 import { probeJudilibre, probeLegifrance } from './clients/piste/probes.js';
 import type { Config } from './config.js';
 import type { ServerDeps } from './server.js';
+import { createBrowseCode } from './services/legislation/browse.js';
 import { createListChanges } from './services/legislation/changes.js';
 import { createGetArticle } from './services/legislation/get-article.js';
+import { createGetText } from './services/legislation/get-text.js';
 import { createGetArticleHistory } from './services/legislation/history.js';
 import { createSearchLegislation } from './services/legislation/search.js';
 import { getStatus, type StatusContext } from './services/status.js';
@@ -50,6 +52,8 @@ export function compose(config: Config, opts: { fetch?: FetchLike } = {}): Serve
     getArticleHistory: createGetArticleHistory(legislation),
     searchLegislation: createSearchLegislation(legislation),
     listChanges: createListChanges(legislation),
+    getText: createGetText(legislation),
+    browseCode: createBrowseCode(legislation),
   });
 
   return {

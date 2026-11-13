@@ -141,6 +141,36 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     expect(text).toContain('Give an article number with its code');
   });
 
+  it('include_neighbours on Code civil 1240: first of its chapter, then art. 1241 (fixtures 23, 113)', async () => {
+    const { result, text } = await call({
+      code: 'Code civil',
+      number: '1240',
+      include_neighbours: true,
+    });
+    expect(result.isError).toBeFalsy();
+    expect(text).toContain(
+      [
+        '#### Neighbouring articles',
+        '- Previous: none',
+        "- Next: art. 1241 — Chacun est responsable du dommage qu'il a causé non seulement par son fait, mais encore par sa négligence ou par son imprudence.… · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032041565",
+      ].join('\n'),
+    );
+    expect(text).not.toContain('⚠️');
+    expect(text.indexOf('#### Neighbouring articles')).toBeLessThan(text.indexOf('Source: '));
+  });
+
+  it('without include_neighbours, no neighbours are read or shown', async () => {
+    const fixtures = fixtureFetch();
+    unmatchedRoutes.push(fixtures.unmatched);
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
+    const result = await client.callTool({
+      name: TOOL,
+      arguments: { code: 'Code civil', number: '1240' },
+    });
+    expect(firstText(result)).not.toContain('Neighbouring');
+    expect(fixtures.calls.some((c) => c.url.endsWith('/consult/getSectionByCid'))).toBe(false);
+  });
+
   it('is listed with annotations and no output schema, only when configured', async () => {
     const client = await composedClient();
     const { tools } = await client.listTools();
@@ -165,7 +195,14 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
 
 function fakeServices(getArticle: LegifranceServices['getArticle']): LegifranceServices {
   const unused = () => Promise.reject(new Error('not used in these tests'));
-  return { getArticle, getArticleHistory: unused, searchLegislation: unused, listChanges: unused };
+  return {
+    getArticle,
+    getArticleHistory: unused,
+    searchLegislation: unused,
+    listChanges: unused,
+    getText: unused,
+    browseCode: unused,
+  };
 }
 
 async function clientOver(getArticle: LegifranceServices['getArticle']) {
@@ -227,7 +264,18 @@ describe('legifrance_get_article handler', () => {
     });
     expect(seen).toHaveLength(1);
     expect(seen[0]?.input).toEqual({ code: 'Code civil', number: '7', atDate: '2020-01-01' });
+    expect(seen[0]?.input.includeNeighbours).not.toBe(true);
     expect(seen[0]?.ctx?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('include_neighbours asks the service for the neighbours', async () => {
+    const seen: GetArticleInput[] = [];
+    const client = await clientOver(async (input) => {
+      seen.push(input);
+      return found();
+    });
+    await client.callTool({ name: TOOL, arguments: { number: '7', include_neighbours: true } });
+    expect(seen[0]).toEqual({ number: '7', includeNeighbours: true });
   });
 
   it('cancelling the call aborts the signal the service received', async () => {
@@ -437,6 +485,30 @@ describe('renderGetArticle', () => {
         'Source: https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000001\nLégifrance id: LEGIARTI000000000001',
       ].join('\n\n'),
     );
+  });
+
+  it('neighbours: one line each, excerpt on one line, before the warnings and the footer', () => {
+    const neighbour = (n: string, excerpt: string) => ({
+      id: `LEGIARTI00000000000${n}`,
+      num: n,
+      excerpt,
+      url: `https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI00000000000${n}`,
+    });
+    const text = render(
+      found({
+        neighbours: { previous: neighbour('6', 'Premier alinéa.\n\nSecond   alinéa'), next: null },
+        warnings: ['Could not read the neighbouring article LEGIARTI000000000008 (boom).'],
+      }),
+    );
+    expect(text).toContain(
+      [
+        '#### Neighbouring articles',
+        '- Previous: art. 6 — Premier alinéa. Second alinéa… · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000006',
+        '- Next: none',
+      ].join('\n'),
+    );
+    expect(text.indexOf('#### Neighbouring articles')).toBeLessThan(text.indexOf('⚠️'));
+    expect(render(found())).not.toContain('Neighbouring');
   });
 
   it('relocation without concordance: inferred from text comparison, past tense', () => {

@@ -8,6 +8,7 @@ import type {
   ArticleView,
   GetArticleInput,
   GetArticleResult,
+  Neighbour,
   RelocationView,
 } from '../../services/legislation/get-article.js';
 import type { ArticleHit, ArticleRecord, CallContext } from '../../services/legislation/ports.js';
@@ -60,6 +61,12 @@ const inputSchema = z.object({
     .optional()
     .describe(
       'Continue a truncated article text from this character offset (given in the answer).',
+    ),
+  include_neighbours: z
+    .boolean()
+    .optional()
+    .describe(
+      'true = also give the previous and next article of the same section (number, first words, link). Default false.',
     ),
 });
 
@@ -159,12 +166,29 @@ function headerOf(a: ArticleView): string {
   return lines.join('\n');
 }
 
+/** One neighbour on one line: the excerpt's line breaks and runs of spaces become single spaces. */
+function neighbourLine(label: string, n: Neighbour | null): string {
+  if (n === null) return `- ${label}: none`;
+  const excerpt = n.excerpt.replace(/\s+/g, ' ').trim();
+  return `- ${label}: art. ${n.num || '?'} — ${excerpt}… · ${n.url}`;
+}
+
 function trailerOf(a: ArticleView, opts: RenderOptions): string[] {
   const { record } = a;
   const blocks: string[] = [];
   if (record.nota !== null) blocks.push(`Note: ${record.nota}`);
   if (a.relocation !== null) {
     blocks.push(relocationSentence(a.relocation, record.version.number || '?', a.asOf, opts.today));
+  }
+  // Best effort: a neighbour that could not be read is `none` here and explained in the warnings.
+  if (a.neighbours !== undefined) {
+    blocks.push(
+      [
+        '#### Neighbouring articles',
+        neighbourLine('Previous', a.neighbours.previous),
+        neighbourLine('Next', a.neighbours.next),
+      ].join('\n'),
+    );
   }
   if (a.warnings.length > 0) blocks.push(a.warnings.map((w) => `⚠️ ${w}`).join('\n'));
   if (opts.detailed) blocks.push(...detailedBlocks(record));
@@ -330,6 +354,7 @@ export function registerGetArticleTool(
           number: presentOrUndefined(args.number),
           id,
           atDate: presentOrUndefined(args.at_date),
+          ...(args.include_neighbours === true && { includeNeighbours: true }),
         };
         const result = await getArticle(input, { signal });
         const text = renderGetArticle(result, {

@@ -41,11 +41,16 @@ const chapitre = node('LEGISCTA000000000003', 'Chapitre I', {
   children: [
     node('LEGISCTA000000000004', 'Section 1'),
     node('LEGISCTA000000000005', 'Section ancienne', { status: 'repealed', validTo: '2010-01-01' }),
+    // A label its dates contradict: the dates decide, so it stays listed.
     node('LEGISCTA000000000006', 'Section abrogée sans date', { status: 'repealed' }),
   ],
 });
 const livre1 = node('LEGISCTA000000000002', 'Livre I', { children: [chapitre] });
-const livre2 = node('LEGISCTA000000000007', 'Livre II', { validTo: '2020-01-01' });
+// Realistic: a part that ended carries Légifrance's ABROGE label and a real end date.
+const livre2 = node('LEGISCTA000000000007', 'Livre II', {
+  status: 'repealed',
+  validTo: '2020-01-01',
+});
 const TOC: CodeToc = {
   codeId: CODE_ID,
   codeTitle: 'Code civil',
@@ -63,14 +68,18 @@ const browse = (extra: Parameters<typeof fakeLegislation>[0] = {}) => {
   return { run: createBrowseCode(repo, { today: () => TODAY }), calls };
 };
 
+const titles = (view: { children: Array<{ section: TocNode }> }) =>
+  view.children.map((c) => c.section.title);
+
 describe('browse a code', () => {
   it('lists the top-level parts valid today, never filtering the root itself', async () => {
     const view = await browse().run({ code: 'Code civil' });
     expect(view.node).toBeNull();
     expect(view.breadcrumb).toEqual([]);
-    expect(view.children.map((c) => c.cid)).toEqual(['LEGISCTA000000000002']);
+    expect(view.children.map((c) => c.section.cid)).toEqual(['LEGISCTA000000000002']);
     expect(view.codeId).toBe(CODE_ID);
     expect(view.asOf).toBe(TODAY);
+    expect(view.asOfIsToday).toBe(true);
   });
 
   it('shows a section with its breadcrumb from the root, children and articles', async () => {
@@ -80,16 +89,29 @@ describe('browse a code', () => {
       { cid: chapitre.cid, title: 'Chapitre I' },
     ]);
     expect(view.node).toEqual({ cid: chapitre.cid, title: 'Chapitre I' });
-    expect(view.children.map((c) => c.title)).toEqual(['Section 1']);
+    expect(titles(view)).toEqual(['Section 1', 'Section abrogée sans date']);
     expect(view.articles.map((a) => a.num)).toEqual(['1', '3']);
   });
 
-  it('hides repealed articles and sections by default and counts them', async () => {
+  it('sections are judged by their dates only: a repealed label never hides a date-valid one', async () => {
     const view = await browse().run({ code: 'Code civil', sectionCid: chapitre.cid });
-    expect(view.hiddenRepealed).toBe(2); // the repealed article + the repealed undated section
+    const undated = view.children.find((c) => c.section.title === 'Section abrogée sans date');
+    expect(undated?.force.inForce).toBe(true);
+    expect(view.children.every((c) => c.force.inForce)).toBe(true);
   });
 
-  it('shows repealed content with includeRepealed', async () => {
+  it('today: hides sections ended by their dates and repealed articles, and counts them', async () => {
+    const view = await browse().run({ code: 'Code civil', sectionCid: chapitre.cid });
+    expect(view.hiddenNotInForce).toBe(2); // the ended section + the repealed article
+  });
+
+  it('an ABROGE section that ended before today is hidden and counted', async () => {
+    const view = await browse().run({ code: 'Code civil' });
+    expect(titles(view)).not.toContain('Livre II');
+    expect(view.hiddenNotInForce).toBe(1);
+  });
+
+  it('shows what is not in force with includeRepealed, each section with its dates', async () => {
     const view = await browse().run({
       code: 'Code civil',
       sectionCid: chapitre.cid,
@@ -97,23 +119,96 @@ describe('browse a code', () => {
     });
     expect(view.articles.map((a) => a.num)).toEqual(['1', '2', '3']);
     expect(view.articles[1]?.status).toBe('repealed');
-    expect(view.children.map((c) => c.title)).toEqual(['Section 1', 'Section abrogée sans date']);
-    expect(view.hiddenRepealed).toBe(0);
+    expect(titles(view)).toEqual(['Section 1', 'Section ancienne', 'Section abrogée sans date']);
+    expect(view.children[1]?.force).toEqual({
+      inForce: false,
+      reason: 'ended',
+      from: '2000-01-01',
+      until: '2010-01-01',
+    });
+    expect(view.hiddenNotInForce).toBe(0);
   });
 
   it('hides a node valid only before the date, and shows it on an earlier date', async () => {
     const { run, calls } = browse();
     const now = await run({ code: 'Code civil' });
-    expect(now.children.map((c) => c.title)).not.toContain('Livre II');
+    expect(titles(now)).not.toContain('Livre II');
     const before = await run({ code: 'Code civil', atDate: '2015-06-01' });
-    expect(before.children.map((c) => c.title)).toContain('Livre II');
+    expect(titles(before)).toContain('Livre II');
     expect(calls.getCodeToc.at(-1)?.args).toEqual([CODE_ID, '2015-06-01']);
+  });
+
+  describe('on a past date (Code du travail, recodified on 2008-05-01)', () => {
+    const TRAVAIL = 'LEGITEXT000006072050';
+    const ancienne = node('LEGISCTA000006079751', 'Partie législative ancienne', {
+      status: 'repealed',
+      validFrom: '1973-11-02',
+      validTo: '2008-05-01',
+      articles: [
+        { ...art('LEGIARTI000006646001', 'L122-14-3', 'repealed'), rawStatus: 'ABROGE' },
+        art('LEGIARTI000006646002', 'L800-4'),
+      ],
+    });
+    const nouvelle = node('LEGISCTA000006112874', 'Partie législative', {
+      validFrom: '2008-05-01',
+    });
+    const travail: CodeToc = {
+      codeId: TRAVAIL,
+      codeTitle: 'Code du travail',
+      asOf: TODAY,
+      root: node(TRAVAIL, 'Code du travail', { children: [ancienne, nouvelle] }),
+    };
+    const run = createBrowseCode(fakeLegislation({ tocs: { [TRAVAIL]: travail } }).repo, {
+      today: () => TODAY,
+    });
+
+    it('a part labelled ABROGE today but in force on the date is shown; the later part is hidden and counted', async () => {
+      const view = await run({ code: 'Code du travail', atDate: '2005-01-01' });
+      expect(titles(view)).toEqual(['Partie législative ancienne']);
+      expect(view.children[0]?.force.inForce).toBe(true);
+      expect(view.hiddenNotInForce).toBe(1);
+      expect(view.asOfIsToday).toBe(false);
+    });
+
+    it('with includeRepealed the later part is shown with its start date', async () => {
+      const view = await run({
+        code: 'Code du travail',
+        atDate: '2005-01-01',
+        includeRepealed: true,
+      });
+      expect(titles(view)).toEqual(['Partie législative ancienne', 'Partie législative']);
+      expect(view.children[1]?.force).toMatchObject({
+        reason: 'not_yet_in_force',
+        from: '2008-05-01',
+      });
+    });
+
+    it("articles carry no dates: on a past date none is hidden by today's label", async () => {
+      const view = await run({
+        code: 'Code du travail',
+        sectionCid: ancienne.cid,
+        atDate: '2005-01-01',
+      });
+      expect(view.articles.map((a) => a.num)).toEqual(['L122-14-3', 'L800-4']);
+      expect(view.hiddenNotInForce).toBe(0);
+    });
+
+    it('an explicit at_date equal to today is today', async () => {
+      const view = await run({ code: 'Code du travail', sectionCid: ancienne.cid, atDate: TODAY });
+      expect(view.asOfIsToday).toBe(true);
+      expect(view.articles.map((a) => a.num)).toEqual(['L800-4']);
+    });
   });
 
   it('never mutates the shared cached table', async () => {
     const snapshot = structuredClone(TOC);
-    await browse().run({ code: 'Code civil', sectionCid: chapitre.cid });
+    await browse().run({ code: 'Code civil', sectionCid: chapitre.cid, includeRepealed: true });
     expect(TOC).toEqual(snapshot);
+  });
+
+  it('shares the cached subtrees by reference', async () => {
+    const view = await browse().run({ code: 'Code civil', sectionCid: chapitre.cid });
+    expect(view.children[0]?.section).toBe(chapitre.children[0]);
   });
 
   it('rejects an unknown section with invalid_input', async () => {
