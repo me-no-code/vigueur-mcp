@@ -49,6 +49,26 @@ _En français : [Outils](#outils)._
   Example: "Qu'a publié le Journal officiel aujourd'hui pour le ministère du travail ?"
 - `legifrance_list_reference_values` — lists the valid values (codes, JORF natures, emitters) to use as filters.
   Example: "Quelles natures de textes existe-t-il au Journal officiel ?"
+- `judilibre_search_decisions` — searches Cour de cassation and lower-court decisions in Judilibre, with filters (chamber, formation, publication, solution, dates, court location) and a sort by newest, oldest or relevance.
+  Example: "Find the recent social-chamber decisions on forfait jours."
+- `judilibre_get_decision` — reads one Judilibre decision: identity, summary, attacked decision, linked texts and the full text, or one zone (introduction, exposé, moyens, motivations, dispositif, annexes).
+  Example: "Read the motivations of decision 6af2c6c06c2e1778126fe2c7."
+- `judilibre_list_taxonomy` — lists the values Judilibre accepts as filters (chambers, formations, publications, solutions, jurisdictions, locations).
+  Example: "List the chambers of the Cour de cassation."
+- `legifrance_search_case_law` — searches the Légifrance case-law collections: judicial (Cour de cassation and appeal courts), administrative (Conseil d'État and administrative courts), Conseil constitutionnel, financial courts and CNIL. Searches by number or ECLI as well as by words.
+  Example: "Find Conseil constitutionnel decision 2026-1217/1218."
+- `legifrance_get_decision` — reads one Légifrance decision by its id (JURITEXT…, CETATEXT…, CONSTEXT…, …), with the text paged.
+  Example: "Read decision JURITEXT000053197030."
+
+### Case law: which source?
+
+Facts about the two sources, side by side:
+
+- Judilibre (`judilibre_*`) covers the Cour de cassation, the courts of appeal, the tribunaux judiciaires, the commercial courts and the labour courts, including the Cour de cassation's unreasoned rejections. Its search matches all the words of the query by default (`match` can be set to an exact phrase or to any word).
+- Légifrance (`legifrance_*_case_law`, `legifrance_get_decision`) covers the judicial courts, the administrative courts (including the Conseil d'État), the Conseil constitutionnel, the financial courts and the CNIL.
+- Légifrance does not hold every Cour de cassation decision: in particular not its unreasoned rejections and non-admissions. It receives the Cour de cassation decisions it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. A decision missing from Légifrance therefore does not mean it does not exist.
+
+The Judilibre tools need the JUDILIBRE API subscribed on your PISTE application (the `vigueur_status` setup steps include it).
 
 ## Outils
 
@@ -73,6 +93,26 @@ _In English: [Tools](#tools)._
   Exemple : « Qu'a publié le Journal officiel aujourd'hui pour le ministère du travail ? »
 - `legifrance_list_reference_values` — liste les valeurs acceptées comme filtres (codes, natures et émetteurs du JORF).
   Exemple : « Quelles natures de textes existe-t-il au Journal officiel ? »
+- `judilibre_search_decisions` — cherche des décisions de la Cour de cassation et des juridictions du fond dans Judilibre, avec des filtres (chambre, formation, publication, solution, dates, siège) et un tri par plus récent, plus ancien ou pertinence.
+  Exemple : « Trouve les arrêts récents de la chambre sociale sur le forfait jours. »
+- `judilibre_get_decision` — lit une décision de Judilibre : identité, sommaire, décision attaquée, textes liés et texte intégral, ou une seule zone (introduction, exposé, moyens, motivations, dispositif, annexes).
+  Exemple : « Lis les motivations de la décision 6af2c6c06c2e1778126fe2c7. »
+- `judilibre_list_taxonomy` — liste les valeurs acceptées par Judilibre comme filtres (chambres, formations, niveaux de publication, solutions, juridictions, sièges).
+  Exemple : « Quelles sont les chambres de la Cour de cassation ? »
+- `legifrance_search_case_law` — cherche dans les fonds de jurisprudence de Légifrance : judiciaire (Cour de cassation et cours d'appel), administratif (Conseil d'État et juridictions administratives), Conseil constitutionnel, juridictions financières et CNIL. Recherche par numéro ou ECLI comme par mots.
+  Exemple : « Trouve la décision 2026-1217/1218 du Conseil constitutionnel. »
+- `legifrance_get_decision` — lit une décision de Légifrance par son identifiant (JURITEXT…, CETATEXT…, CONSTEXT…, …), texte paginé.
+  Exemple : « Lis la décision JURITEXT000053197030. »
+
+### Jurisprudence : quelle source ?
+
+Les faits sur les deux sources :
+
+- Judilibre (`judilibre_*`) couvre la Cour de cassation, les cours d'appel, les tribunaux judiciaires, les tribunaux de commerce et les conseils de prud'hommes, y compris les rejets non spécialement motivés de la Cour de cassation. Sa recherche exige tous les mots de la requête par défaut (`match` permet de choisir l'expression exacte ou un mot quelconque).
+- Légifrance (`legifrance_*_case_law`, `legifrance_get_decision`) couvre les juridictions judiciaires, les juridictions administratives (dont le Conseil d'État), le Conseil constitutionnel, les juridictions financières et la CNIL.
+- Légifrance ne détient pas toutes les décisions de la Cour de cassation : notamment pas ses rejets non spécialement motivés ni ses non-admissions. Il reçoit les décisions de la Cour de cassation qu'il détient quelques semaines après Judilibre, et ne contient aucune décision de cour d'appel postérieure au début de 2023. Une décision absente de Légifrance ne signifie donc pas qu'elle n'existe pas.
+
+Les outils Judilibre nécessitent que l'API JUDILIBRE soit souscrite sur votre application PISTE (les étapes de `vigueur_status` l'incluent).
 
 ## Development
 
