@@ -1,0 +1,27 @@
+{
+  "page": 5,
+  "page_size": 10,
+  "query": {
+    "query": "24-16.924",
+    "page": 5,
+    "page_size": 10,
+    "field": [],
+    "type": [],
+    "theme": [],
+    "chamber": [],
+    "formation": [],
+    "jurisdiction": [],
+    "location": [],
+    "publication": [],
+    "solution": []
+  },
+  "total": 1,
+  "previous_page": "query=24-16.924&page=4&page_size=10",
+  "next_page": null,
+  "took": 17,
+  "max_score": 0,
+  "results": [],
+  "relaxed": false,
+  "searchQuery": "{\"index\":\"judilibre_0\",\"preference\":\"preventbouncingresults\",\"explain\":false,\"from\":50,\"size\":10,\"_source\":true,\"body\":{\"track_scores\":true,\"query\":{\"function_score\":{\"query\":{\"bool\":{\"filter\":[{\"wildcard\":{\"number\":{\"value\":\"*2416924\"}}},{\"terms\":{\"jurisdiction\":[\"cc\"]}}]}},\"boost\":5,\"functions\":[{\"filter\":{\"match\":{\"publication\":\"b\"}},\"weight\":50},{\"filter\":{\"match\":{\"publication\":\"r\"}},\"weight\":10},{\"filter\":{\"match\":{\"publication\":\"c\"}},\"weight\":5},{\"filter\":{\"match\":{\"publication\":\"l\"}},\"weight\":2},{\"filter\":{\"match\":{\"publication\":\"n\"}},\"weight\":0.1},{\"filter\":{\"match\":{\"lowInterest\":true}},\"weight\":0.1},{\"filter\":{\"match\":{\"jurisdiction\":\"ca\"}},\"weight\":0.1},{\"filter\":{\"match\":{\"jurisdiction\":\"tj\"}},\"weight\":0.1},{\"filter\":{\"match\":{\"jurisdiction\":\"tcom\"}},\"weight\":0.1},{\"filter\":{\"match\":{\"jurisdiction\":\"cph\"}},\"weight\":0.1}],\"score_mode\":\"max\",\"boost_mode\":\"multiply\"}},\"sort\":[{\"_score\":\"desc\"},{\"decision_date\":\"desc\"}],\"highlight\":{\"fields\":{}}}}",
+  "date": "2026-11-13T15:17:01.473Z"
+}

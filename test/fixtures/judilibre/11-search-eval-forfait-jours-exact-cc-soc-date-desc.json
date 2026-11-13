@@ -1,0 +1,450 @@
+{
+  "page": 0,
+  "page_size": 10,
+  "query": {
+    "query": "forfait jours",
+    "operator": "exact",
+    "jurisdiction": [
+      "cc"
+    ],
+    "chamber": [
+      "soc"
+    ],
+    "sort": "date",
+    "order": "desc",
+    "page_size": 10,
+    "field": [],
+    "type": [],
+    "theme": [],
+    "formation": [],
+    "location": [],
+    "publication": [],
+    "solution": []
+  },
+  "total": 568,
+  "previous_page": null,
+  "next_page": "query=forfait+jours&operator=exact&jurisdiction=cc&chamber=soc&sort=date&order=desc&page_size=10&page=1",
+  "took": 102,
+  "max_score": 51.727333,
+  "results": [
+    {
+      "score": 0.5718358222721438,
+      "highlights": {
+        "text": [
+          "supplémentaires accomplies en 2017 et les congés payés afférents en soutenant que la convention de <em>forfait</em>",
+          "<em>jours</em> était inopposable, celles accomplies de 2018 à 2020 en raison de la nullité du statut de cadre",
+          "supplémentaires accomplies en 2017 et les congés payés afférents, en soutenant que la convention de <em>forfait</em>",
+          "en <em>jours</em> était inopposable, et sur celles accomplies de 2018 à 2020 en raison de la nullité du statut",
+          "Après avoir relevé que la demande en reconnaissance de la convention de <em>forfait</em> en <em>jours</em> et la nullit"
+        ]
+      },
+      "id": "6abcc10bc27382d099087409",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "25-14.434",
+      "numbers": [
+        "25-14.434",
+        "25-14.434"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00769",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-09-30",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.48043400961731386,
+      "highlights": {
+        "text": [
+          "en <em>jours</em>",
+          "Toute convention de <em>forfait</em> en <em>jours</em> doit être prévue par un accord collectif dont les stipulations assurent",
+          "Pour dire que la convention de <em>forfait</em> en <em>jours</em>, à laquelle la salariée était soumise, était valable",
+          "L'arrêt relève que la convention de <em>forfait</em> en <em>jours</em> prévoit un suivi à mettre en place et donc une garantie",
+          "en <em>jours</em>"
+        ]
+      },
+      "id": "6aaa630bc27382d099c5a519",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "25-18.658",
+      "numbers": [
+        "25-18.658",
+        "25-18.658"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00727",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-09-16",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.6668565920458338,
+      "highlights": {
+        "text": [
+          "Le temps de travail du salarié était soumis à une convention de <em>forfait</em> annuel en <em>jours</em>",
+          "en <em>jours</em> ETAM, alors « que, tenu d'examiner les demandes dans l'ordre fixé par les parties, le juge",
+          "de <em>forfait</em>, après avoir constaté que la demande d'inopposabilité de la convention de <em>forfait</em> <em>jours</em> était",
+          "Il en résulte qu'il n'était pas susceptible de relever du régime du <em>forfait</em> en <em>jours</em> qui lui avait ét",
+          "au titre de la convention de <em>forfait</em> en <em>jours</em> ETAM"
+        ]
+      },
+      "id": "6a1fbeedcdc6046d47e9d6f3",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "25-11.673",
+      "numbers": [
+        "25-11.673",
+        "25-11.673"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00508",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-06-03",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.5222626691385771,
+      "highlights": {
+        "text": [
+          "avait mené les entretiens, en décembre 2015 et décembre 2016, sur la charge de travail du salarié au <em>forfait</em>",
+          "<em>jours</em> et qu'elle avait également signé la lettre de licenciement"
+        ]
+      },
+      "id": "6a02bc88cdc6046d47714614",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "24-19.771",
+      "numbers": [
+        "24-19.771",
+        "24-19.771"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00427",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-05-12",
+      "solution": "rejet",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.5377058005290936,
+      "highlights": {
+        "text": [
+          "annuel en <em>jours</em>",
+          "non travaillés en repos hebdomadaire, congés payés, congés conventionnels, <em>jours</em> fériés chômés ou <em>jours</em>",
+          "Toute convention de <em>forfait</em> en <em>jours</em> doit être prévue par un accord collectif dont les stipulations assurent",
+          "repos hebdomadaires, congés payés, congés conventionnels, <em>jours</em> fériés chômés ou <em>jours</em> de repos",
+          "Le supérieur hiérarchique du cadre soumis au <em>forfait</em> <em>jours</em> assurera le suivi régulier de l'organisation"
+        ]
+      },
+      "id": "69fad6a2cdc6046d47c06cbe",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "24-10.699",
+      "numbers": [
+        "24-10.699",
+        "24-10.699"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00417",
+      "formation": "fs",
+      "publication": [
+        "b"
+      ],
+      "decision_date": "2026-05-06",
+      "solution": "rejet",
+      "type": "other",
+      "summary": "Toute convention de forfait en jours doit être prévue par un accord collectif dont les stipulations assurent la garantie du respect de durées raisonnables de travail ainsi que des repos, journaliers et hebdomadaires.\nIl résulte des dispositions de l'article 2.1.3 du titre III de l'accord de substitution sur l'aménagement et la réduction du temps de travail du 18 novembre 2013 de la société Hertz France, qui prévoient que l'employeur doit, notamment, respecter le droit aux repos journalier et hebdomadaire, veiller au risque de surcharge de travail du salarié et y remédier, de sorte que le contrôle de la durée raisonnable de travail soit assuré, qu'elles assurent une bonne répartition, dans le temps, du travail de l'intéressé, et répondent ainsi aux exigences relatives au droit à la santé et au repos",
+      "themes": [
+        "travail reglementation, duree du travail",
+        "convention de forfait",
+        "convention de forfait sur l'année",
+        "convention de forfait en jours sur l'année",
+        "validité",
+        "conditions",
+        "garantie du respect de durées raisonnables de travail ainsi que des repos journaliers et hebdomadaires",
+        "obligation",
+        "détermination",
+        "portée"
+      ],
+      "files": [
+        {
+          "id": "3f0ced544a2ca0253a4d4133eeed219b",
+          "type": "prep_avis",
+          "isCommunication": false,
+          "isPreparatoire": true,
+          "isAttache": false,
+          "date": "2026-05-06",
+          "name": "2410699_Avis.pdf",
+          "size": "181 kB",
+          "url": "https://search.judilibre.io/decision?id=69fad6a2cdc6046d47c06cbe&fileId=3f0ced544a2ca0253a4d4133eeed219b",
+          "rawUrl": "https://judilibre-attachments-d0df9293-a1ed-49eb-87d6-59f30784a645.s3.fr-par.scw.cloud/2410699_Avis-3f0ced544a2ca0253a4d4133eeed219b.pdf"
+        },
+        {
+          "id": "48510725bb98adec58d0e9716bafbdad",
+          "type": "prep_raco",
+          "isCommunication": false,
+          "isPreparatoire": true,
+          "isAttache": false,
+          "date": "2026-05-06",
+          "name": "2410699_RapportComp.pdf",
+          "size": "251 kB",
+          "url": "https://search.judilibre.io/decision?id=69fad6a2cdc6046d47c06cbe&fileId=48510725bb98adec58d0e9716bafbdad",
+          "rawUrl": "https://judilibre-attachments-d0df9293-a1ed-49eb-87d6-59f30784a645.s3.fr-par.scw.cloud/2410699_RapportComp-48510725bb98adec58d0e9716bafbdad.pdf"
+        }
+      ],
+      "titlesAndSummaries": [
+        {
+          "titles": [
+            "TRAVAIL REGLEMENTATION, DUREE DU TRAVAIL",
+            "Convention de forfait",
+            "Convention de forfait sur l'année",
+            "Convention de forfait en jours sur l'année",
+            "Validité",
+            "Conditions",
+            "Garantie du respect de durées raisonnables de travail ainsi que des repos journaliers et hebdomadaires",
+            "Obligation",
+            "Détermination",
+            "Portée"
+          ],
+          "summary": "Toute convention de forfait en jours doit être prévue par un accord collectif dont les stipulations assurent la garantie du respect de durées raisonnables de travail ainsi que des repos, journaliers et hebdomadaires. Il résulte des dispositions de l'article 2.1.3 du titre III de l'accord de substitution sur l'aménagement et la réduction du temps de travail du 18 novembre 2013 de la société Hertz France, qui prévoient que l'employeur doit, notamment, respecter le droit aux repos journalier et hebdomadaire, veiller au risque de surcharge de travail du salarié et y remédier, de sorte que le contrôle de la durée raisonnable de travail soit assuré, qu'elles assurent une bonne répartition, dans le temps, du travail de l'intéressé, et répondent ainsi aux exigences relatives au droit à la santé et au repos",
+          "secondaryTitles": [
+            [
+              "TRAVAIL REGLEMENTATION, DUREE DU TRAVAIL",
+              "Convention de forfait",
+              "Convention de forfait en jours sur l'année",
+              "Validité",
+              "Conditions",
+              "Cas",
+              "Garantie relative au droit à la santé et au repos garantie par les dispositions de l'accord",
+              "Possibilité (oui)",
+              "Détermination",
+              "Portée"
+            ]
+          ]
+        }
+      ],
+      "particularInterest": false
+    },
+    {
+      "score": 0.5454138723912172,
+      "highlights": {
+        "text": [
+          "de l'absence de stipulations conventionnelles sur le nombre de <em>jours</em> compris dans le <em>forfait</em>\", quand",
+          "Il résulte des articles L. 3121-53 et L. 3121-58 du code du travail qu'une convention de <em>forfait</em> en <em>jours</em>",
+          "prévu au <em>forfait</em> ne peut être répar",
+          "<em>jours</em>, a légalement justifié sa décision d'annulation de ce <em>forfait</em> en <em>jours</em>",
+          "Il résulte de ces textes que le salarié, qui a été soumis à tort à un <em>forfait</em> annuel en <em>jours</em>, peut prétendre"
+        ]
+      },
+      "id": "69d74304cdc6046d479c5fde",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "24-21.017",
+      "numbers": [
+        "24-21.017",
+        "24-21.017"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00368",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-04-09",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.6105921409093331,
+      "highlights": {
+        "text": [
+          "Le 7 août 2002, elle a conclu une convention individuelle de <em>forfait</em> de deux cent-dix-huit <em>jours</em> travaillés",
+          "en <em>jours</em> sur l'année doit être établie par écrit et contenir l'indication des engagements réciproques",
+          "des parties relatifs au nombre de <em>jours</em> travaillés et au salaire global destiné à rémunérer le <em>forfait</em>",
+          "charte individuelle », la salariée a donné le 7 mars 2017 son accord écrit à la mise en oeuvre du <em>forfait</em>-<em>jours</em>",
+          "prouvant l'acceptation requise de l'intéressée pour la mise en place d'un <em>forfait</em> en <em>jours</em> tel que prévu"
+        ]
+      },
+      "id": "69d742f1cdc6046d479c5e3c",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "25-12.011",
+      "numbers": [
+        "25-12.011",
+        "25-12.011"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00374",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-04-09",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.9259992197935277,
+      "highlights": {
+        "text": [
+          "La société fait grief à l'arrêt de dire que son appel incident au titre de la convention de <em>forfait</em> <em>jours</em>",
+          "est irrecevable et de confirmer le jugement en ce qu'il a déclaré la convention de <em>forfait</em> <em>jours</em> privée",
+          "<em>jours</em>, sans pour autant contester les dispositions sur l'opposabilité de la convention de <em>forfait</em>",
+          "<em>jours</em>, jugeant la convention de <em>forfait</em> <em>jours</em> privée d'effet et inopposable au salarié et condamnant",
+          "<em>jours</em> est irrecevable, déclare la convention de <em>forfait</em> <em>jours</em> privée d'effet et inopposable à M"
+        ]
+      },
+      "id": "69ccb150cdc6046d47b34191",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "24-20.863",
+      "numbers": [
+        "24-20.863",
+        "24-20.863"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00331",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-04-01",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.9795190484690173,
+      "highlights": {
+        "text": [
+          "compris dans le <em>forfait</em>, dans la limite légale de deux cent dix-huit <em>jours</em> s'agissant du <em>forfait</em>-<em>jours</em>",
+          "fût-ce de manière erronée, un nombre de deux cent dix-huit <em>jours</em> compris dans le <em>forfait</em> ; qu'il en",
+          "contractuel, prévoit la possibilité d'un <em>forfait</em> de deux cent quatorze <em>jours</em>, alors que le <em>forfait</em> appliqu",
+          "en <em>jours</em> sur l'année détermine le nombre de <em>jours</em> compris dans le <em>forfait</em>, dans la limite de deux cent",
+          "<em>jours</em>, en application d'une convention collective prévoyant un nombre de <em>jours</em> compris dans le <em>forfait</em>"
+        ]
+      },
+      "id": "69c3883ecdc6046d47dcc39b",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "24-22.129",
+      "numbers": [
+        "24-22.129",
+        "24-22.129"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00320",
+      "formation": "fs",
+      "publication": [
+        "b"
+      ],
+      "decision_date": "2026-03-25",
+      "solution": "cassation",
+      "type": "other",
+      "summary": "Lorsque les parties ont conclu une convention individuelle de forfait en jours en application d'une  convention collective prévoyant un nombre de jours compris dans le forfait, dans la limite de deux cent dix-huit jours, et qu'il est ultérieurement jugé que l'activité de l'entreprise relève d'une convention collective différente, laquelle a autorisé le recours au forfait en jours mais en fixant un nombre inférieur de jours compris dans le forfait, la convention individuelle conclue entre les parties n'encourt pas la nullité pour ce motif, le salarié pouvant solliciter le paiement d'un rappel de salaire à un taux majoré fixé par le juge en contrepartie du temps de travail excédant le forfait prévu par la convention collective dont relève l'activité de l'entreprise",
+      "themes": [
+        "travail reglementation, duree du travail",
+        "convention de forfait",
+        "convention de forfait sur l'année",
+        "convention de forfait en jours sur l'année",
+        "dépassement du forfait annuel",
+        "cas",
+        "convention individuelle de forfait en jours conclue en application d'une convention collective non applicable à l'entreprise",
+        "sanction",
+        "détermination",
+        "nullité de la convention individuelle de forfait en jours (non)",
+        "portée"
+      ],
+      "files": [
+        {
+          "id": "861f19c4b6f467c633d6680f85b40bf8",
+          "type": "prep_rapp",
+          "isCommunication": false,
+          "isPreparatoire": true,
+          "isAttache": false,
+          "date": "2026-03-25",
+          "name": "2422129_Rapport.pdf",
+          "size": "350 kB",
+          "url": "https://search.judilibre.io/decision?id=69c3883ecdc6046d47dcc39b&fileId=861f19c4b6f467c633d6680f85b40bf8",
+          "rawUrl": "https://judilibre-attachments-d0df9293-a1ed-49eb-87d6-59f30784a645.s3.fr-par.scw.cloud/2422129_Rapport-861f19c4b6f467c633d6680f85b40bf8.pdf"
+        },
+        {
+          "id": "1bdffa479cbc7ae66ff70064541d5c82",
+          "type": "prep_avis",
+          "isCommunication": false,
+          "isPreparatoire": true,
+          "isAttache": false,
+          "date": "2026-03-25",
+          "name": "2422129_Avis.pdf",
+          "size": "235 kB",
+          "url": "https://search.judilibre.io/decision?id=69c3883ecdc6046d47dcc39b&fileId=1bdffa479cbc7ae66ff70064541d5c82",
+          "rawUrl": "https://judilibre-attachments-d0df9293-a1ed-49eb-87d6-59f30784a645.s3.fr-par.scw.cloud/2422129_Avis-1bdffa479cbc7ae66ff70064541d5c82.pdf"
+        }
+      ],
+      "titlesAndSummaries": [
+        {
+          "titles": [
+            "TRAVAIL REGLEMENTATION, DUREE DU TRAVAIL",
+            "Convention de forfait",
+            "Convention de forfait sur l'année",
+            "Convention de forfait en jours sur l'année",
+            "Dépassement du forfait annuel",
+            "Cas",
+            "Convention individuelle de forfait en jours conclue en application d'une convention collective non applicable à l'entreprise",
+            "Sanction",
+            "Détermination",
+            "Nullité de la convention individuelle de forfait en jours (non)",
+            "Portée"
+          ],
+          "summary": "Lorsque les parties ont conclu une convention individuelle de forfait en jours en application d'une convention collective prévoyant un nombre de jours compris dans le forfait, dans la limite de deux cent dix-huit jours, et qu'il est ultérieurement jugé que l'activité de l'entreprise relève d'une convention collective différente, laquelle a autorisé le recours au forfait en jours mais en fixant un nombre inférieur de jours compris dans le forfait, la convention individuelle conclue entre les parties n'encourt pas la nullité pour ce motif, le salarié pouvant solliciter le paiement d'un rappel de salaire à un taux majoré fixé par le juge en contrepartie du temps de travail excédant le forfait prévu par la convention collective dont relève l'activité de l'entreprise",
+          "secondaryTitles": []
+        }
+      ],
+      "particularInterest": false
+    },
+    {
+      "score": 0.49361199426229846,
+      "highlights": {
+        "text": [
+          "salarié a conclu plusieurs avenants à son contrat de travail, le 24 mai 2017, fixant à 80 % du nombre de <em>jours</em>",
+          "de référence (deux cent onze <em>jours</em>) le temps de travail et à 90 % la rémunération, puis le 22 juin",
+          "L'article 1-3 « durée du travail des cadres en <em>forfait</em> <em>jours</em> » prévoit que le <em>forfait</em> des salariés ayant",
+          "accepté le dispositif de rémunération variable est porté à deux cent onze <em>jours</em> pour les cadres de la",
+          "classe 5, à deux cent douze <em>jours</em> pour ceux de la classe 6 et à deux cent treize <em>jours</em> pour ceux de"
+        ]
+      },
+      "id": "69c38750cdc6046d47dca2db",
+      "jurisdiction": "cc",
+      "chamber": "soc",
+      "number": "24-10.513",
+      "numbers": [
+        "24-10.513",
+        "24-10.513"
+      ],
+      "ecli": "ECLI:FR:CCASS:2026:SO00306",
+      "formation": "frh",
+      "publication": [],
+      "decision_date": "2026-03-25",
+      "solution": "cassation",
+      "type": "other",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    }
+  ],
+  "relaxed": false,
+  "searchQuery": "{\"index\":\"judilibre_0\",\"preference\":\"preventbouncingresults\",\"explain\":false,\"from\":0,\"size\":10,\"_source\":true,\"body\":{\"track_scores\":true,\"query\":{\"function_score\":{\"query\":{\"bool\":{\"filter\":[{\"terms\":{\"chamber\":[\"soc\"]}},{\"terms\":{\"jurisdiction\":[\"cc\"]}}],\"must\":{\"simple_query_string\":{\"query\":\"\\\"forfait jours\\\"\",\"fields\":[\"text.exact\"],\"default_operator\":\"AND\",\"auto_generate_synonyms_phrase_query\":false,\"fuzzy_max_expansions\":0,\"fuzzy_transpositions\":false}}}},\"boost\":5,\"score_mode\":\"max\",\"boost_mode\":\"multiply\"}},\"sort\":[{\"decision_date\":\"desc\"}],\"highlight\":{\"fields\":{\"text.exact\":{}}}}}",
+  "date": "2026-11-13T15:16:59.441Z"
+}

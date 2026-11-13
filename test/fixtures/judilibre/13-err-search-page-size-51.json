@@ -1,0 +1,11 @@
+{
+  "route": "GET /search",
+  "errors": [
+    {
+      "value": "51",
+      "msg": "Value of the page_size parameter must be an integer between 1 and 50.",
+      "param": "page_size",
+      "location": "query"
+    }
+  ]
+}

@@ -2,12 +2,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { PisteHttp, PisteRequest, RequestOptions } from '../../src/clients/piste/http.js';
 
-const FIXTURES = join(import.meta.dirname, '..', 'fixtures', 'legifrance');
-
-/** Parses `test/fixtures/legifrance/<name>.json` (the `.json` extension is optional). */
-export function loadFixture(name: string): unknown {
+/** Parses `test/fixtures/<api>/<name>.json` (the `.json` extension is optional). */
+export function loadFixture(name: string, api: 'legifrance' | 'judilibre' = 'legifrance'): unknown {
   const file = name.endsWith('.json') ? name : `${name}.json`;
-  return JSON.parse(readFileSync(join(FIXTURES, file), 'utf8'));
+  return JSON.parse(readFileSync(join(import.meta.dirname, '..', 'fixtures', api, file), 'utf8'));
 }
 
 export interface FakeRoute {

@@ -10,15 +10,19 @@ export function sandboxConfig(): Config {
 }
 
 export type FixtureRoute = {
-  /** Path under the Légifrance prefix, e.g. `/search`. */
+  /** Path under the API's prefix, e.g. `/search`. */
   path: string;
+  /** Which API answers (default `legifrance`; Judilibre routes are GET and use `whenQuery`). */
+  api?: 'legifrance' | 'judilibre';
   /** Extra condition on the JSON request body; routes are tried in order. */
   when?: (body: unknown) => boolean;
-  /** HTTP status of the answer (default 200), e.g. 400 for a recorded Légifrance error body. */
+  /** Extra condition on the query string of a Judilibre GET. */
+  whenQuery?: (query: URLSearchParams) => boolean;
+  /** HTTP status of the answer (default 200), e.g. 400 for a recorded error body. */
   status?: number;
 } & (
   | {
-      /** Fixture name under `test/fixtures/legifrance/`. */
+      /** Fixture name under `test/fixtures/legifrance/` (`test/fixtures/judilibre/` for Judilibre). */
       fixture: string;
     }
   | {
@@ -297,14 +301,29 @@ export function fixtureFetch(routes: readonly FixtureRoute[] = LEGIFRANCE_FIXTUR
       return Response.json({ access_token: 'fixture-token', expires_in: 3600 });
     }
     const raw = await req.clone().text();
-    if (req.url.startsWith(endpoints.legifranceBaseUrl)) {
-      const path = req.url.slice(endpoints.legifranceBaseUrl.length);
+    const api = req.url.startsWith(endpoints.legifranceBaseUrl)
+      ? ('legifrance' as const)
+      : req.url.startsWith(endpoints.judilibreBaseUrl)
+        ? ('judilibre' as const)
+        : undefined;
+    if (api !== undefined) {
+      const url = new URL(req.url);
+      const prefix = new URL(
+        api === 'legifrance' ? endpoints.legifranceBaseUrl : endpoints.judilibreBaseUrl,
+      );
+      const path = url.pathname.slice(prefix.pathname.length);
       const body: unknown = raw === '' ? undefined : JSON.parse(raw);
-      const route = routes.find((r) => r.path === path && (r.when?.(body) ?? true));
+      const route = routes.find(
+        (r) =>
+          (r.api ?? 'legifrance') === api &&
+          r.path === path &&
+          (r.when?.(body) ?? true) &&
+          (r.whenQuery?.(url.searchParams) ?? true),
+      );
       if (route !== undefined) {
-        return Response.json('fixture' in route ? loadFixture(route.fixture) : route.body(), {
-          status: route.status ?? 200,
-        });
+        const answer =
+          'fixture' in route ? loadFixture(route.fixture, route.api ?? 'legifrance') : route.body();
+        return Response.json(answer, { status: route.status ?? 200 });
       }
     }
     const request = `${req.method} ${req.url}${raw === '' ? '' : ` ${raw}`}`;

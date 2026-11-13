@@ -1,0 +1,113 @@
+{
+  "page": 0,
+  "page_size": 3,
+  "query": {
+    "query": "bail",
+    "jurisdiction": [
+      "ca"
+    ],
+    "location": [
+      "ca_paris"
+    ],
+    "sort": "date",
+    "order": "desc",
+    "page_size": 3,
+    "field": [],
+    "type": [],
+    "theme": [],
+    "chamber": [],
+    "formation": [],
+    "publication": [],
+    "solution": []
+  },
+  "total": 13369,
+  "previous_page": null,
+  "next_page": "query=bail&jurisdiction=ca&location=ca_paris&sort=date&order=desc&page_size=3&page=1",
+  "took": 18,
+  "max_score": 22.570518,
+  "results": [
+    {
+      "score": 0.8567395307453732,
+      "highlights": {
+        "text": [
+          "A] [U] a ,suivant contrat de location meublé du 10 avril 2017, à effet du 1er juin 2017 donné à <em>bail</em>",
+          "U], représenté par le Cabinet COMTE, de rédiger un avenant au contrat de <em>bail</em>, et le condamner à verser",
+          "d'une première lettre recommandée datant du 11 avril 2022 soit moins de 3 mois avant l'expiration du <em>bail</em>",
+          "Il convient donc de dire que la proposition de modification des conditions du <em>bail</em> est régulièrement",
+          "intervenue dans le délai de contractuel de 3 mois avant l'expiration du <em>bail</em>"
+        ]
+      },
+      "id": "6aead2477a1020213711b3db",
+      "jurisdiction": "ca",
+      "chamber": "Pôle 4 - Chambre 4",
+      "number": "26/05723",
+      "numbers": [
+        "26/05723"
+      ],
+      "location": "ca_paris",
+      "publication": [],
+      "decision_date": "2026-11-03",
+      "solution": "other",
+      "solution_alt": "Infirme partiellement, réforme ou modifie certaines dispositions de la décision déférée",
+      "type": "arret",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.7762068198877846,
+      "highlights": {
+        "text": [
+          "D] [C] a donné à <em>bail</em> à M",
+          "Logement\nConstate que les conditions d'acquisition de la clause résolutoire figurant au <em>bail</em>",
+          "au montant du loyer principal révisé et des charges tels qu'ils auraient été dus si le contrat de <em>bail</em>",
+          "au montant du loyer principal révisé et des charges tels qu'ils auraient été dus si le contrat de <em>bail</em>"
+        ]
+      },
+      "id": "6aead2ff7a1020213711ba19",
+      "jurisdiction": "ca",
+      "chamber": "Pôle 4 - Chambre 4",
+      "number": "24/11997",
+      "numbers": [
+        "24/11997"
+      ],
+      "location": "ca_paris",
+      "publication": [],
+      "decision_date": "2026-11-03",
+      "solution": "other",
+      "solution_alt": "Infirme partiellement, réforme ou modifie certaines dispositions de la décision déférée",
+      "type": "arret",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    },
+    {
+      "score": 0.8466690928404923,
+      "highlights": {
+        "text": [
+          "de l'acte de saisine : 03 Juillet\nDate de saisine : 18 Août\nNature de l'affaire : Crédit-<em>bail</em>",
+          "ou leasing - Demande en paiement des loyers et/ou en résiliation du crédit-<em>bail</em>\nDécision attaquée"
+        ]
+      },
+      "id": "6aead2f27a1020213711b9b3",
+      "jurisdiction": "ca",
+      "chamber": "Pôle 4 - Chambre 9 - A",
+      "number": "26/13149",
+      "numbers": [
+        "26/13149"
+      ],
+      "location": "ca_paris",
+      "publication": [],
+      "decision_date": "2026-11-03",
+      "solution": "other",
+      "solution_alt": "Constate ou prononce le désistement d'instance et/ou d'action",
+      "type": "ordonnance",
+      "files": [],
+      "titlesAndSummaries": [],
+      "particularInterest": false
+    }
+  ],
+  "relaxed": false,
+  "searchQuery": "{\"index\":\"judilibre_0\",\"preference\":\"preventbouncingresults\",\"explain\":false,\"from\":0,\"size\":3,\"_source\":true,\"body\":{\"track_scores\":true,\"query\":{\"function_score\":{\"query\":{\"bool\":{\"filter\":[{\"terms\":{\"jurisdiction\":[\"ca\"]}},{\"terms\":{\"location\":[\"ca_paris\"]}}],\"must\":{\"simple_query_string\":{\"query\":\"bail\",\"fields\":[\"text\"],\"default_operator\":\"OR\",\"auto_generate_synonyms_phrase_query\":true,\"fuzzy_max_expansions\":50,\"fuzzy_transpositions\":true}}}},\"boost\":5,\"score_mode\":\"max\",\"boost_mode\":\"multiply\"}},\"sort\":[{\"decision_date\":\"desc\"}],\"highlight\":{\"fields\":{\"text\":{}}}}}",
+  "date": "2026-11-13T15:17:04.434Z"
+}

@@ -73,6 +73,14 @@ describe('cleanTitle', () => {
 });
 
 describe('htmlToText', () => {
+  it('takes linear time on unclosed tags (upstream text is untrusted)', () => {
+    // 40 000 characters of "<p " took about 2 s with a scan to the end of the text per "<".
+    const start = performance.now();
+    htmlToText('<p '.repeat(13_400));
+    htmlToText('<td x'.repeat(8_000));
+    expect(performance.now() - start).toBeLessThan(300);
+  });
+
   it('turns paragraphs into lines and drops links keeping text', () => {
     expect(
       htmlToText(
