@@ -301,6 +301,8 @@ function fakeServices(getText: LegifranceServices['getText']): LegifranceService
     listChanges: unused,
     getText,
     browseCode: unused,
+    latestJo: unused,
+    listReferenceValues: unused,
   };
 }
 

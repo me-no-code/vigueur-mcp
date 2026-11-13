@@ -29,6 +29,8 @@ describe('tools answer with text only', () => {
         'legifrance_get_article',
         'legifrance_get_text',
         'legifrance_browse_code',
+        'legifrance_latest_jo',
+        'legifrance_list_reference_values',
       ]),
     );
     for (const tool of tools) expect(tool.outputSchema, tool.name).toBeUndefined();
@@ -89,5 +91,16 @@ describe('tools answer with text only', () => {
     });
     expect(result.structuredContent).toBeUndefined();
     expect(firstText(result)).toContain('section_id LEGISCTA000006112874');
+  });
+
+  it.each([
+    ['legifrance_latest_jo', {}, 'Published 2026-11-11'],
+    ['legifrance_list_reference_values', { kind: 'codes' }, 'Code civil'],
+  ])('%s returns text only, no structuredContent', async (name, args, expected) => {
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
+    const result = await client.callTool({ name, arguments: args });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toBeUndefined();
+    expect(firstText(result)).toContain(expected);
   });
 });

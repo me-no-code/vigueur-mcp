@@ -202,6 +202,8 @@ function fakeServices(getArticle: LegifranceServices['getArticle']): LegifranceS
     listChanges: unused,
     getText: unused,
     browseCode: unused,
+    latestJo: unused,
+    listReferenceValues: unused,
   };
 }
 

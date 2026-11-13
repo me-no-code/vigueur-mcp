@@ -58,6 +58,15 @@ export const bodyField =
   (body: unknown): boolean =>
     asJson(body)[key] === value;
 
+/** The filter-only JORF search behind the facets: every text (`*`), filtered by publication date. */
+function jorfFilterOnlySearch(body: unknown): boolean {
+  const b = asJson(body);
+  const champs = asJson(b.recherche).champs;
+  const champ = asJson(Array.isArray(champs) ? champs[0] : undefined);
+  const critere = asJson(Array.isArray(champ.criteres) ? champ.criteres[0] : undefined);
+  return b.fond === 'JORF' && champ.typeChamp === 'ALL' && critere.valeur === '*';
+}
+
 const DECRET_2005_1309 = ['LEGITEXT000006052580', 'LEGITEXT000006052581'];
 
 /** `getArticleWithIdAndNum` returns the same payload as `getArticle`. */
@@ -111,6 +120,12 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
   },
   // Article history (Code civil 1382 lineage) and the Code civil change log 2025-2026.
   { path: '/chrono/textCidAndElementCid', fixture: '16-chrono-textCidAndElementCid-1382' },
+  // Loi 78-17 by its JORFTEXT cid (2025-2026 loaded), before the Code civil catch-all.
+  {
+    path: '/chrono/textCid',
+    when: bodyField('textCid', 'JORFTEXT000000886460'),
+    fixture: '83-chrono-textCid-loda-jorfcid',
+  },
   { path: '/chrono/textCid', fixture: '24-chrono-textCid-civil-2025-2026' },
   // Current version of 1382: not recorded. It shows only the 1353 link (the 1240 link belongs
   // to the old version), so it is answered with the old version's links minus newTexts.
@@ -166,6 +181,13 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     path: '/consult/legi/tableMatieres',
     when: bodyField('textId', 'LEGITEXT000006072050'),
     fixture: '20-tableMatieres-code-travail.trimmed-livre-III',
+  },
+  // Journal officiel: the 3 latest issues (47) and the filter-only JORF search with facets (56).
+  { path: '/consult/lastNJo', fixture: '47-lastNJo-3' },
+  {
+    path: '/search',
+    when: jorfFilterOnlySearch,
+    fixture: '56-search-jorf-wide-facets',
   },
   // Loi 78-17: one in-force hit by number, then its consolidated text.
   {

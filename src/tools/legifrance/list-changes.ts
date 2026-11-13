@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import type { IsoDate } from '../../domain/dates.js';
-import { codeUrl } from '../../domain/links.js';
+import { codeUrl, jorfUrl, lodaUrl } from '../../domain/links.js';
 import type { ChangesView } from '../../services/legislation/changes.js';
 import type { CallContext, ChangeEntry } from '../../services/legislation/ports.js';
 import {
@@ -12,20 +12,28 @@ import {
   optionalIsoDateSchema,
   pageByBudget,
   presentOrUndefined,
-  responseFormatSchema,
 } from '../format.js';
 import { toToolError } from '../tool-error.js';
 
 export type ListChanges = (
-  input: { code: string; since: IsoDate; until?: IsoDate },
+  input: { code?: string; text?: string; since: IsoDate; until?: IsoDate },
   ctx?: CallContext,
 ) => Promise<ChangesView>;
 
 const DESCRIPTION =
-  'List what changed in a French code between two dates on Légifrance — articles created, amended, repealed, renumbered — grouped by the amending text. Dates are entry-into-force dates (not publication dates). Example: what changed in the Code du travail since 2026-01-01.';
+  'List what changed in a French code, or in a law or decree, between two dates on Légifrance — articles created, amended, repealed, renumbered — grouped by the amending text. Give either "code" (e.g. "Code du travail") or "text" (a law or decree: "loi 78-17", a NOR or a Légifrance id). Dates are entry-into-force dates (not publication dates). Example: what changed in the Code du travail since 2026-01-01.';
 
 const inputSchema = z.object({
-  code: z.string().describe('Code title, e.g. "Code du travail", "Code civil". Codes only.'),
+  code: z
+    .string()
+    .optional()
+    .describe('Code title, e.g. "Code du travail", "Code civil". Exclusive with "text".'),
+  text: z
+    .string()
+    .optional()
+    .describe(
+      'A law, ordinance, decree or order: "loi 78-17", "décret 2019-1088", a NOR, or a LEGITEXT/JORFTEXT id. Exclusive with "code".',
+    ),
   since: isoDateSchema.describe('Start of the range, YYYY-MM-DD (entry-into-force date).'),
   until: optionalIsoDateSchema.describe('End of the range, YYYY-MM-DD. Default: today.'),
   page: z
@@ -34,7 +42,6 @@ const inputSchema = z.object({
     .min(1)
     .optional()
     .describe('Page of the change list, 100 entries per page (default 1).'),
-  response_format: responseFormatSchema.optional().describe('"concise" (default) or "detailed".'),
 });
 
 const ENTRIES_PER_PAGE = 100;
@@ -50,9 +57,14 @@ const ACTION_LABELS: Readonly<Record<ChangeEntry['action'], string>> = {
 };
 
 export interface ChangesRenderOptions {
-  detailed: boolean;
   today: IsoDate;
   page: number;
+}
+
+/** `target` follows the input: a code → its code page; a text → LODA for a LEGITEXT id, JORF for a JORFTEXT id. */
+function headerLink(view: ChangesView): string {
+  if (view.target === 'code') return codeUrl(view.textId);
+  return view.textId.startsWith('JORFTEXT') ? jorfUrl(view.textId) : lodaUrl(view.textId);
 }
 
 function entryLine(e: ChangeEntry, today: IsoDate): string {
@@ -90,7 +102,7 @@ export function renderListChanges(view: ChangesView, opts: ChangesRenderOptions)
   }
   const header = [
     `### ${view.textTitle} — changes from ${view.since} to ${view.until}`,
-    `Code: ${codeUrl(view.textId)}`,
+    `${view.target === 'code' ? 'Code' : 'Text'}: ${headerLink(view)}`,
     `${view.totalEntries} ${view.totalEntries === 1 ? 'entry' : 'entries'} in ${view.groups.length} amending ${view.groups.length === 1 ? 'text' : 'texts'}, ${view.scheduledCount} scheduled (not yet in force) — page ${opts.page} of ${paged.pageCount}. Dates are entry-into-force dates, not publication dates.`,
   ];
   const body =
@@ -138,11 +150,15 @@ export function registerListChangesTool(
       const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
       try {
         const view = await listChanges(
-          { code: args.code, since: args.since, until: presentOrUndefined(args.until) },
+          {
+            code: presentOrUndefined(args.code),
+            text: presentOrUndefined(args.text),
+            since: args.since,
+            until: presentOrUndefined(args.until),
+          },
           { signal },
         );
         const text = renderListChanges(view, {
-          detailed: args.response_format === 'detailed',
           today: today(),
           page: args.page ?? 1,
         });

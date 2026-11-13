@@ -4,19 +4,24 @@ import { pisteEndpoints } from './clients/piste/endpoints.js';
 import { createPisteHttp } from './clients/piste/http.js';
 import { probeJudilibre, probeLegifrance } from './clients/piste/probes.js';
 import type { Config } from './config.js';
+import type { IsoDate } from './domain/dates.js';
 import type { ServerDeps } from './server.js';
 import { createBrowseCode } from './services/legislation/browse.js';
 import { createListChanges } from './services/legislation/changes.js';
 import { createGetArticle } from './services/legislation/get-article.js';
 import { createGetText } from './services/legislation/get-text.js';
 import { createGetArticleHistory } from './services/legislation/history.js';
+import { createLatestJo, createListReferenceValues } from './services/legislation/jo.js';
 import { createSearchLegislation } from './services/legislation/search.js';
 import { getStatus, type StatusContext } from './services/status.js';
 import type { FetchLike } from './shared/fetch.js';
 import { createLegifranceSource } from './tools/legifrance/index.js';
 
 /** Wires the PISTE clients and services for a configuration (no network until used). */
-export function compose(config: Config, opts: { fetch?: FetchLike } = {}): ServerDeps {
+export function compose(
+  config: Config,
+  opts: { fetch?: FetchLike; today?: () => IsoDate } = {},
+): ServerDeps {
   const { piste } = config;
   if (piste === null) {
     return { config, getStatus: (ctx) => getStatus({ config, probes: {} }, ctx), sources: [] };
@@ -47,14 +52,19 @@ export function compose(config: Config, opts: { fetch?: FetchLike } = {}): Serve
   };
 
   const legislation = createLegifranceClient(legifrance);
-  const legifranceSource = createLegifranceSource({
-    getArticle: createGetArticle(legislation),
-    getArticleHistory: createGetArticleHistory(legislation),
-    searchLegislation: createSearchLegislation(legislation),
-    listChanges: createListChanges(legislation),
-    getText: createGetText(legislation),
-    browseCode: createBrowseCode(legislation),
-  });
+  const legifranceSource = createLegifranceSource(
+    {
+      getArticle: createGetArticle(legislation, { today: opts.today }),
+      getArticleHistory: createGetArticleHistory(legislation, { today: opts.today }),
+      searchLegislation: createSearchLegislation(legislation, { today: opts.today }),
+      listChanges: createListChanges(legislation, { today: opts.today }),
+      getText: createGetText(legislation, { today: opts.today }),
+      browseCode: createBrowseCode(legislation, { today: opts.today }),
+      latestJo: createLatestJo(legislation, { today: opts.today }),
+      listReferenceValues: createListReferenceValues(legislation, { today: opts.today }),
+    },
+    { today: opts.today },
+  );
 
   return {
     config,

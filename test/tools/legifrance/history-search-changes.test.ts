@@ -27,13 +27,22 @@ afterEach(async () => {
   for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
 });
 
-async function call(name: string, args: Record<string, unknown>) {
+async function connectOnly(opts: { today?: () => string } = {}) {
   const fixtures = fixtureFetch();
   unmatchedRoutes.push(fixtures.unmatched);
   const { client, close } = await connectClient(
-    compose(sandboxConfig(), { fetch: fixtures.fetch }),
+    compose(sandboxConfig(), { fetch: fixtures.fetch, ...opts }),
   );
   cleanup.push(close);
+  return { client };
+}
+
+async function call(
+  name: string,
+  args: Record<string, unknown>,
+  opts: { today?: () => string } = {},
+) {
+  const { client } = await connectOnly(opts);
   const result = await client.callTool({ name, arguments: args });
   return { result, text: firstText(result) };
 }
@@ -305,6 +314,55 @@ describe('legifrance_list_changes (fixtures)', () => {
     expect(text).toContain('entry-into-force dates');
   });
 
+  it('text "loi 78-17" lists its changes with entry-into-force dates and the LODA link', async () => {
+    const { result, text } = await call(
+      'legifrance_list_changes',
+      { text: 'loi 78-17', since: '2025-01-01', until: '2026-12-31' },
+      { today: () => '2026-11-13' },
+    );
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toBeUndefined();
+    expect(text).toMatch(/^### .*78-17.* — changes from 2025-01-01 to 2026-12-31$/m);
+    expect(text).toContain('Text: https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006068624');
+    expect(text).toContain('entry-into-force dates');
+    expect(text).toMatch(/^- \d{4}-\d{2}-\d{2} · (created|amended|repealed|codified)/m);
+    expect(text).not.toContain('has not loaded the version detail');
+    expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+  });
+
+  it('code and text together, or neither, is an error', async () => {
+    for (const args of [
+      { code: 'Code civil', text: 'loi 78-17', since: '2025-01-01' },
+      { since: '2025-01-01' },
+    ]) {
+      const { result, text } = await call('legifrance_list_changes', args);
+      expect(result.isError).toBe(true);
+      expect(text).toContain('exactly one of');
+    }
+  });
+
+  it('has no response_format input (it never changed the answer)', async () => {
+    const { client } = await connectOnly();
+    const tool = (await client.listTools()).tools.find((t) => t.name === 'legifrance_list_changes');
+    expect(Object.keys(tool?.inputSchema.properties ?? {})).not.toContain('response_format');
+  });
+
+  it('the header link follows the target and the id: code, LEGITEXT text, JORFTEXT text', () => {
+    const base = { ...syntheticChanges(2) };
+    const at = (target: 'code' | 'text', textId: string) =>
+      renderListChanges({ ...base, target, textId }, { today: TODAY, page: 1 });
+    expect(at('code', 'LEGITEXT000006070721')).toContain(
+      'Code: https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070721',
+    );
+    expect(at('text', 'LEGITEXT000006068624')).toContain(
+      'Text: https://www.legifrance.gouv.fr/loda/id/LEGITEXT000006068624',
+    );
+    expect(at('text', 'JORFTEXT000000886460')).toContain(
+      'Text: https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000000886460',
+    );
+    expect(at('text', 'JORFTEXT000000886460')).toContain('entry-into-force dates');
+  });
+
   it('a bad date is an error', async () => {
     const { result } = await call('legifrance_list_changes', {
       code: 'Code civil',
@@ -344,7 +402,7 @@ function syntheticChanges(n: number, groups = 60): ChangesView {
 describe('list changes paging', () => {
   it('250 entries: page 1 shows 100 with a Next page hint, text under the cap', () => {
     const view = syntheticChanges(250);
-    const p1 = renderListChanges(view, { detailed: false, today: TODAY, page: 1 });
+    const p1 = renderListChanges(view, { today: TODAY, page: 1 });
     expect(p1.split('\n').filter((l) => l.startsWith('- ')).length).toBe(100);
     expect(p1).toContain('Next page: "page": 2');
     expect(p1.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
@@ -352,11 +410,11 @@ describe('list changes paging', () => {
     expect(p1).toContain('page 1 of 3');
     expect(p1).toContain('### Code du travail — changes from 2026-01-01 to 2027-12-31');
 
-    const p3 = renderListChanges(view, { detailed: false, today: TODAY, page: 3 });
+    const p3 = renderListChanges(view, { today: TODAY, page: 3 });
     expect(p3.split('\n').filter((l) => l.startsWith('- ')).length).toBe(50);
     expect(p3).not.toContain('Next page');
     const allText = [1, 2, 3]
-      .map((page) => renderListChanges(view, { detailed: false, today: TODAY, page }))
+      .map((page) => renderListChanges(view, { today: TODAY, page }))
       .join('\n');
     expect(allText.match(/\(scheduled\)/g)?.length).toBe(3);
     expect(p3).toContain('2 versions in this range have an entry-into-force date');
@@ -365,26 +423,24 @@ describe('list changes paging', () => {
   });
 
   it('entry lines show the article id and the header links the code', () => {
-    const text = renderListChanges(syntheticChanges(5), { detailed: false, today: TODAY, page: 1 });
+    const text = renderListChanges(syntheticChanges(5), { today: TODAY, page: 1 });
     expect(text).toContain('· id LEGIARTI');
     const view = { ...syntheticChanges(5), textId: 'LEGITEXT000006070721' };
-    expect(renderListChanges(view, { detailed: false, today: TODAY, page: 1 })).toContain(
+    expect(renderListChanges(view, { today: TODAY, page: 1 })).toContain(
       'https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070721',
     );
   });
 
   it('a page past the end is an error from the tool', async () => {
     const view = syntheticChanges(5);
-    expect(() => renderListChanges(view, { detailed: false, today: TODAY, page: 2 })).toThrow(
-      /past the last page/,
-    );
+    expect(() => renderListChanges(view, { today: TODAY, page: 2 })).toThrow(/past the last page/);
   });
 
   it('every page stays under the cap even with huge titles', () => {
     const view = syntheticChanges(300, 300);
     for (const g of view.groups) g.amendingTitle = 'T'.repeat(600);
     for (let page = 1; page <= 3; page++) {
-      const r = renderListChanges(view, { detailed: true, today: TODAY, page });
+      const r = renderListChanges(view, { today: TODAY, page });
       expect(r.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
     }
   });

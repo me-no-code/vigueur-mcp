@@ -223,6 +223,8 @@ function fakeServices(browseCode: LegifranceServices['browseCode']): LegifranceS
     listChanges: unused,
     getText: unused,
     browseCode,
+    latestJo: unused,
+    listReferenceValues: unused,
   };
 }
 

@@ -12,7 +12,9 @@ import { type BrowseCode, registerBrowseCodeTool } from './browse-code.js';
 import { type GetArticle, registerGetArticleTool } from './get-article.js';
 import { registerGetArticleHistoryTool } from './get-article-history.js';
 import { type GetText, registerGetTextTool } from './get-text.js';
+import { type LatestJo, registerLatestJoTool } from './latest-jo.js';
 import { registerListChangesTool } from './list-changes.js';
+import { type ListReferenceValues, registerReferenceValuesTool } from './reference-values.js';
 import { registerSearchLegislationTool } from './search-legislation.js';
 
 /** The Légifrance services the tools call (see `services/legislation/`). */
@@ -27,11 +29,13 @@ export interface LegifranceServices {
     ctx?: CallContext,
   ) => Promise<LegislationSearchPage>;
   listChanges: (
-    input: { code: string; since: IsoDate; until?: IsoDate },
+    input: { code?: string; text?: string; since: IsoDate; until?: IsoDate },
     ctx?: CallContext,
   ) => Promise<ChangesView>;
   getText: GetText;
   browseCode: BrowseCode;
+  latestJo: LatestJo;
+  listReferenceValues: ListReferenceValues;
 }
 
 /** The Légifrance tools; `today` (default: today in Paris) sets the tense of upcoming changes; `deadlineMs`
@@ -50,6 +54,8 @@ export function createLegifranceSource(
       registerListChangesTool(server, services.listChanges, today, opts.deadlineMs);
       registerGetTextTool(server, services.getText, opts.deadlineMs);
       registerBrowseCodeTool(server, services.browseCode, opts.deadlineMs);
+      registerLatestJoTool(server, services.latestJo, opts.deadlineMs);
+      registerReferenceValuesTool(server, services.listReferenceValues, opts.deadlineMs);
     },
   };
 }
