@@ -28,7 +28,7 @@ No PISTE account yet? Enable the plugin with empty credentials and ask Claude to
 
 ## Tools
 
-*En français : [Outils](#outils).*
+_En français : [Outils](#outils)._
 
 - `vigueur_status` — checks your PISTE credentials and which sources are reachable.
   Example: "Run vigueur_status: is my Légifrance access working?"
@@ -52,7 +52,7 @@ No PISTE account yet? Enable the plugin with empty credentials and ask Claude to
 
 ## Outils
 
-*In English: [Tools](#tools).*
+_In English: [Tools](#tools)._
 
 - `vigueur_status` — vérifie vos identifiants PISTE et les sources joignables.
   Exemple : « Lance vigueur_status : mon accès à Légifrance fonctionne-t-il ? »
