@@ -153,12 +153,41 @@ function parseFinancial(title: string): ParsedCaseLawTitle | null {
   };
 }
 
+/**
+ * Old style: `Court. [Chamber.] Nature. 06/05/2010. Parties. [n° 57767.] [Publié au Recueil de
+ * jurisprudence.]`
+ */
+function parseFinancialDotted(title: string): ParsedCaseLawTitle | null {
+  const parts = title.replace(/\.$/, '').split(/\.\s+/);
+  const at = parts.findIndex((p, i) => i > 0 && SLASH_DATE.test(p));
+  if (at < 2 || at > 3) return null;
+  const m = SLASH_DATE.exec(parts[at] as string);
+  if (m === null) return null;
+  const date = isoDate(m[3] as string, Number(m[2]), m[1] as string);
+  if (date === null) return null;
+  const tail = parts.slice(at + 2);
+  const last = tail[tail.length - 1];
+  const publication = last !== undefined && /^(Publié|Inédit)/i.test(last) ? last : null;
+  const numberPart = publication === null ? last : tail[tail.length - 2];
+  const number = numberPart === undefined ? null : /^n\s*°\s*(\S.*)$/i.exec(numberPart);
+  return {
+    court: parts[0] as string,
+    chamber: at === 3 ? (parts[1] as string) : null,
+    nature: parts[at - 1] as string,
+    date,
+    numbers: number === null ? [] : [number[1] as string],
+    publication,
+  };
+}
+
+const parseFinancialAny = (title: string) => parseFinancial(title) ?? parseFinancialDotted(title);
+
 const PARSERS: Readonly<Record<CaseLawCollection, (title: string) => ParsedCaseLawTitle | null>> = {
   judicial: parseJudicial,
   administrative: parseAdministrative,
   constitutional: parseConstitutional,
   cnil: parseCnil,
-  financial: parseFinancial,
+  financial: parseFinancialAny,
 };
 
 /** The facts a Légifrance case-law title states; null when the title does not follow its fond's grammar. */

@@ -421,7 +421,9 @@ describe('searchCaseLaw mapping', () => {
         path: '/search',
         reply: {
           totalResultNumber: 1,
-          results: [{ titles: [{ id: 'JURITEXT1', title: 'x' }], text: 'mot '.repeat(200) }],
+          results: [
+            { titles: [{ id: 'JURITEXT000000000001', title: 'x' }], text: 'mot '.repeat(200) },
+          ],
         },
       },
     ]);
@@ -429,10 +431,37 @@ describe('searchCaseLaw mapping', () => {
     expect(page.hits[0]?.snippet?.length).toBeLessThanOrEqual(300);
   });
 
+  it('reports a hit whose id is not a decision id as an unexpected response', async () => {
+    const fake = fakePisteHttp([
+      {
+        path: '/search',
+        reply: { totalResultNumber: 1, results: [{ titles: [{ id: 'JURITEXT1', title: 'x' }] }] },
+      },
+    ]);
+    await expect(
+      createLegifranceCaseLawClient(fake.http).searchCaseLaw(base),
+    ).rejects.toMatchObject({ kind: 'unexpected_response', details: { source: 'legifrance' } });
+  });
+
   it('reports a body without a total as an unexpected response', async () => {
     const fake = fakePisteHttp([{ path: '/search', reply: { results: [] } }]);
     await expect(
       createLegifranceCaseLawClient(fake.http).searchCaseLaw(base),
     ).rejects.toMatchObject({ kind: 'unexpected_response' });
+  });
+
+  it('maps an old dot-separated Cour des comptes title (fixture 154)', async () => {
+    const { repo } = setup('154-search-jufi-filter-recueil-publie-pertinence');
+    const page = await repo.searchCaseLaw({ ...base, collection: 'financial' });
+    expect(page.hits[0]).toMatchObject({ court: 'Cour des comptes', decisionDate: '2010-05-06' });
+  });
+
+  it('shows the snippet of a highlighted hit without its marks (fixture 34)', async () => {
+    const { repo } = setup('34-search-juri-fulltext');
+    const hit = (await repo.searchCaseLaw(base)).hits[0];
+    expect(hit?.id).toBe('JURITEXT000053197030');
+    expect(hit?.snippet).toContain('faute grave');
+    expect(hit?.snippet).not.toContain('<mark');
+    expect(hit?.snippet?.length).toBeLessThanOrEqual(300);
   });
 });

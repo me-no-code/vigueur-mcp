@@ -177,6 +177,35 @@ export interface CaseLawSearchPage {
   hits: CaseLawHit[];
 }
 
+/** A decision read from Légifrance, whichever of the five fonds holds it. */
+export interface LegifranceDecision {
+  id: string;
+  collection: CaseLawCollection;
+  title: string;
+  court: string | null;
+  /** Chamber or formation as the source labels it. */
+  chamber: string | null;
+  nature: string | null;
+  decisionDate: IsoDate | null;
+  numbers: string[];
+  ecli: string | null;
+  solution: string | null;
+  publication: string | null;
+  summary: string | null;
+  /** The attacked decision, when the source states it. */
+  attacked: { court: string; date: IsoDate | null } | null;
+  /** Verbatim, with line breaks. */
+  text: string;
+  constitutionalCouncilUrl: string | null;
+  joUrl: string | null;
+  /** CNIL `etat`. */
+  labelledStatus: string | null;
+  /** CNIL `datePubli`. */
+  publishedOn: IsoDate | null;
+}
+
 export interface CaseLawRepository {
   searchCaseLaw(q: CaseLawQuery, ctx?: CallContext): Promise<CaseLawSearchPage>;
+  /** `null` when the id is unknown (HTTP 400 "L'expression à valider est fausse."). */
+  getDecision(id: string, ctx?: CallContext): Promise<LegifranceDecision | null>;
 }

@@ -1,19 +1,32 @@
 import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
-import type { CaseLawCollection } from '../../domain/decisions.js';
+import { CASS_CHAMBER_LABELS, type CaseLawCollection } from '../../domain/decisions.js';
+import { isDecisionId } from '../../domain/links.js';
 import type {
   CallContext,
   CaseLawHit,
   CaseLawQuery,
   CaseLawRepository,
   CaseLawSearchPage,
+  LegifranceDecision,
 } from '../../services/case-law/ports.js';
 import { VigueurError } from '../../shared/errors.js';
+import { decodeEntities } from '../html.js';
 import type { PisteHttp } from '../piste/http.js';
 import { parseCaseLawTitle } from './case-law-titles.js';
-import { asObj, list, type Obj, optStr, postJson, shape, str } from './request.js';
+import {
+  asObj,
+  isUnknownId,
+  list,
+  lookup,
+  type Obj,
+  optStr,
+  postJson,
+  shape,
+  str,
+} from './request.js';
 import { champ } from './search.js';
-import { parseApiDate, stripMarks } from './wire.js';
+import { htmlToText, parseApiDate, stripMarks } from './wire.js';
 
 const MAX_PAGE_SIZE = 100;
 const MAX_SNIPPET = 300;
@@ -191,10 +204,12 @@ function snippetOf(result: Obj): string | null {
 function mapHit(result: Obj, collection: CaseLawCollection): CaseLawHit {
   const title = list(result, 'titles')[0];
   if (title === undefined) throw shape('search result without a title');
+  const id = str(title, 'id');
+  if (!isDecisionId(id)) throw shape(`search result with an id that is not a decision id`);
   const text = oneLine(str(title, 'title'));
   const parsed = parseCaseLawTitle(collection, text);
   return {
-    id: str(title, 'id'),
+    id,
     collection,
     title: text,
     court: parsed?.court ?? null,
@@ -235,6 +250,130 @@ export function searchCaseLaw(
   return postJson(http, '/search', buildBody(query), ctx, (raw) => mapSearch(raw, query));
 }
 
+// ---------------------------------------------------------------------------------------------
+// Read a decision
+
+const ID_PREFIXES: Readonly<Record<string, CaseLawCollection>> = {
+  JURITEXT: 'judicial',
+  CETATEXT: 'administrative',
+  CONSTEXT: 'constitutional',
+  CNILTEXT: 'cnil',
+  JUFITEXT: 'financial',
+};
+
+/** JURI `formation` keys (Légifrance wire) to their French label. */
+const CHAMBER_LABELS: Readonly<Record<string, string>> = Object.fromEntries(
+  (Object.keys(CHAMBERS) as CassChamber[]).map((k) => [CHAMBERS[k], CASS_CHAMBER_LABELS[k]]),
+);
+
+const PUBLICATION_BULLETIN: Readonly<Record<string, string>> = {
+  T: 'Publié au bulletin',
+  F: 'Inédit',
+};
+
+/** A non-empty string, else null (the source sends `""` for "nothing"). */
+const filled = (o: Obj, key: string) => optStr(o, key)?.trim() || null;
+
+function collectionOf(id: string): CaseLawCollection {
+  const collection = Object.hasOwn(ID_PREFIXES, id.slice(0, 8))
+    ? ID_PREFIXES[id.slice(0, 8)]
+    : undefined;
+  if (collection === undefined) {
+    throw invalid(
+      `"${id}" is not a Légifrance case-law id (JURITEXT, CETATEXT, CONSTEXT, CNILTEXT or JUFITEXT).`,
+    );
+  }
+  return collection;
+}
+
+function numbersOf(o: Obj): string[] {
+  const v = o.numeroAffaire;
+  const fromAffaire = Array.isArray(v)
+    ? v.filter((n): n is string => typeof n === 'string' && n.trim() !== '').map((n) => n.trim())
+    : [];
+  if (fromAffaire.length > 0) return fromAffaire;
+  const num = filled(o, 'num');
+  return num === null ? [] : [num];
+}
+
+function summaryOf(o: Obj): string | null {
+  const lines = list(o, 'sommaire').flatMap((entry) =>
+    [optStr(entry, 'resumePrincipal'), optStr(entry, 'abstrats')]
+      .map((html) => (html === null ? '' : htmlToText(html)))
+      .filter((t) => t !== ''),
+  );
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
+function attackedOf(o: Obj): LegifranceDecision['attacked'] {
+  const a = o.decisionAttaquee;
+  if (a === null || a === undefined) return null;
+  const obj = asObj(a, 'decisionAttaquee');
+  const court = filled(obj, 'formation');
+  return court === null ? null : { court, date: parseApiDate(obj.date).date };
+}
+
+function mapDecision(raw: unknown, id: string, collection: CaseLawCollection): LegifranceDecision {
+  const o = asObj(asObj(raw, 'body').text, 'text');
+  const title = oneLine(filled(o, 'titreLong') ?? str(o, 'titre'));
+  const parsed = parseCaseLawTitle(collection, oneLine(filled(o, 'titre') ?? title));
+  const formation = filled(o, 'formation');
+  const bulletin = collection === 'judicial' ? filled(o, 'typePublicationBulletin') : null;
+  const html = optStr(o, 'texteHtml');
+  const plain = optStr(o, 'texte');
+  return {
+    id,
+    collection,
+    title,
+    court: filled(o, 'juridiction') ?? parsed?.court ?? null,
+    chamber:
+      collection === 'judicial' && formation !== null
+        ? lookup(CHAMBER_LABELS, formation, formation)
+        : (formation ?? parsed?.chamber ?? null),
+    nature: filled(o, 'nature') ?? parsed?.nature ?? null,
+    decisionDate: parseApiDate(o.dateTexte).date ?? parsed?.date ?? null,
+    numbers: numbersOf(o),
+    ecli: filled(o, 'ecli'),
+    solution: filled(o, 'solution'),
+    publication:
+      bulletin !== null && Object.hasOwn(PUBLICATION_BULLETIN, bulletin)
+        ? (PUBLICATION_BULLETIN[bulletin] as string)
+        : (parsed?.publication ?? null),
+    summary: summaryOf(o),
+    attacked: attackedOf(o),
+    text:
+      html !== null && html.trim() !== ''
+        ? htmlToText(html)
+        : plain === null
+          ? ''
+          : decodeEntities(plain).trim(),
+    constitutionalCouncilUrl: filled(o, 'urlCC'),
+    joUrl: filled(o, 'lienJo'),
+    labelledStatus: filled(o, 'etat'),
+    publishedOn: parseApiDate(o.datePubli).date,
+  };
+}
+
+export async function getDecision(
+  http: PisteHttp,
+  id: string,
+  ctx?: CallContext,
+): Promise<LegifranceDecision | null> {
+  const collection = collectionOf(id);
+  const path = collection === 'cnil' ? '/consult/cnil' : '/consult/juri';
+  try {
+    return await postJson(http, path, { textId: id }, ctx, (raw) =>
+      mapDecision(raw, id, collection),
+    );
+  } catch (err) {
+    if (isUnknownId(err)) return null;
+    throw err;
+  }
+}
+
 export function createLegifranceCaseLawClient(http: PisteHttp): CaseLawRepository {
-  return { searchCaseLaw: (q, ctx) => searchCaseLaw(http, q, ctx) };
+  return {
+    searchCaseLaw: (q, ctx) => searchCaseLaw(http, q, ctx),
+    getDecision: (id, ctx) => getDecision(http, id, ctx),
+  };
 }

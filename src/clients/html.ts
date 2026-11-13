@@ -9,7 +9,7 @@ const NAMED_ENTITIES: Readonly<Record<string, string>> = {
   apos: "'",
 };
 
-function decodeEntities(s: string): string {
+export function decodeEntities(s: string): string {
   return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, body: string) => {
     if (body[0] === '#') {
       const code =

@@ -215,6 +215,55 @@ describe('parseCaseLawTitle', () => {
     });
   });
 
+  describe('old dot-separated Cour des comptes titles', () => {
+    const first =
+      "Cour des comptes. 4ème chambre. Arrêt d'appel. 06/05/2010. Centre communal d'action sociale (CCAS) de Polaincourt - Trésorerie d'Amance Faverney (Haute-Saône) - Appel d'un jugement de la chambre régionale des comptes (CRC) de Franche-Comté. n° 57767. Publié au Recueil de jurisprudence.";
+    const third =
+      "Cour des comptes. 4ème chambre. Arrêt d'appel. 03/02/2011. Centre hospitalier de Compiègne (Oise) - Appel d'une ordonnance du président de la chambre régionale des comptes (CRC) de Picardie. n° 60083. Publié au Recueil de jurisprudence.";
+
+    it('reads court, chamber, nature, date, number and publication', () => {
+      expect(parseCaseLawTitle('financial', third)).toEqual({
+        court: 'Cour des comptes',
+        chamber: '4ème chambre',
+        nature: "Arrêt d'appel",
+        date: '2011-02-03',
+        numbers: ['60083'],
+        publication: 'Publié au Recueil de jurisprudence',
+      });
+    });
+
+    it('reads the first title of the sample', () => {
+      expect(parseCaseLawTitle('financial', first)).toMatchObject({
+        date: '2010-05-06',
+        numbers: ['57767'],
+        publication: 'Publié au Recueil de jurisprudence',
+      });
+    });
+
+    it('has no number and no publication when the title ends with the parties', () => {
+      const cut = first.slice(0, first.indexOf(' n° 57767.')).trim();
+      expect(parseCaseLawTitle('financial', cut)).toMatchObject({
+        date: '2010-05-06',
+        numbers: [],
+        publication: null,
+      });
+    });
+
+    it('has no chamber when only the court and the nature precede the date', () => {
+      expect(
+        parseCaseLawTitle(
+          'financial',
+          "Cour des comptes. Arrêt d'appel. 03/02/2011. Commune de X. n° 1. Inédit.",
+        ),
+      ).toMatchObject({
+        chamber: null,
+        nature: "Arrêt d'appel",
+        numbers: ['1'],
+        publication: 'Inédit',
+      });
+    });
+  });
+
   it('accepts non-breaking spaces', () => {
     expect(
       parseCaseLawTitle('judicial', "Cour d'appel de Lyon, 3 janvier 2023, 23/000101"),

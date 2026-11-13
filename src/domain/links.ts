@@ -42,14 +42,15 @@ const DECISION_PATHS: Readonly<Record<string, string>> = {
   JUFITEXT: 'jufi',
 };
 const DECISION_ID = /^[A-Z]{8}\d{12}$/;
+/** Whether `id` is a Légifrance case-law decision id (JURITEXT, CETATEXT… + 12 digits). */
+export function isDecisionId(id: string): boolean {
+  // `Object.hasOwn`: an inherited key such as `toString` is not a prefix.
+  return DECISION_ID.test(id) && Object.hasOwn(DECISION_PATHS, id.slice(0, 8));
+}
+
 /** Official Légifrance page of a case-law decision; the id prefix decides the path. */
 export function decisionUrl(id: string): string {
-  const prefix = id.slice(0, 8);
-  // `Object.hasOwn`: an inherited key such as `toString` is not a prefix.
-  const path =
-    DECISION_ID.test(id) && Object.hasOwn(DECISION_PATHS, prefix)
-      ? DECISION_PATHS[prefix]
-      : undefined;
+  const path = isDecisionId(id) ? DECISION_PATHS[id.slice(0, 8)] : undefined;
   if (path === undefined) throw new Error(`Not a Légifrance decision id: ${id}`);
   return `${LEGIFRANCE_BASE_URL}/${path}/id/${id}`;
 }

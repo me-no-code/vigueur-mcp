@@ -46,3 +46,15 @@ export async function postJson<T>(
     );
   }
 }
+
+/** The one 400 that means "no such text" on a consult call. */
+const UNKNOWN_ID_MESSAGE = "L'expression à valider est fausse";
+
+export function isUnknownId(err: unknown): boolean {
+  return (
+    err instanceof VigueurError &&
+    err.kind === 'invalid_input' &&
+    err.message.includes('HTTP 400') &&
+    err.message.includes(UNKNOWN_ID_MESSAGE)
+  );
+}

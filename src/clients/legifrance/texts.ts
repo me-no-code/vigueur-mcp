@@ -5,17 +5,13 @@ import type {
   TextRecord,
   TextSection,
 } from '../../services/legislation/ports.js';
-import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
-import { asObj, list, type Obj, optStr, postJson, str } from './request.js';
+import { asObj, isUnknownId, list, type Obj, optStr, postJson, str } from './request.js';
 import { mapPisteStatus } from './status-map.js';
 import { cleanTitle, htmlToText, parseApiDate, stripIdSuffix } from './wire.js';
 
 // Whole texts (laws, decrees, JORF): LODA /consult/lawDecree, JORF /consult/jorf and
 // /consult/getJoWithNor. Sections come back unordered: they are sorted by `intOrdre`.
-
-/** The one 400 that means "no such text" on a consult call. */
-const UNKNOWN_ID_MESSAGE = "L'expression à valider est fausse";
 
 const order = (o: Obj): number => (typeof o.intOrdre === 'number' ? o.intOrdre : 0);
 const byOrder = (a: Obj, b: Obj) => order(a) - order(b);
@@ -84,15 +80,6 @@ function mapText(raw: unknown): TextRecord {
     sections: [...list(o, 'sections')].sort(byOrder).map(mapSection),
     articles: mapArticles(o),
   };
-}
-
-function isUnknownId(err: unknown): boolean {
-  return (
-    err instanceof VigueurError &&
-    err.kind === 'invalid_input' &&
-    err.message.includes('HTTP 400') &&
-    err.message.includes(UNKNOWN_ID_MESSAGE)
-  );
 }
 
 async function consult(
