@@ -92,7 +92,8 @@ describe('per-call deadline over every tool', () => {
       cleanup.push(close);
       const result = await client.callTool({ name, arguments: args });
       expect(result.isError).toBe(true);
-      expect(firstText(result)).toContain('did not answer within 45 s');
+      const source = name.startsWith('judilibre_') ? 'Judilibre' : 'Légifrance';
+      expect(firstText(result)).toContain(`${source} did not answer within 45 s`);
     });
   }
 });
