@@ -52,8 +52,8 @@ export interface ArticleRecord {
   version: ArticleVersion;
   /** Lineage id: follows the article number, not its content. */
   cid: string;
-  codeId: string | null;
-  codeTitle: string | null;
+  textId: string | null;
+  textTitle: string | null;
   nota: string | null;
   /** Ancestor section titles, outermost first, as they read on the requested date. */
   sectionPath: string[];
@@ -166,5 +166,5 @@ export interface LegislationRepository {
   getConcordance(articleId: string, ctx?: CallContext): Promise<Concordance>;
   searchLegislation(query: LegislationQuery, ctx?: CallContext): Promise<LegislationSearchPage>;
   /** Changes to a code with entry into force in `from..to` (inclusive). */
-  listChanges(codeId: string, from: IsoDate, to: IsoDate, ctx?: CallContext): Promise<ChangeLog>;
+  listChanges(textCid: string, from: IsoDate, to: IsoDate, ctx?: CallContext): Promise<ChangeLog>;
 }

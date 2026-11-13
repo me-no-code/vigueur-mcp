@@ -23,3 +23,13 @@ export function jorfUrl(jorftextId: string): string {
 export function kaliUrl(kalitextId: string): string {
   return `${LEGIFRANCE_BASE_URL}/conv_coll/id/${kalitextId}`;
 }
+export function codeUrl(legitextId: string): string {
+  return `${LEGIFRANCE_BASE_URL}/codes/texte_lc/${legitextId}`;
+}
+export function codeSectionUrl(legitextId: string, legiscta: string): string {
+  return `${LEGIFRANCE_BASE_URL}/codes/section_lc/${legitextId}/${legiscta}`;
+}
+/** Official page of a Journal officiel issue from its ELI path (e.g. `/eli/jo/2026/11/11/0264`). */
+export function joIssueUrl(eliPath: string): string {
+  return `${LEGIFRANCE_BASE_URL}${eliPath}`;
+}

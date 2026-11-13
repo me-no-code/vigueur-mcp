@@ -92,8 +92,8 @@ export function makeArticle(seed: ArticleSeed): ArticleRecord {
       ...(validToUndetermined && { validToUndetermined }),
     },
     cid: seed.cid ?? seed.id,
-    codeId,
-    codeTitle,
+    textId: codeId,
+    textTitle: codeTitle,
     nota: seed.nota ?? null,
     sectionPath: seed.sectionPath ?? [],
     sectionCid: seed.sectionCid ?? null,
@@ -133,8 +133,8 @@ export function hitOf(record: ArticleRecord): ArticleHit {
   return {
     id,
     num: number,
-    codeId: record.codeId ?? '',
-    codeTitle: record.codeTitle ?? '',
+    codeId: record.textId ?? '',
+    codeTitle: record.textTitle ?? '',
     status,
     rawStatus: rawStatus ?? '',
     validFrom,
@@ -193,7 +193,7 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     articles.filter(
       (a) =>
         numKey(a.version.number) === numKey(num) &&
-        (codeTitle === null || a.codeTitle === codeTitle),
+        (codeTitle === null || a.textTitle === codeTitle),
     );
 
   const seeded: LegislationRepository = {

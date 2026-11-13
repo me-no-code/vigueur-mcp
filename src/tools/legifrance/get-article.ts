@@ -152,7 +152,7 @@ function headerOf(a: ArticleView): string {
     validToUndetermined: version.validToUndetermined,
   });
   const lines = [
-    record.codeTitle === null ? `### Art. ${num}` : `### ${record.codeTitle} — art. ${num}`,
+    record.textTitle === null ? `### Art. ${num}` : `### ${record.textTitle} — art. ${num}`,
     `${status}${version.rawStatus ? ` (${version.rawStatus})` : ''}`,
   ];
   if (record.sectionPath.length > 0) lines.push(record.sectionPath.join(' › '));

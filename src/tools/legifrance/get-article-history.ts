@@ -105,7 +105,7 @@ export function renderGetArticleHistory(
   result: ArticleHistoryResult,
   opts: HistoryRenderOptions,
 ): string {
-  if (!('events' in result)) return renderLookupMiss(result, opts);
+  if (result.kind !== 'history') return renderLookupMiss(result, opts);
   const view = result;
   const heading = `### ${view.codeTitle ?? 'Code'} — art. ${view.num || '?'}: version history`;
   const { current } = view;

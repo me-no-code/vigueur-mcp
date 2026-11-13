@@ -58,7 +58,7 @@ function mapChanges(body: unknown, from: IsoDate, to: IsoDate): ChangeLog {
 /** Changes to a code entering into force between `from` and `to`, from `/chrono/textCid`. */
 export function listChanges(
   http: PisteHttp,
-  codeId: string,
+  textCid: string,
   from: IsoDate,
   to: IsoDate,
   today: Date,
@@ -68,7 +68,7 @@ export function listChanges(
     return Promise.reject(new VigueurError('invalid_input', 'from must not be after to.'));
   }
   const body = {
-    textCid: codeId,
+    textCid,
     dateConsult: isoDateInParis(today),
     startYear: yearOf(from),
     endYear: yearOf(to),

@@ -49,6 +49,7 @@ describe('createGetArticleHistory', () => {
     const run = createGetArticleHistory(repo, { today });
     const res = await run({ code: 'Code civil', number: '1382' });
     if (!('versions' in res)) throw new Error('expected history');
+    expect(res.kind).toBe('history');
     expect(res.codeTitle).toBe('Code civil');
     expect(res.num).toBe('1382');
     expect(res.versions.map((v) => v.id)).toEqual([OLD?.version.id, NEW?.version.id]);

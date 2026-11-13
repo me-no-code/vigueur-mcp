@@ -380,8 +380,8 @@ describe('getArticle', () => {
       validTo: '2016-10-01',
     });
     expect(record.cid).toBe('LEGIARTI000006438819');
-    expect(record.codeId).toBe('LEGITEXT000006070721');
-    expect(record.codeTitle).toBe('Code civil');
+    expect(record.textId).toBe('LEGITEXT000006070721');
+    expect(record.textTitle).toBe('Code civil');
     expect(record.nota).toBeNull();
     expect(record.sectionCid).toBe('LEGISCTA000006136352');
     expect(record.sectionPath.at(-1)).toContain('Des délits et des quasi-délits');
@@ -467,7 +467,7 @@ describe('getArticle', () => {
     expect(record?.versions).toHaveLength(35);
     expect(record?.version.number).toBe('199 undecies B');
     // Same title as /list/code and the search NOM_CODE facet (textTitles[0].titreLong).
-    expect(record?.codeTitle).toBe('Code général des impôts');
+    expect(record?.textTitle).toBe('Code général des impôts');
     expect(JSON.stringify(record).length).toBeLessThan(60_000);
   });
 

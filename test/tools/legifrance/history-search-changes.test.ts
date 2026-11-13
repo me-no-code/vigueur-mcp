@@ -174,6 +174,27 @@ describe('legifrance_search_legislation (fixtures)', () => {
     }
   });
 
+  it('a JORF text hit renders its status as "as published", not "unknown"', () => {
+    const jorfText: LegislationHit = {
+      ...hit(1),
+      kind: 'text',
+      id: 'JORFTEXT000033934937',
+      textId: 'JORFTEXT000033934937',
+      title: 'Décret n° 2017-23 du 11 janvier 2017',
+      status: 'unknown',
+      rawStatus: '',
+      validFrom: null,
+      snippet: null,
+    };
+    const text = renderSearch(
+      { total: 1, page: 1, pageSize: 10, hits: [jorfText] },
+      { detailed: false, asked: 'a', filteredByArticleNumber: false },
+    );
+    const line = text.split('\n').find((l) => l.includes('JORFTEXT000033934937')) ?? '';
+    expect(line).toContain('as published');
+    expect(line).not.toContain('unknown');
+  });
+
   it('a JORF article hit links to the JO article and is not offered to get_article', () => {
     const jorfArticle: LegislationHit = {
       ...hit(1),
@@ -341,6 +362,15 @@ describe('list changes paging', () => {
     expect(p3).toContain('### Code du travail — changes from');
   });
 
+  it('entry lines show the article id and the header links the code', () => {
+    const text = renderListChanges(syntheticChanges(5), { detailed: false, today: TODAY, page: 1 });
+    expect(text).toContain('· id LEGIARTI');
+    const view = { ...syntheticChanges(5), textId: 'LEGITEXT000006070721' };
+    expect(renderListChanges(view, { detailed: false, today: TODAY, page: 1 })).toContain(
+      'https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070721',
+    );
+  });
+
   it('a page past the end is an error from the tool', async () => {
     const view = syntheticChanges(5);
     expect(() => renderListChanges(view, { detailed: false, today: TODAY, page: 2 })).toThrow(
@@ -367,6 +397,7 @@ function syntheticHistory(events: number): ArticleHistoryView {
     amendingArticleId: null,
   }));
   return {
+    kind: 'history',
     codeTitle: 'Code civil',
     num: '1',
     current: {
@@ -482,6 +513,7 @@ describe('article history paging', () => {
       label: `Code civil - art. ${num} (${flag})`,
     });
     const view: ArticleHistoryView = {
+      kind: 'history',
       codeTitle: 'Code civil',
       num: '1240',
       current: tort,

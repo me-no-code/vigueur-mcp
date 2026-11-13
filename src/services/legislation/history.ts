@@ -28,6 +28,7 @@ import {
 } from './resolve.js';
 
 export interface ArticleHistoryView {
+  kind: 'history';
   codeTitle: string | null;
   num: string;
   /** The version in force today; `null` when none is (repealed, or not yet in force). */
@@ -165,7 +166,7 @@ export function createGetArticleHistory(
     const own = ownSummary(record);
     const concordanceOf = dedupeById([versions[0] ?? own, current ?? versions.at(-1) ?? own]);
 
-    if (record.codeId === null) {
+    if (record.textId === null) {
       throw new VigueurError(
         'upstream_unavailable',
         `Légifrance did not say which code article ${record.version.number} belongs to, so its history cannot be read.`,
@@ -181,12 +182,13 @@ export function createGetArticleHistory(
         (reason) => `Could not read Légifrance's concordance of ${version.id} (${reason}).`,
       ).then((concordance) => ({ version, concordance }));
     const [events, concordances] = await Promise.all([
-      repo.getArticleHistory(record.codeId, record.cid, ctx),
+      repo.getArticleHistory(record.textId, record.cid, ctx),
       Promise.all(concordanceOf.map(read)),
     ]);
 
     return {
-      codeTitle: record.codeTitle,
+      kind: 'history',
+      codeTitle: record.textTitle,
       num: record.version.number,
       current,
       versions,

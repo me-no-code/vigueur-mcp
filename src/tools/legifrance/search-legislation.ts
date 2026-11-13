@@ -56,7 +56,7 @@ const inputSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      'true = return every version, whatever its dates (at_date is then ignored). No effect on "jorf".',
+      'true = return every version, whatever its dates (at_date is then ignored). For "codes" and "loda"; no effect on "jorf" and "kali", where at_date is rejected.',
     ),
   published_from: optionalIsoDateSchema.describe(
     'Earliest publication date, YYYY-MM-DD (collection "jorf").',
@@ -92,12 +92,18 @@ function hitUrl(hit: LegislationHit): string {
 /** Article ids `legifrance_get_article` reads (a JORF article is read on its JO page). */
 const READABLE_ARTICLE = /^(?:LEGIARTI|KALIARTI)/;
 
+function statusLabel(hit: LegislationHit): string {
+  if (hit.id.startsWith('JORF') && hit.rawStatus === '' && hit.status === 'unknown')
+    return 'as published';
+  return hit.rawStatus || hit.status;
+}
+
 /** The hit line always carries the official link; then the snippet, if any. */
 function hitLines(hit: LegislationHit, snippet: string | null): string {
   const art = hit.articleNumber === null ? '' : ` — art. ${hit.articleNumber}`;
   const dates = `${hit.validFrom ?? '?'} → ${hit.validTo ?? 'no end'}`;
   const lines = [
-    `- ${hit.title}${art} · ${hit.rawStatus || hit.status} · ${dates} · id ${hit.id} · ${hitUrl(hit)}`,
+    `- ${hit.title}${art} · ${statusLabel(hit)} · ${dates} · id ${hit.id} · ${hitUrl(hit)}`,
   ];
   if (snippet !== null) lines.push(`  ${snippet}`);
   return lines.join('\n');

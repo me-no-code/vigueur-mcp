@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import type { IsoDate } from '../../domain/dates.js';
+import { codeUrl } from '../../domain/links.js';
 import type { ChangesView } from '../../services/legislation/changes.js';
 import type { CallContext, ChangeEntry } from '../../services/legislation/ports.js';
 import {
@@ -33,9 +34,7 @@ const inputSchema = z.object({
     .min(1)
     .optional()
     .describe('Page of the change list, 100 entries per page (default 1).'),
-  response_format: responseFormatSchema
-    .optional()
-    .describe('"concise" (default) or "detailed" (also the id of each article).'),
+  response_format: responseFormatSchema.optional().describe('"concise" (default) or "detailed".'),
 });
 
 const ENTRIES_PER_PAGE = 100;
@@ -56,9 +55,9 @@ export interface ChangesRenderOptions {
   page: number;
 }
 
-function entryLine(e: ChangeEntry, detailed: boolean, today: IsoDate): string {
+function entryLine(e: ChangeEntry, today: IsoDate): string {
   const section = e.sectionTitle === null ? '' : ` (${e.sectionTitle})`;
-  const id = detailed && e.articleId !== null ? ` [${e.articleId}]` : '';
+  const id = e.articleId !== null ? ` · id ${e.articleId}` : '';
   const scheduled = e.date > today ? ' (scheduled)' : '';
   return `- ${e.date} · ${ACTION_LABELS[e.action]} · art. ${e.articleNum ?? '?'}${section}${id}${scheduled}`;
 }
@@ -74,7 +73,7 @@ export function renderListChanges(view: ChangesView, opts: ChangesRenderOptions)
     flat,
     opts.page,
     // Counts a group header for every entry: a safe upper bound whatever the page boundaries.
-    (i) => entryLine(i.entry, opts.detailed, opts.today).length + 1 + titleCost(i.group),
+    (i) => entryLine(i.entry, opts.today).length + 1 + titleCost(i.group),
     { maxItems: ENTRIES_PER_PAGE, budget: MAX_TOOL_TEXT - FRAME_RESERVE },
   );
 
@@ -91,16 +90,14 @@ export function renderListChanges(view: ChangesView, opts: ChangesRenderOptions)
   }
   const header = [
     `### ${view.textTitle} — changes from ${view.since} to ${view.until}`,
+    `Code: ${codeUrl(view.textId)}`,
     `${view.totalEntries} ${view.totalEntries === 1 ? 'entry' : 'entries'} in ${view.groups.length} amending ${view.groups.length === 1 ? 'text' : 'texts'}, ${view.scheduledCount} scheduled (not yet in force) — page ${opts.page} of ${paged.pageCount}. Dates are entry-into-force dates, not publication dates.`,
   ];
   const body =
     pageGroups.length === 0
       ? ['No change recorded in this range.']
       : pageGroups.map((g) =>
-          [
-            `#### ${g.amendingTitle}`,
-            ...g.entries.map((e) => entryLine(e, opts.detailed, opts.today)),
-          ].join('\n'),
+          [`#### ${g.amendingTitle}`, ...g.entries.map((e) => entryLine(e, opts.today))].join('\n'),
         );
   const notes: string[] = [];
   if (view.undeterminedCount > 0) {

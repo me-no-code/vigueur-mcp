@@ -257,8 +257,8 @@ function mapArticle(a: Obj, asOf: IsoDate): ArticleRecord {
   return {
     version,
     cid: optStr(a, 'cid') || id,
-    codeId: parentId ? stripIdSuffix(parentId) : null,
-    codeTitle: parentTitle ? cleanTitle(parentTitle) : null,
+    textId: parentId ? stripIdSuffix(parentId) : null,
+    textTitle: parentTitle ? cleanTitle(parentTitle) : null,
     nota: richText(a, 'notaHtml', 'nota') || null,
     sectionPath: sectionPath(list(context, 'titresTM'), validFrom, validTo, asOf),
     sectionCid: optStr(a, 'sectionParentCid'),
@@ -390,8 +390,8 @@ export function createLegifranceClient(
       return searchLegislation(http, query, ctx);
     },
 
-    listChanges(codeId, from, to, ctx) {
-      return listChanges(http, codeId, from, to, now(), ctx);
+    listChanges(textCid, from, to, ctx) {
+      return listChanges(http, textCid, from, to, now(), ctx);
     },
 
     getConcordance(articleId, ctx) {
