@@ -7,6 +7,7 @@ import {
   JURISDICTION_LABELS,
   labelOf,
   PUBLICATION_LABELS,
+  PUBLICATION_WIRE,
   SOLUTION_LABELS,
 } from '../../domain/judilibre-labels.js';
 import { judilibreDecisionUrl } from '../../domain/links.js';
@@ -18,6 +19,7 @@ import type {
 import type { CallContext, JudilibreHit } from '../../services/case-law/ports.js';
 import {
   callSignal,
+  cut,
   MAX_TOOL_TEXT,
   nextPageHint,
   optionalIsoDateSchema,
@@ -124,16 +126,14 @@ const MAX_WINDOW = 10_000;
 const SUMMARY_MAX = 600;
 const EXCERPT_MAX = 700;
 
-const cut = (s: string, max: number): string =>
-  s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
-
 /** The criteria of a search other than the query, as short phrases. */
 function filtersOf(input: JudilibreSearchView['input']): string[] {
-  const wirePublication = { bulletin: 'b', report: 'r', chamber_letter: 'l', press_release: 'c' };
   return [
     ...(input.chamber ? [labelOf(CHAMBER_LABELS, CHAMBER_WIRE[input.chamber])] : []),
     ...(input.formation ? [labelOf(FORMATION_LABELS, input.formation)] : []),
-    ...(input.publication ? [labelOf(PUBLICATION_LABELS, wirePublication[input.publication])] : []),
+    ...(input.publication
+      ? [labelOf(PUBLICATION_LABELS, PUBLICATION_WIRE[input.publication])]
+      : []),
     ...(input.solution ? [labelOf(SOLUTION_LABELS, input.solution)] : []),
     ...(input.location ? [`location ${input.location}`] : []),
     ...(input.searchIn ? [`searched in ${input.searchIn}`] : []),
@@ -209,7 +209,7 @@ export function renderSearch(view: JudilibreSearchView): string {
     result.total > MAX_WINDOW
       ? ' Only the first 10 000 are reachable by paging; narrow the search to see the others.'
       : '';
-  const header = `Judilibre — ${result.total} decisions match "${input.query}" (${criteria}).${capped} Page ${input.page} of ${view.pageCount}, ${SORT_WORDS[input.sort]}.`;
+  const header = `Judilibre — ${result.total} ${result.total === 1 ? 'decision matches' : 'decisions match'} "${input.query}" (${criteria}).${capped} Page ${input.page} of ${view.pageCount}, ${SORT_WORDS[input.sort]}.`;
   if (result.hits.length === 0) {
     return `${header}\nPage ${input.page} is past the last page (${view.pageCount}).`;
   }

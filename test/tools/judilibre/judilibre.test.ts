@@ -347,8 +347,12 @@ describe('search paging and hints', () => {
   it('a page past the end says so instead of "no decision matches"', async () => {
     const { text } = await call('judilibre_search_decisions', { query: '24-16.924', page: 6 });
     expect(text).not.toContain('No Judilibre decision matches');
-    expect(text).toContain('1 decisions match');
+    expect(text).toContain('1 decision matches');
     expect(text).toContain('Page 6 is past the last page (1).');
+  });
+
+  it('a single hit reads "1 decision matches"', async () => {
+    expect(await search([hitOf(1)], 1, {})).toContain('1 decision matches');
   });
 
   it('a total above 10 000 says only the first 10 000 are reachable', async () => {
@@ -373,6 +377,36 @@ describe('search paging and hints', () => {
     const text = await search([], 0, { match: 'any_word' });
     expect(text).not.toContain('"match": "any_word"');
     expect(text).toContain('fewer filters');
+  });
+});
+
+describe('a decision page with a very long head', () => {
+  const id = 'cccccccccccccccccccccccc';
+  const long = (n: number, c: string) => Array.from({ length: n }, () => c.repeat(500));
+
+  it('keeps room for the text, stays within the cap and gives a valid continuation offset', async () => {
+    const decision = decisionOf({
+      id,
+      text: 'texte '.repeat(10_000),
+      summary: 'S'.repeat(2_000),
+      titles: ['T'.repeat(2_000)],
+      visa: long(30, 'V'),
+      rapprochements: long(30, 'R'),
+      files: Array.from({ length: 30 }, (_, i) => ({
+        name: 'F'.repeat(500),
+        type: 'pdf',
+        url: `https://example.test/${i}/${'u'.repeat(500)}`,
+      })),
+    });
+    const client = await serverOver(fakeJudilibre({ decisions: { [id]: decision } }).repo);
+    const text = firstText(
+      await client.callTool({ name: 'judilibre_get_decision', arguments: { id } }),
+    );
+    expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+    expect(text).toContain('texte texte');
+    expect(text).toMatch(/more\)/);
+    const next = /"offset": (\d+)/.exec(text);
+    expect(Number(next?.[1])).toBeGreaterThanOrEqual(2_000);
   });
 });
 

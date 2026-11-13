@@ -67,6 +67,31 @@ export function paginateText(
   return { text: text.slice(offset, end), nextOffset: end < text.length ? end : null };
 }
 
+/** `s` cut to `max` characters, the cut shown by a trailing "…". */
+export function cut(s: string, max: number): string {
+  return s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
+}
+
+/** Room a decision page keeps for the decision's own text, however long its head is. */
+export const MIN_TEXT_ROOM = 2_000;
+
+/**
+ * The head of a decision page, built by `build(level)` with its lists cut harder at each level
+ * (level 0 is the fullest), until `roomLeft(head)` characters remain for the text: at least
+ * `MIN_TEXT_ROOM`, or the last level.
+ */
+export function fitHead(
+  build: (level: number) => string,
+  levels: number,
+  roomLeft: (head: string) => number,
+): string {
+  let head = build(0);
+  for (let level = 1; level < levels && roomLeft(head) < MIN_TEXT_ROOM; level++) {
+    head = build(level);
+  }
+  return head;
+}
+
 /** Appended where a paginated text stops: how to read the rest. */
 export function truncationNotice(nextOffset: number): string {
   return `[Truncated — call again with "offset": ${nextOffset}]`;

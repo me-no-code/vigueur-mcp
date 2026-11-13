@@ -7,7 +7,14 @@ import {
 } from '../../services/case-law/legifrance.js';
 import type { CallContext, LegifranceDecision } from '../../services/case-law/ports.js';
 import { VigueurError } from '../../shared/errors.js';
-import { callSignal, MAX_TOOL_TEXT, paginateText, truncationNotice } from '../format.js';
+import {
+  callSignal,
+  cut,
+  fitHead,
+  MAX_TOOL_TEXT,
+  paginateText,
+  truncationNotice,
+} from '../format.js';
 import { toToolError } from '../tool-error.js';
 
 export type GetDecision = (
@@ -33,10 +40,9 @@ const inputSchema = z.object({
     .describe('Character offset to continue a long text from; the previous page says which.'),
 });
 
-const SUMMARY_MAX = 2000;
+/** The summary's cut, fullest first (see `fitHead`). */
+const SUMMARY_MAX = [2000, 1000, 500, 200] as const;
 const TITLE_MAX = 300;
-const cut = (s: string, max: number): string =>
-  s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
 
 const notFound = (id: string): string =>
   [
@@ -67,43 +73,49 @@ export function renderDecision(result: LegifranceDecisionResult, offset: number)
       `"offset" ${offset} is past the end of the text (${d.text.length} characters).`,
     );
   }
-  const head: string[] = [
-    identityLine(d),
-    `Source: Légifrance · ${decisionUrl(d.id)} (official page, constructed link)`,
-  ];
-  if (offset === 0) {
-    // CNIL and Conseil constitutionnel decisions have no court-style identity: their title says what they are.
-    const subject = d.collection === 'cnil' || d.collection === 'constitutional';
-    const labels = [d.nature, d.publication, d.solution].filter((p): p is string => Boolean(p));
-    head.push(
-      ...(subject ? [`Title: ${cut(d.title, TITLE_MAX)}`] : []),
-      ...(labels.length > 0 ? [labels.join(' · ')] : []),
-      ...(d.attacked
-        ? [
-            `Attacked decision: ${d.attacked.court}${d.attacked.date ? `, decision of ${d.attacked.date}` : ''}`,
-          ]
-        : []),
-      ...(d.constitutionalCouncilUrl
-        ? [`Conseil constitutionnel page: ${d.constitutionalCouncilUrl}`]
-        : []),
-      ...(d.joUrl ? [`Published in the Journal officiel: ${d.joUrl}`] : []),
-      ...(d.labelledStatus
-        ? [
-            `Status as labelled by Légifrance: ${d.labelledStatus}${d.publishedOn ? ` · published ${d.publishedOn}` : ''}`,
-          ]
-        : []),
-      ...(d.summary ? [`Summary (sommaire): ${cut(d.summary, SUMMARY_MAX)}`] : []),
-    );
-  }
-  head.push('── Text ──');
   const pointer =
     d.collection === 'judicial' && d.ecli
       ? `Same decision on Judilibre (usually earlier, with zones): judilibre_search_decisions with "query": "${d.ecli}".`
       : null;
-  const headText = head.join('\n');
-  const reserved =
-    headText.length + 1 + (pointer?.length ?? 0) + 2 + truncationNotice(d.text.length).length + 4;
-  const page = paginateText(d.text, offset, MAX_TOOL_TEXT - reserved);
+  const buildHead = (level: number): string => {
+    const head: string[] = [
+      identityLine(d),
+      `Source: Légifrance · ${decisionUrl(d.id)} (official page, constructed link)`,
+    ];
+    if (offset === 0) {
+      // CNIL and Conseil constitutionnel decisions have no court-style identity: their title says what they are.
+      const subject = d.collection === 'cnil' || d.collection === 'constitutional';
+      const labels = [d.nature, d.publication, d.solution].filter((p): p is string => Boolean(p));
+      head.push(
+        ...(subject ? [`Title: ${cut(d.title, TITLE_MAX)}`] : []),
+        ...(labels.length > 0 ? [labels.join(' · ')] : []),
+        ...(d.attacked
+          ? [
+              `Attacked decision: ${d.attacked.court}${d.attacked.date ? `, decision of ${d.attacked.date}` : ''}`,
+            ]
+          : []),
+        ...(d.constitutionalCouncilUrl
+          ? [`Conseil constitutionnel page: ${d.constitutionalCouncilUrl}`]
+          : []),
+        ...(d.joUrl ? [`Published in the Journal officiel: ${d.joUrl}`] : []),
+        ...(d.labelledStatus
+          ? [
+              `Status as labelled by Légifrance: ${d.labelledStatus}${d.publishedOn ? ` · published ${d.publishedOn}` : ''}`,
+            ]
+          : []),
+        ...(d.summary
+          ? [`Summary (sommaire): ${cut(d.summary, SUMMARY_MAX[level] as number)}`]
+          : []),
+      );
+    }
+    head.push('── Text ──');
+    return head.join('\n');
+  };
+  const roomLeft = (head: string): number =>
+    MAX_TOOL_TEXT -
+    (head.length + 1 + (pointer?.length ?? 0) + 2 + truncationNotice(d.text.length).length + 4);
+  const headText = fitHead(buildHead, SUMMARY_MAX.length, roomLeft);
+  const page = paginateText(d.text, offset, roomLeft(headText));
   return [
     headText,
     page.text,

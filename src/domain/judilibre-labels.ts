@@ -113,6 +113,14 @@ export const CHAMBER_WIRE: Readonly<Record<CassChamber, string>> = {
   criminal: 'cr',
 };
 
+/** Judilibre `publication` wire value for each vigueur publication filter. */
+export const PUBLICATION_WIRE = {
+  bulletin: 'b',
+  report: 'r',
+  chamber_letter: 'l',
+  press_release: 'c',
+} as const;
+
 /** The label of `key` in `table`; an unknown key is its own label. */
 export function labelOf(table: Readonly<Record<string, string>>, key: string): string {
   return Object.hasOwn(table, key) ? (table[key] as string) : key;

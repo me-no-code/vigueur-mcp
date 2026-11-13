@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   callSignal,
+  cut,
   deadlineHit,
   isoDateSchema,
   MAX_TOOL_TEXT,
@@ -207,5 +208,14 @@ describe('pageByBudget', () => {
       ['c', undefined],
       ['d', 'c'],
     ]);
+  });
+});
+
+describe('cut', () => {
+  it('keeps a short text as is and marks a cut with "…" within the limit', () => {
+    expect(cut('abc', 3)).toBe('abc');
+    expect(cut('abcdef', 4)).toBe('abc…');
+    expect(cut('abc def', 4)).toBe('abc…');
+    expect(cut('abcdef', 4)).toHaveLength(4);
   });
 });

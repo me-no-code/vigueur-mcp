@@ -11,6 +11,7 @@ import {
 import type { CallContext, CaseLawHit } from '../../services/case-law/ports.js';
 import {
   callSignal,
+  cut,
   MAX_TOOL_TEXT,
   nextPageHint,
   optionalIsoDateSchema,
@@ -89,8 +90,6 @@ const COURT_WORDS = {
 
 const TITLE_MAX = 300;
 const EXCERPT_MAX = 700;
-const cut = (s: string, max: number): string =>
-  s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
 
 /** The criteria of a search, as short phrases. */
 function criteriaOf(view: CaseLawSearchView): string[] {
@@ -163,7 +162,7 @@ export function renderSearch(view: CaseLawSearchView): string {
   }
   const page = view.query.page;
   const sort = view.query.sort;
-  const header = `Légifrance — ${label}: ${result.total} decisions${criteria.length > 0 ? `${criteria[0]?.startsWith('matching') ? ' ' : ', '}${criteria.join(', ')}` : ''}. Page ${page} of ${view.pageCount}, ${SORT_WORDS[sort]}.`;
+  const header = `Légifrance — ${label}: ${result.total} ${result.total === 1 ? 'decision' : 'decisions'}${criteria.length > 0 ? `${criteria[0]?.startsWith('matching') ? ' ' : ', '}${criteria.join(', ')}` : ''}. Page ${page} of ${view.pageCount}, ${SORT_WORDS[sort]}.`;
   if (result.hits.length === 0) {
     return `${header}\nPage ${page} is past the last page (${view.pageCount}).`;
   }

@@ -374,6 +374,37 @@ describe('search hit identity and header criteria', () => {
   });
 });
 
+describe('header count and a long head', () => {
+  it('a single decision reads "1 decision", not "1 decisions"', async () => {
+    const text = await callOver(
+      fakeLegifrance({ hits: [hitOf()] }).repo,
+      'legifrance_search_case_law',
+      {
+        collection: 'judicial',
+        query: 'x',
+      },
+    );
+    expect(text.split('\n')[0]).toMatch(/: 1 decision matching /);
+  });
+
+  it('a decision with a very long summary still shows its text within the cap', async () => {
+    const long = {
+      ...decisionFixture(),
+      summary: 'S'.repeat(50_000),
+      text: 'texte '.repeat(10_000),
+    };
+    const text = await callOver(
+      fakeLegifrance({ decisions: { [long.id]: long } }).repo,
+      'legifrance_get_decision',
+      { id: long.id },
+    );
+    expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+    expect(text).toContain('texte texte');
+    expect(text).toContain('Summary (sommaire): ');
+    expect(Number(/"offset": (\d+)/.exec(text)?.[1])).toBeGreaterThanOrEqual(2_000);
+  });
+});
+
 describe('Title line on CNIL and Conseil constitutionnel decision pages', () => {
   it('CNIL: the title is shown verbatim at offset 0', async () => {
     const { text } = await call('legifrance_get_decision', { id: 'CNILTEXT000053716494' });

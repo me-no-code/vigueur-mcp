@@ -1,5 +1,6 @@
 import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
+import { PUBLICATION_WIRE } from '../../domain/judilibre-labels.js';
 import { foldKey } from '../../domain/text.js';
 import { blankToNull, invalid, requireIsoDate } from '../legislation/resolve.js';
 import type {
@@ -30,18 +31,13 @@ const OPERATOR: Record<JudilibreMatch, JudilibreQuery['operator']> = {
   exact_phrase: 'exact',
 };
 
-const PUBLICATION: Record<
-  'bulletin' | 'report' | 'chamber_letter' | 'press_release',
-  NonNullable<JudilibreQuery['publication']>
-> = { bulletin: 'b', report: 'r', chamber_letter: 'l', press_release: 'c' };
-
 export interface SearchJudilibreInput {
   query: string;
   match?: JudilibreMatch;
   jurisdiction?: JudilibreJurisdiction;
   chamber?: CassChamber;
   formation?: JudilibreQuery['formation'];
-  publication?: keyof typeof PUBLICATION;
+  publication?: keyof typeof PUBLICATION_WIRE;
   solution?: string;
   location?: string;
   searchIn?: JudilibreQuery['field'];
@@ -120,7 +116,7 @@ export function createSearchJudilibre(repo: JudilibreRepository) {
       jurisdiction,
       ...(input.chamber && { chamber: input.chamber }),
       ...(input.formation && { formation: input.formation }),
-      ...(input.publication && { publication: PUBLICATION[input.publication] }),
+      ...(input.publication && { publication: PUBLICATION_WIRE[input.publication] }),
       ...(solution && { solution }),
       ...(location && { location }),
       ...(input.searchIn && { field: input.searchIn }),

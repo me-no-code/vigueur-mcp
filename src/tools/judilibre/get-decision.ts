@@ -4,7 +4,14 @@ import { judilibreDecisionUrl } from '../../domain/links.js';
 import type { JudilibreDecisionResult } from '../../services/case-law/judilibre.js';
 import type { CallContext, DecisionZone } from '../../services/case-law/ports.js';
 import { VigueurError } from '../../shared/errors.js';
-import { callSignal, MAX_TOOL_TEXT, paginateText, truncationNotice } from '../format.js';
+import {
+  callSignal,
+  cut,
+  fitHead,
+  MAX_TOOL_TEXT,
+  paginateText,
+  truncationNotice,
+} from '../format.js';
 import { toToolError } from '../tool-error.js';
 import { identityLine, publicationText } from './search-decisions.js';
 
@@ -31,17 +38,22 @@ const inputSchema = z.object({
     .describe('Character offset to continue a long text from; the previous page says which.'),
 });
 
-const LIST_ITEMS = 30;
-const LIST_ITEM_MAX = 500;
-const cut = (s: string, max: number): string =>
-  s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
-const listLines = (label: string, items: string[]): string[] =>
+/** How hard the head's lists and summary are cut, fullest first (see `fitHead`). */
+const LEVELS = [
+  { items: 30, itemMax: 500, summaryMax: 2000 },
+  { items: 10, itemMax: 200, summaryMax: 1000 },
+  { items: 3, itemMax: 100, summaryMax: 500 },
+  { items: 0, itemMax: 0, summaryMax: 200 },
+] as const;
+type Limits = (typeof LEVELS)[number];
+
+const listLines = (label: string, items: string[], lim: Limits): string[] =>
   items.length === 0
     ? []
     : [
         `${label}:`,
-        ...items.slice(0, LIST_ITEMS).map((i) => `- ${cut(i, LIST_ITEM_MAX)}`),
-        ...(items.length > LIST_ITEMS ? [`(+${items.length - LIST_ITEMS} more)`] : []),
+        ...items.slice(0, lim.items).map((i) => `- ${cut(i, lim.itemMax)}`),
+        ...(items.length > lim.items ? [`(+${items.length - lim.items} more)`] : []),
       ];
 
 const notFound = (id: string): string =>
@@ -62,52 +74,58 @@ export function renderDecision(result: JudilibreDecisionResult, offset: number):
     );
   }
   const heading = `── ${zone === null ? 'Full text' : `Zone: ${zone.name}`} ──`;
-  const head: string[] = [
-    identityLine(d),
-    `Source: Judilibre · ${judilibreDecisionUrl(d.id)} (official page, constructed link)`,
-  ];
-  if (offset === 0) {
-    const zones = [...new Set(d.zones.map((z) => z.zone))];
-    const second = [
-      d.formation?.label,
-      publicationText(d),
-      d.solutionFull ?? d.solution?.label ?? d.solutionText,
-    ].filter((p): p is string => Boolean(p));
-    head.push(
-      ...(second.length > 0 ? [second.join(' · ')] : []),
-      ...(d.contested
-        ? [
-            `Attacked decision: ${d.contested.title.replace(/\s*\n\s*/g, ', ')}${d.contested.date ? `, decision of ${d.contested.date}` : ''}${d.contested.number ? `, n° ${d.contested.number}` : ''}`,
-            ...(d.contested.judilibreId
-              ? [`Full text: judilibre_get_decision id "${d.contested.judilibreId}"`]
-              : []),
-          ]
-        : []),
-      ...(d.summary ? [`Summary (sommaire): ${cut(d.summary, 2000)}`] : []),
-      ...(d.titles.length > 0 ? [`Titles: ${cut(d.titles.join(' · '), 2000)}`] : []),
-      ...listLines('Visa', d.visa),
-      ...listLines('Rapprochements', d.rapprochements),
-      ...listLines(
-        'Files',
-        d.files.map((f) => `${f.name} · ${f.type} · ${f.url}`),
-      ),
-      zones.length > 0
-        ? `Zones: ${zones.join(', ')}`
-        : 'No zone markup (common for unpublished decisions): read the full text.',
-    );
-  }
-  if (zoneMissing !== null) {
-    head.push(`This decision has no "${zoneMissing}" zone; showing the full text.`);
-  }
-  head.push(heading);
   const pointer =
     d.jurisdiction.key === 'cc' && d.ecli
       ? `Same decision on Légifrance (when it holds it, usually weeks later): legifrance_search_case_law with "collection": "judicial" and "ecli": "${d.ecli}".`
       : null;
-  const headText = head.join('\n');
-  const reserved =
-    headText.length + 1 + (pointer?.length ?? 0) + 2 + truncationNotice(body.length).length + 4;
-  const page = paginateText(body, offset, MAX_TOOL_TEXT - reserved);
+  const buildHead = (level: number): string => {
+    const lim = LEVELS[level] as Limits;
+    const head: string[] = [
+      identityLine(d),
+      `Source: Judilibre · ${judilibreDecisionUrl(d.id)} (official page, constructed link)`,
+    ];
+    if (offset === 0) {
+      const zones = [...new Set(d.zones.map((z) => z.zone))];
+      const second = [
+        d.formation?.label,
+        publicationText(d),
+        d.solutionFull ?? d.solution?.label ?? d.solutionText,
+      ].filter((p): p is string => Boolean(p));
+      head.push(
+        ...(second.length > 0 ? [second.join(' · ')] : []),
+        ...(d.contested
+          ? [
+              `Attacked decision: ${d.contested.title.replace(/\s*\n\s*/g, ', ')}${d.contested.date ? `, decision of ${d.contested.date}` : ''}${d.contested.number ? `, n° ${d.contested.number}` : ''}`,
+              ...(d.contested.judilibreId
+                ? [`Full text: judilibre_get_decision id "${d.contested.judilibreId}"`]
+                : []),
+            ]
+          : []),
+        ...(d.summary ? [`Summary (sommaire): ${cut(d.summary, lim.summaryMax)}`] : []),
+        ...(d.titles.length > 0 ? [`Titles: ${cut(d.titles.join(' · '), lim.summaryMax)}`] : []),
+        ...listLines('Visa', d.visa, lim),
+        ...listLines('Rapprochements', d.rapprochements, lim),
+        ...listLines(
+          'Files',
+          d.files.map((f) => `${f.name} · ${f.type} · ${f.url}`),
+          lim,
+        ),
+        zones.length > 0
+          ? `Zones: ${zones.join(', ')}`
+          : 'No zone markup (common for unpublished decisions): read the full text.',
+      );
+    }
+    if (zoneMissing !== null) {
+      head.push(`This decision has no "${zoneMissing}" zone; showing the full text.`);
+    }
+    head.push(heading);
+    return head.join('\n');
+  };
+  const roomLeft = (head: string): number =>
+    MAX_TOOL_TEXT -
+    (head.length + 1 + (pointer?.length ?? 0) + 2 + truncationNotice(body.length).length + 4);
+  const headText = fitHead(buildHead, LEVELS.length, roomLeft);
+  const page = paginateText(body, offset, roomLeft(headText));
   return [
     headText,
     page.text,
