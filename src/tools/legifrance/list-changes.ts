@@ -13,7 +13,6 @@ import {
   responseFormatSchema,
 } from '../format.js';
 import { toToolError } from '../tool-error.js';
-import { type ChangesOutput, changesOutputSchema } from './schemas.js';
 
 export type ListChanges = (
   input: { code: string; since: IsoDate; until?: IsoDate },
@@ -67,10 +66,7 @@ function entryLine(e: ChangeEntry, detailed: boolean, today: IsoDate): string {
  * One page of a change log, 100 entries at most (fewer when the text would pass the cap). Every
  * page repeats the heading and the notes; only the entries are split, group headers repeating.
  */
-export function renderListChanges(
-  view: ChangesView,
-  opts: ChangesRenderOptions,
-): { text: string; output: ChangesOutput } {
+export function renderListChanges(view: ChangesView, opts: ChangesRenderOptions): string {
   const flat = view.groups.flatMap((g, group) => g.entries.map((entry) => ({ group, entry })));
   const titleCost = (group: number) => (view.groups[group]?.amendingTitle.length ?? 0) + 8;
   const paged = pageByBudget(
@@ -92,14 +88,6 @@ export function renderListChanges(
       indexes.push(group);
     }
   }
-  const groups: ChangesOutput['groups'] = pageGroups.map((g) => ({
-    amendingTitle: g.amendingTitle,
-    amendingArticleId: g.entries[0]?.amendingArticleId ?? null,
-    entries: g.entries.map(
-      ({ amendingTitle: _t, amendingArticleId: _a, sectionTitle: _s, ...entry }) => entry,
-    ),
-  }));
-
   const header = [
     `### ${view.textTitle} — changes from ${view.since} to ${view.until}`,
     `${view.totalEntries} ${view.totalEntries === 1 ? 'entry' : 'entries'} in ${view.groups.length} amending ${view.groups.length === 1 ? 'text' : 'texts'}, ${view.scheduledCount} scheduled (not yet in force) — page ${opts.page} of ${paged.pageCount}. Dates are entry-into-force dates, not publication dates.`,
@@ -124,31 +112,9 @@ export function renderListChanges(
       `Légifrance has not loaded the version detail for ${view.detailMissingYears.join(', ')}: changes of ${view.detailMissingYears.length === 1 ? 'that year' : 'those years'} may be missing.`,
     );
   }
-  const text = [
-    ...header,
-    ...body,
-    ...notes,
-    ...(paged.hasMore ? [nextPageHint(opts.page)] : []),
-  ].join('\n\n');
-  return {
-    text,
-    output: {
-      textTitle: view.textTitle,
-      textId: view.textId,
-      since: view.since,
-      until: view.until,
-      groups,
-      scheduledCount: view.scheduledCount,
-      undeterminedCount: view.undeterminedCount,
-      detailMissingYears: view.detailMissingYears,
-      paging: {
-        page: opts.page,
-        pageSize: ENTRIES_PER_PAGE,
-        total: view.totalEntries,
-        hasMore: paged.hasMore,
-      },
-    },
-  };
+  return [...header, ...body, ...notes, ...(paged.hasMore ? [nextPageHint(opts.page)] : [])].join(
+    '\n\n',
+  );
 }
 
 export function registerListChangesTool(
@@ -162,7 +128,6 @@ export function registerListChangesTool(
       title: 'List changes to a French code',
       description: DESCRIPTION,
       inputSchema,
-      outputSchema: changesOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -176,12 +141,12 @@ export function registerListChangesTool(
           { code: args.code, since: args.since, until: presentOrUndefined(args.until) },
           { signal: ctx.mcpReq.signal },
         );
-        const { text, output } = renderListChanges(view, {
+        const text = renderListChanges(view, {
           detailed: args.response_format === 'detailed',
           today: today(),
           page: args.page ?? 1,
         });
-        return { content: [{ type: 'text', text }], structuredContent: output };
+        return { content: [{ type: 'text', text }] };
       } catch (err) {
         return toToolError(err);
       }

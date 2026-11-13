@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import type { IsoDate } from '../../domain/dates.js';
+import { articleUrlFor } from '../../domain/links.js';
 import type { ArticleRef } from '../../domain/relocation.js';
 import { coversDate, type ModificationLink } from '../../domain/status-at.js';
 import type {
@@ -22,7 +23,6 @@ import {
   truncationNotice,
 } from '../format.js';
 import { toToolError } from '../tool-error.js';
-import { type GetArticleOutput, getArticleOutputSchema, type TextPage } from './schemas.js';
 
 export type GetArticle = (input: GetArticleInput, ctx?: CallContext) => Promise<GetArticleResult>;
 
@@ -176,7 +176,7 @@ function trailerOf(a: ArticleView, opts: RenderOptions): string[] {
  * header (heading, status, location) and the trailer (note, relocation, warnings, source), so
  * the in-force verdict and the link travel with every part of the text.
  */
-function renderFound(a: ArticleView, opts: RenderOptions): { text: string; textPage: TextPage } {
+function renderFound(a: ArticleView, opts: RenderOptions): string {
   const articleText = a.record.version.text;
   const { offset } = opts;
   if (offset > 0 && offset >= articleText.length) {
@@ -199,16 +199,7 @@ function renderFound(a: ArticleView, opts: RenderOptions): { text: string; textP
   // The frame with the longest possible notice: what is left of the budget is for the text.
   const frame = page('', articleText.length).length;
   const slice = paginateText(articleText, offset, Math.max(MIN_TEXT_PAGE, MAX_TOOL_TEXT - frame));
-  return {
-    text: page(slice.text || '(Légifrance has no text for this version.)', slice.nextOffset),
-    textPage: { offset, nextOffset: slice.nextOffset, totalLength: articleText.length },
-  };
-}
-
-/** The article as structured output: everything but its text. */
-function foundOutput(a: ArticleView, textPage: TextPage): GetArticleOutput {
-  const { text: _text, ...version } = a.record.version;
-  return { kind: 'found', article: { ...a, record: { ...a.record, version } }, textPage };
+  return page(slice.text || '(Légifrance has no text for this version.)', slice.nextOffset);
 }
 
 function renderAmbiguous(num: string, candidates: ArticleHit[], incomplete: boolean): string {
@@ -252,7 +243,7 @@ function renderNotInForce(
     heading,
     ...r.periods.map(
       (p) =>
-        `- ${statusLabel(p)} ${p.validFrom ?? 'unknown'} → ${endCell(p, 'date not yet determined')}${r.codeTitle === null ? ` (${p.codeTitle})` : ''}`,
+        `- ${statusLabel(p)} ${p.validFrom ?? 'unknown'} → ${endCell(p, 'date not yet determined')}${r.codeTitle === null ? ` (${p.codeTitle})` : ''} · id ${p.id} · ${articleUrlFor(p.id)}`,
     ),
     ...(moved === undefined
       ? []
@@ -270,17 +261,11 @@ function renderNotInForce(
   return lines.join('\n');
 }
 
-/** The text answer (one page of it, for an article) and the structured output of a result. */
-export function renderGetArticle(
-  result: GetArticleResult,
-  opts: RenderOptions,
-): { text: string; output: GetArticleOutput } {
-  if (result.kind === 'found') {
-    const { text, textPage } = renderFound(result.article, opts);
-    return { text, output: foundOutput(result.article, textPage) };
-  }
+/** The text answer (one page of it, for an article). */
+export function renderGetArticle(result: GetArticleResult, opts: RenderOptions): string {
+  if (result.kind === 'found') return renderFound(result.article, opts);
   // Lists of at most a page of hits, periods or suggestions: well under MAX_TOOL_TEXT.
-  return { text: renderLookupMiss(result, opts), output: result };
+  return renderLookupMiss(result, opts);
 }
 
 /**
@@ -327,7 +312,6 @@ export function registerGetArticleTool(
       title: 'Get a French code article',
       description: DESCRIPTION,
       inputSchema,
-      outputSchema: getArticleOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -345,13 +329,13 @@ export function registerGetArticleTool(
           atDate: presentOrUndefined(args.at_date),
         };
         const result = await getArticle(input, { signal: ctx.mcpReq.signal });
-        const { text, output } = renderGetArticle(result, {
+        const text = renderGetArticle(result, {
           detailed: args.response_format === 'detailed',
           today: today(),
           requestedId: id ?? null,
           offset: args.offset ?? 0,
         });
-        return { content: [{ type: 'text', text }], structuredContent: output };
+        return { content: [{ type: 'text', text }] };
       } catch (err) {
         return toToolError(err);
       }

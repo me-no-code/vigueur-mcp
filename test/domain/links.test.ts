@@ -32,5 +32,8 @@ describe('links', () => {
     expect(articleUrlFor('KALIARTI000005849443')).toBe(
       'https://www.legifrance.gouv.fr/conv_coll/article/KALIARTI000005849443',
     );
+    expect(articleUrlFor('JORFARTI000033934948')).toBe(
+      'https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000033934948',
+    );
   });
 });

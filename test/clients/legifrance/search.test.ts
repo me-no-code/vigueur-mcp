@@ -158,7 +158,12 @@ describe('searchLegislation request', () => {
       fond: 'KALI',
       recherche: {
         champs: [champ('IDCC', 'EXACTE', '1486')],
-        filtres: [{ facette: 'LEGAL_STATUS', valeurs: ['VIGUEUR', 'VIGUEUR_ETEN'] }],
+        filtres: [
+          {
+            facette: 'LEGAL_STATUS',
+            valeurs: ['VIGUEUR', 'VIGUEUR_ETEN', 'VIGUEUR_NON_ETEN'],
+          },
+        ],
       },
     });
     expect(page.total).toBe(176);
@@ -260,7 +265,7 @@ describe('searchLegislation mapping', () => {
 });
 
 describe('searchLegislation validation', () => {
-  async function invalid(q: LegislationQuery) {
+  async function invalid(q: LegislationQuery, message?: string) {
     const { repo, calls } = setup('84-search-jorf-by-nor');
     const err = await repo.searchLegislation(q).then(
       () => undefined,
@@ -268,14 +273,38 @@ describe('searchLegislation validation', () => {
     );
     expect(err).toBeInstanceOf(VigueurError);
     expect((err as VigueurError).kind).toBe('invalid_input');
+    if (message !== undefined) expect((err as VigueurError).message).toBe(message);
     expect(calls).toHaveLength(0);
   }
 
-  it('rejects a page size above 100', () => invalid({ ...base, text: 'x', pageSize: 101 }));
+  // Messages name the tool parameters (query, article_number, code, page_size…).
+  it('rejects a page size above 100', () =>
+    invalid(
+      { ...base, text: 'x', pageSize: 101 },
+      '"page_size" must be a whole number from 1 to 100.',
+    ));
   it('rejects a page size of 0', () => invalid({ ...base, text: 'x', pageSize: 0 }));
-  it('rejects a page below 1', () => invalid({ ...base, text: 'x', page: 0 }));
-  it('rejects a query with no criterion', () => invalid({ ...base, codeTitle: 'Code civil' }));
+  it('rejects a page below 1', () =>
+    invalid({ ...base, text: 'x', page: 0 }, '"page" must be a whole number from 1.'));
+  it('rejects a query with no criterion', () =>
+    invalid(
+      { ...base, codeTitle: 'Code civil' },
+      'Give at least one of "query", "article_number", "text_number", "nor" or "idcc": "code", "nature" and the publication dates only narrow a search.',
+    ));
   it('rejects a blank criterion', () => invalid({ ...base, text: '   ' }));
   it('rejects a criterion the collection cannot search', () =>
-    invalid({ ...base, collection: 'kali', nor: 'X' }));
+    invalid(
+      { ...base, collection: 'kali', nor: 'X' },
+      '"nor" does not apply to the kali collection.',
+    ));
+  it('names a refinement by its tool parameter', () =>
+    invalid(
+      { ...base, collection: 'kali', idcc: '1486', codeTitle: 'Code civil' },
+      '"code" does not apply to the kali collection.',
+    ));
+  it('names an article number by its tool parameter', () =>
+    invalid(
+      { ...base, collection: 'kali', text: 'x', articleNumber: '1' },
+      '"article_number" does not apply to the kali collection.',
+    ));
 });

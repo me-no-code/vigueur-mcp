@@ -35,6 +35,12 @@ export interface SearchLegislationInput {
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 
+/** Collections searched without a date: what to do instead of giving `at_date`. */
+const NO_AT_DATE: Partial<Record<LegislationCollection, string>> = {
+  jorf: 'the Journal officiel is searched as published. Filter by publication date with "published_from" / "published_to".',
+  kali: 'results are the collective agreements currently in force (extended or not), or every version with "include_historical".',
+};
+
 function positiveInt(value: number | undefined, label: string, fallback: number, max?: number) {
   if (value === undefined) return fallback;
   if (!Number.isInteger(value) || value < 1 || (max !== undefined && value > max)) {
@@ -45,20 +51,33 @@ function positiveInt(value: number | undefined, label: string, fallback: number,
   return value;
 }
 
-/** Searches legislation. Blank optional inputs count as absent and are never forwarded. */
+/**
+ * Searches legislation. Blank optional inputs count as absent and are never forwarded. Messages
+ * name the `legifrance_search_legislation` parameters. `atDate` applies to codes and loda only:
+ * jorf is searched as published, kali by current status.
+ */
 export function createSearchLegislation(
   repo: LegislationRepository,
   opts: { today?: () => IsoDate } = {},
 ): (input: SearchLegislationInput, ctx?: CallContext) => Promise<LegislationSearchPage> {
   const today = opts.today ?? todayInParis;
   return async (input, ctx) => {
-    const page = positiveInt(input.page, 'page', 1);
-    const pageSize = positiveInt(input.pageSize, 'pageSize', DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
-    const atDate = input.atDate === undefined ? today() : requireIsoDate(input.atDate, 'atDate');
+    const page = positiveInt(input.page, '"page"', 1);
+    const pageSize = positiveInt(input.pageSize, '"page_size"', DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const noAtDate = NO_AT_DATE[input.collection];
+    if (input.atDate !== undefined && noAtDate !== undefined) {
+      throw invalid(`"at_date" does not apply to the ${input.collection} collection: ${noAtDate}`);
+    }
+    const atDate = input.atDate === undefined ? today() : requireIsoDate(input.atDate, '"at_date"');
     const publishedFrom = blankToNull(input.publishedFrom);
     const publishedTo = blankToNull(input.publishedTo);
-    if (publishedFrom !== null) requireIsoDate(publishedFrom, 'publishedFrom');
-    if (publishedTo !== null) requireIsoDate(publishedTo, 'publishedTo');
+    if (publishedFrom !== null) requireIsoDate(publishedFrom, '"published_from"');
+    if (publishedTo !== null) requireIsoDate(publishedTo, '"published_to"');
+    if (publishedFrom !== null && publishedTo !== null && publishedTo < publishedFrom) {
+      throw invalid(
+        `"published_to" (${publishedTo}) is before "published_from" (${publishedFrom}).`,
+      );
+    }
 
     const text = blankToNull(input.query);
     const rawCode = blankToNull(input.code);

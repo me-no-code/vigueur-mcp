@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
-import type * as z from 'zod/v4';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { compose } from '../../../src/compose.js';
 import { loadConfig } from '../../../src/config.js';
 import type { ServerDeps } from '../../../src/server.js';
@@ -15,11 +14,6 @@ import {
   createLegifranceSource,
   type LegifranceServices,
 } from '../../../src/tools/legifrance/index.js';
-import {
-  type GetArticleOutput,
-  getArticleOutputSchema,
-  type TextPage,
-} from '../../../src/tools/legifrance/schemas.js';
 import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
 import { connectClient, firstText } from '../../helpers/mcp-client.js';
 
@@ -31,9 +25,10 @@ let unmatchedRoutes: string[][] = [];
 afterEach(async () => {
   for (const close of cleanup.reverse()) await close();
   cleanup = [];
-  for (const unmatched of unmatchedRoutes)
-    expect(unmatched, 'requests without a fixture').toEqual([]);
+  // Reset before asserting, so one test's unmatched request never fails the next ones.
+  const pending = unmatchedRoutes;
   unmatchedRoutes = [];
+  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
 });
 
 async function connect(deps: ServerDeps) {
@@ -71,8 +66,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     );
     expect(text).toContain('Légifrance id: LEGIARTI000032041571');
     expect(text).not.toContain('#### Versions');
-    const structured = result.structuredContent as GetArticleResult;
-    expect(structured.kind).toBe('found');
+    expect(result.structuredContent).toBeUndefined();
   });
 
   it('L1234-1 without a code lists both codes instead of picking one', async () => {
@@ -81,7 +75,6 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     expect(text).toContain('Article L1234-1 exists in several codes — call again with "code":');
     expect(text).toContain('- Code du travail (in force since 2008-05-01)');
     expect(text).toContain('- Code de la santé publique (in force since 2004-08-07)');
-    expect((result.structuredContent as GetArticleResult).kind).toBe('ambiguous');
   });
 
   it('Code civil 1382 on 2015-01-01: old text, and where its content moved', async () => {
@@ -104,7 +97,9 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     const { result, text } = await call({ code: 'Code du travail', number: 'R4217-2' });
     expect(result.isError).toBeFalsy();
     expect(text).toMatch(/^Art\. R4217-2 of Code du travail exists but was not in force on \d{4}-/);
-    expect(text).toContain('- ABROGE 2008-05-01 → 2026-10-01');
+    expect(text).toContain(
+      '- ABROGE 2008-05-01 → 2026-10-01 · id LEGIARTI000018532352 · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000018532352',
+    );
   });
 
   it('detailed adds the versions table, modifications and citation count', async () => {
@@ -131,8 +126,6 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     const { result, text } = await call({ code: 'C. route', number: 'R413-17' });
     expect(result.isError).toBeFalsy();
     expect(text).toContain('Unknown code "C. route": no Légifrance code has this title.');
-    expect(result.structuredContent).toMatchObject({ kind: 'not_found', reason: 'unknown_code' });
-    expect(getArticleOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
 
   it('rejects an impossible date', async () => {
@@ -147,7 +140,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     expect(text).toContain('Give an article number with its code');
   });
 
-  it('is listed with annotations and an object output schema only when configured', async () => {
+  it('is listed with annotations and no output schema, only when configured', async () => {
     const client = await composedClient();
     const { tools } = await client.listTools();
     const tool = tools.find((t) => t.name === TOOL);
@@ -157,7 +150,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
       idempotentHint: true,
       openWorldHint: true,
     });
-    expect(tool?.outputSchema?.type).toBe('object');
+    expect(tool?.outputSchema).toBeUndefined();
     expect(tool?.description).toContain('it lists the candidates instead of guessing');
 
     const unconfigured = await connect(compose(loadConfig({})));
@@ -259,14 +252,10 @@ describe('legifrance_get_article handler', () => {
     await vi.waitFor(() => expect(signal?.aborted).toBe(true));
   });
 
-  it('found: structured content leaves the article text out and says which part was sent', async () => {
+  it('found: the answer is text only and carries the article text', async () => {
     const client = await clientOver(async () => found());
     const result = await client.callTool({ name: TOOL, arguments: { number: '7' } });
-    const structured = result.structuredContent as GetArticleOutput;
-    expect(structured.kind).toBe('found');
-    if (structured.kind !== 'found') return;
-    expect(structured.article.record.version).not.toHaveProperty('text');
-    expect(structured.textPage).toEqual({ offset: 0, nextOffset: null, totalLength: 15 });
+    expect(result.structuredContent).toBeUndefined();
     expect(firstText(result)).toContain('Texte officiel.');
   });
 
@@ -290,8 +279,8 @@ describe('legifrance_get_article handler', () => {
 
 interface Page {
   text: string;
-  textPage: TextPage;
-  structuredLength: number;
+  /** Where the truncation notice says the next page starts; `null` on the last page. */
+  nextOffset: number | null;
 }
 
 type Client = Awaited<ReturnType<typeof clientOver>>;
@@ -305,15 +294,12 @@ async function readAllPages(client: Client, args: Record<string, unknown>): Prom
       arguments: offset > 0 ? { ...args, offset } : args,
     });
     expect(result.isError, firstText(result)).toBeFalsy();
-    const structured = result.structuredContent as GetArticleOutput;
-    if (structured.kind !== 'found') throw new Error(`expected an article, got ${structured.kind}`);
-    pages.push({
-      text: firstText(result),
-      textPage: structured.textPage,
-      structuredLength: JSON.stringify(structured).length,
-    });
-    if (structured.textPage.nextOffset === null) return pages;
-    offset = structured.textPage.nextOffset;
+    const text = firstText(result);
+    const next = /\[Truncated — call again with "offset": (\d+)\]/.exec(text);
+    const nextOffset = next?.[1] === undefined ? null : Number(next[1]);
+    pages.push({ text, nextOffset });
+    if (nextOffset === null) return pages;
+    offset = nextOffset;
   }
   throw new Error('more than 50 pages');
 }
@@ -321,7 +307,6 @@ async function readAllPages(client: Client, args: Record<string, unknown>): Prom
 function expectBoundedPages(pages: Page[]) {
   for (const page of pages) {
     expect(page.text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-    expect(page.structuredLength).toBeLessThan(15_000);
   }
 }
 
@@ -367,23 +352,21 @@ describe('legifrance_get_article on a long article', () => {
         expect(page.text.includes('#### Versions') || page.text.includes('Cited by')).toBe(
           format === 'detailed',
         );
-        expect(page.textPage.offset).toBe(expectedOffset);
-        expect(page.textPage.totalLength).toBe(longText.length);
 
         // The article text sits between the header (and continuation mark) and the trailer.
         let body = page.text.slice(page.text.indexOf('Titre II\n\n') + 'Titre II\n\n'.length);
         body = body.slice(0, body.indexOf('\n\nNote: Une note.'));
-        const continued = `(continued from character ${page.textPage.offset})\n\n`;
+        const continued = `(continued from character ${expectedOffset})\n\n`;
         expect(body.startsWith(continued)).toBe(i > 0);
         if (i > 0) body = body.slice(continued.length);
-        const { nextOffset } = page.textPage;
+        const { nextOffset } = page;
         const notice = `\n\n[Truncated — call again with "offset": ${nextOffset}]`;
         expect(body.endsWith(notice)).toBe(nextOffset !== null);
         if (nextOffset !== null) body = body.slice(0, -notice.length);
         slices.push(body);
         expectedOffset = nextOffset ?? -1;
       }
-      expect(pages.at(-1)?.textPage.nextOffset).toBeNull();
+      expect(pages.at(-1)?.nextOffset).toBeNull();
       expect(slices.join('')).toBe(longText);
     },
   );
@@ -399,7 +382,7 @@ describe('legifrance_get_article on a long article', () => {
     expect(text).toContain(longText.slice(100_000, 100_200));
   });
 
-  it('CGI art. 199 undecies B by id (fixture 59): bounded text pages and slim structured content', async () => {
+  it('CGI art. 199 undecies B by id (fixture 59): bounded text pages', async () => {
     const client = await composedClient();
     for (const format of ['concise', 'detailed']) {
       const pages = await readAllPages(client, {
@@ -419,8 +402,7 @@ describe('legifrance_get_article on a long article', () => {
 // ---------------------------------------------------------------------------------------------
 
 const render = (r: GetArticleResult, opts: { detailed?: boolean; requestedId?: string } = {}) =>
-  renderGetArticle(r, { detailed: false, today: TODAY, requestedId: null, offset: 0, ...opts })
-    .text;
+  renderGetArticle(r, { detailed: false, today: TODAY, requestedId: null, offset: 0, ...opts });
 
 const summary = (over: Partial<VersionSummary> = {}): VersionSummary => ({
   id: 'LEGIARTI000000000002',
@@ -675,6 +657,32 @@ describe('renderGetArticle', () => {
     expect(text).toContain('- ABROGE 2000-01-01 → 2010-01-01 (Code A)');
   });
 
+  it('each not-in-force period carries its id and official link', () => {
+    const text = render({
+      kind: 'not_in_force_at_date',
+      num: '5',
+      codeTitle: null,
+      asOf: '1990-01-01',
+      periods: [
+        {
+          id: 'LEGIARTI000000000005',
+          num: '5',
+          codeId: 'LEGITEXT000000000001',
+          codeTitle: 'Code A',
+          status: 'repealed',
+          rawStatus: 'ABROGE',
+          validFrom: '2000-01-01',
+          validTo: '2010-01-01',
+          validToUndetermined: false,
+        },
+      ],
+      warnings: [],
+    });
+    expect(text).toContain(
+      '- ABROGE 2000-01-01 → 2010-01-01 (Code A) · id LEGIARTI000000000005 · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000005',
+    );
+  });
+
   it('an end Légifrance has not dated is shown as such, never as "no end"', () => {
     const period = {
       id: 'LEGIARTI000000000005',
@@ -822,21 +830,5 @@ describe('renderGetArticle', () => {
     );
     expect(text).toContain('⚠️ Repeal scheduled; Légifrance has not set its date.');
     expect(text).toContain('| 2.0 (shown) | ABROGE_DIFF | 2010-01-01 | not yet determined |');
-  });
-});
-
-describe('getArticleOutputSchema', () => {
-  it('mirrors GetArticleOutput exactly', () => {
-    expectTypeOf<z.infer<typeof getArticleOutputSchema>>().toEqualTypeOf<GetArticleOutput>();
-  });
-
-  it('accepts the structured output of a found article', () => {
-    const { output } = renderGetArticle(found(), {
-      detailed: false,
-      today: TODAY,
-      requestedId: null,
-      offset: 0,
-    });
-    expect(getArticleOutputSchema.safeParse(output).success).toBe(true);
   });
 });

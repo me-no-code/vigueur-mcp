@@ -1,8 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/server';
-import * as z from 'zod/v4';
-import { PISTE_ENVS } from '../config.js';
-import { HEALTH_STATES, type StatusReport } from '../services/status.js';
-import { SOURCE_IDS, SOURCE_LABELS } from '../shared/source-id.js';
+import type { StatusReport } from '../services/status.js';
+import { SOURCE_LABELS } from '../shared/source-id.js';
 import { toToolError } from './tool-error.js';
 
 const CONSENT_STEP =
@@ -30,20 +28,6 @@ const ENABLE_APIS_GUIDE = `To enable a missing API on your PISTE application (ht
 
 1. ${CONSENT_STEP}
 2. ${APPLY_STEP}`;
-
-const sourceHealthSchema = z.object({
-  source: z.enum(SOURCE_IDS),
-  state: z.enum(HEALTH_STATES),
-  detail: z.string().optional(),
-  retryAfterSeconds: z.number().optional(),
-});
-
-const statusReportSchema = z.object({
-  configured: z.boolean(),
-  env: z.enum(PISTE_ENVS).nullable(),
-  configProblems: z.array(z.string()),
-  sources: z.array(sourceHealthSchema),
-}) satisfies z.ZodType<StatusReport>;
 
 export function formatStatus(report: StatusReport): string {
   const sections: string[] = [];
@@ -100,7 +84,6 @@ export function registerStatusTool(
       title: 'Vigueur setup status',
       description:
         "Check Vigueur's setup: whether PISTE credentials are configured, which environment is used, and whether each legal source (Légifrance, Judilibre) is reachable and enabled. Returns step-by-step setup instructions for anything missing. Call this first when another Vigueur tool reports a credentials, access or availability problem, or when helping a user install Vigueur.",
-      outputSchema: statusReportSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -111,10 +94,7 @@ export function registerStatusTool(
     async () => {
       try {
         const report = await getStatus();
-        return {
-          content: [{ type: 'text', text: formatStatus(report) }],
-          structuredContent: report,
-        };
+        return { content: [{ type: 'text', text: formatStatus(report) }] };
       } catch (err) {
         return toToolError(err);
       }

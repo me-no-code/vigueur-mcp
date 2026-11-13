@@ -20,7 +20,6 @@ import {
 } from '../format.js';
 import { toToolError } from '../tool-error.js';
 import { renderLookupMiss } from './get-article.js';
-import { type ArticleHistoryOutput, articleHistoryOutputSchema } from './schemas.js';
 
 export type GetArticleHistory = (
   input: GetArticleHistoryInput,
@@ -104,10 +103,8 @@ export interface HistoryRenderOptions {
 export function renderGetArticleHistory(
   result: ArticleHistoryResult,
   opts: HistoryRenderOptions,
-): { text: string; output: ArticleHistoryOutput } {
-  if (!('events' in result)) {
-    return { text: renderLookupMiss(result, opts), output: result };
-  }
+): string {
+  if (!('events' in result)) return renderLookupMiss(result, opts);
   const view = result;
   const heading = `### ${view.codeTitle ?? 'Code'} — art. ${view.num || '?'}: version history`;
   const { current } = view;
@@ -158,19 +155,7 @@ export function renderGetArticleHistory(
     ...after,
     ...(paged.hasMore ? [nextPageHint(opts.page)] : []),
   ];
-  return {
-    text: parts.join('\n\n'),
-    output: {
-      kind: 'history',
-      history: { ...view, events: paged.items },
-      paging: {
-        page: opts.page,
-        pageSize: EVENTS_PER_PAGE,
-        total: paged.total,
-        hasMore: paged.hasMore,
-      },
-    },
-  };
+  return parts.join('\n\n');
 }
 
 export function registerGetArticleHistoryTool(
@@ -184,7 +169,6 @@ export function registerGetArticleHistoryTool(
       title: 'Get the history of a French code article',
       description: DESCRIPTION,
       inputSchema,
-      outputSchema: articleHistoryOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -199,13 +183,13 @@ export function registerGetArticleHistoryTool(
           { code: presentOrUndefined(args.code), number: presentOrUndefined(args.number), id },
           { signal: ctx.mcpReq.signal },
         );
-        const { text, output } = renderGetArticleHistory(result, {
+        const text = renderGetArticleHistory(result, {
           detailed: args.response_format === 'detailed',
           today: today(),
           requestedId: id ?? null,
           page: args.page ?? 1,
         });
-        return { content: [{ type: 'text', text }], structuredContent: output };
+        return { content: [{ type: 'text', text }] };
       } catch (err) {
         return toToolError(err);
       }

@@ -74,12 +74,11 @@ describe('createServer', () => {
     expect(await toolNames(client)).toEqual(['vigueur_status']);
   });
 
-  it('unconfigured: vigueur_status returns the setup guide with structured content', async () => {
+  it('unconfigured: vigueur_status returns the setup guide as text', async () => {
     const client = await connect(deps());
     const result = await client.callTool({ name: 'vigueur_status' });
     expect(result.isError).toBeFalsy();
-    expect(result.structuredContent).toEqual(unconfiguredReport);
-    expect((result.structuredContent as { configured: boolean }).configured).toBe(false);
+    expect(result.structuredContent).toBeUndefined();
     const [first] = result.content as Array<{ type: string; text: string }>;
     expect(first?.type).toBe('text');
     expect(first?.text).toContain('PISTE_CLIENT_ID');

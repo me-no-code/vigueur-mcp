@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, expectTypeOf, it } from 'vitest';
-import type * as z from 'zod/v4';
+import { afterEach, describe, expect, it } from 'vitest';
 import { compose } from '../../../src/compose.js';
 import type { ChangesView } from '../../../src/services/legislation/changes.js';
 import type { ArticleHistoryView } from '../../../src/services/legislation/history.js';
@@ -12,15 +11,7 @@ import type {
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
 import { renderGetArticleHistory } from '../../../src/tools/legifrance/get-article-history.js';
 import { renderListChanges } from '../../../src/tools/legifrance/list-changes.js';
-import {
-  type ArticleHistoryOutput,
-  articleHistoryOutputSchema,
-  type ChangesOutput,
-  changesOutputSchema,
-  type SearchOutput,
-  searchOutputSchema,
-} from '../../../src/tools/legifrance/schemas.js';
-import { renderSearch } from '../../../src/tools/legifrance/search-legislation.js';
+import { askedLine, renderSearch } from '../../../src/tools/legifrance/search-legislation.js';
 import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
 import { connectClient, firstText } from '../../helpers/mcp-client.js';
 
@@ -30,9 +21,10 @@ let unmatchedRoutes: string[][] = [];
 afterEach(async () => {
   for (const close of cleanup.reverse()) await close();
   cleanup = [];
-  for (const unmatched of unmatchedRoutes)
-    expect(unmatched, 'requests without a fixture').toEqual([]);
+  // Reset before asserting, so one test's unmatched request never fails the next ones.
+  const pending = unmatchedRoutes;
   unmatchedRoutes = [];
+  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
 });
 
 async function call(name: string, args: Record<string, unknown>) {
@@ -47,7 +39,6 @@ async function call(name: string, args: Record<string, unknown>) {
 }
 
 const TODAY = '2026-11-12';
-const JSON_LIMIT = 20_000;
 
 describe('legifrance_get_article_history (fixtures)', () => {
   it('Code civil 1382: versions, amending text, concordance to 1240', async () => {
@@ -74,14 +65,13 @@ describe('legifrance_get_article_history (fixtures)', () => {
     expect(text.match(/art\. 1240/g)).toHaveLength(1);
     expect(text).not.toContain('Content moved to:');
     expect(text).toContain('Source: https://www.legifrance.gouv.fr/codes/article_lc/');
-    expect(articleHistoryOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
 
   it('an ambiguous citation renders like get_article', async () => {
     const { result, text } = await call('legifrance_get_article_history', { number: 'L1234-1' });
     expect(result.isError).toBeFalsy();
     expect(text).toContain('Article L1234-1 exists in several codes — call again with "code":');
-    expect((result.structuredContent as { kind: string }).kind).toBe('ambiguous');
+    expect(result.structuredContent).toBeUndefined();
   });
 
   it('an unknown code renders like get_article', async () => {
@@ -91,8 +81,6 @@ describe('legifrance_get_article_history (fixtures)', () => {
     });
     expect(result.isError).toBeFalsy();
     expect(text).toContain('Unknown code "C. route": no Légifrance code has this title.');
-    expect(result.structuredContent).toMatchObject({ kind: 'not_found', reason: 'unknown_code' });
-    expect(articleHistoryOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
 
   it('blank inputs count as absent', async () => {
@@ -136,7 +124,6 @@ describe('legifrance_search_legislation (fixtures)', () => {
       '(Counts include texts filtered out by the article number; showing matches only.)',
     );
     expect(text).toContain('Searched codes');
-    expect(searchOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
 
   it('no criterion is an error', async () => {
@@ -153,7 +140,7 @@ describe('legifrance_search_legislation (fixtures)', () => {
     expect(result.isError).toBe(true);
   });
 
-  it('a page of 50 long hits stays small in text and structured output, both modes', () => {
+  it('a page of 50 long hits stays under the text cap, both modes', () => {
     const page: LegislationSearchPage = {
       total: 500,
       page: 1,
@@ -164,19 +151,117 @@ describe('legifrance_search_legislation (fixtures)', () => {
       })),
     };
     for (const detailed of [false, true]) {
-      const { text, output } = renderSearch(page, {
+      const text = renderSearch(page, {
         detailed,
         asked: 'Searched codes',
         filteredByArticleNumber: false,
       });
       expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-      expect(JSON.stringify(output).length).toBeLessThan(JSON_LIMIT);
       expect(text).toContain('Next page: "page": 2');
     }
   });
 
+  it('every hit line carries its official link, concise or detailed', () => {
+    for (const detailed of [false, true]) {
+      const text = renderSearch(
+        { total: 1, page: 1, pageSize: 10, hits: [hit(1)] },
+        { detailed, asked: 'a', filteredByArticleNumber: false },
+      );
+      expect(text).toContain(
+        '- Code civil — art. 1 · VIGUEUR · 2016-10-01 → no end · id LEGIARTI000000000001 · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000001',
+      );
+      expect(text).toContain('Use legifrance_get_article with a hit id');
+    }
+  });
+
+  it('a JORF article hit links to the JO article and is not offered to get_article', () => {
+    const jorfArticle: LegislationHit = {
+      ...hit(1),
+      id: 'JORFARTI000033934948',
+      textId: 'JORFTEXT000033934937',
+      title: 'Décret n° 2017-23 du 11 janvier 2017',
+      status: 'initial',
+      rawStatus: 'INITIALE',
+      validFrom: null,
+      snippet: null,
+    };
+    const text = renderSearch(
+      { total: 1, page: 1, pageSize: 10, hits: [jorfArticle] },
+      { detailed: false, asked: 'a', filteredByArticleNumber: false },
+    );
+    expect(text).toContain('https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000033934948');
+    expect(text).not.toContain('codes/article_lc/JORFARTI');
+    expect(text).not.toContain('legifrance_get_article');
+  });
+
+  it('a code article hit from the fixtures carries its link in concise mode', async () => {
+    const { result, text } = await call('legifrance_search_legislation', {
+      collection: 'codes',
+      code: 'Code civil',
+      article_number: '1240',
+    });
+    expect(result.isError).toBeFalsy();
+    expect(text).toContain(
+      'id LEGIARTI000032041571 · https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000032041571',
+    );
+  });
+
+  it('states the scope each collection really has', () => {
+    const at = (args: Parameters<typeof askedLine>[0]) => askedLine(args, TODAY);
+    expect(at({ collection: 'codes', query: 'x' })).toBe(
+      'Searched codes · query "x" · in force on 2026-11-12',
+    );
+    expect(at({ collection: 'loda', query: 'x', at_date: '2015-01-01' })).toBe(
+      'Searched loda · query "x" · in force on 2015-01-01',
+    );
+    expect(at({ collection: 'jorf', nor: 'JUSC1522466R' })).toBe(
+      'Searched jorf · NOR "JUSC1522466R" · as published',
+    );
+    expect(at({ collection: 'jorf', nor: 'JUSC1522466R', include_historical: true })).toBe(
+      'Searched jorf · NOR "JUSC1522466R" · as published',
+    );
+    expect(at({ collection: 'kali', idcc: '1486' })).toBe(
+      'Searched kali · IDCC "1486" · currently in force (extended or not)',
+    );
+    expect(at({ collection: 'kali', idcc: '1486', include_historical: true })).toBe(
+      'Searched kali · IDCC "1486" · all versions',
+    );
+    expect(at({ collection: 'codes', query: 'x', include_historical: true })).toBe(
+      'Searched codes · query "x" · all versions',
+    );
+  });
+
+  it('rejects at_date on kali with guidance, as a tool error', async () => {
+    const { result, text } = await call('legifrance_search_legislation', {
+      collection: 'kali',
+      idcc: '1486',
+      at_date: '2015-01-01',
+    });
+    expect(result.isError).toBe(true);
+    expect(text).toContain('"at_date" does not apply to the kali collection');
+  });
+
+  it('the description matches the criteria rule and the per-collection scope', async () => {
+    const fixtures = fixtureFetch();
+    unmatchedRoutes.push(fixtures.unmatched);
+    const { client, close } = await connectClient(
+      compose(sandboxConfig(), { fetch: fixtures.fetch }),
+    );
+    cleanup.push(close);
+    const tool = (await client.listTools()).tools.find(
+      (t) => t.name === 'legifrance_search_legislation',
+    );
+    const description = tool?.description ?? '';
+    expect(description).toContain(
+      'Give at least one of query, article_number, text_number, nor or idcc',
+    );
+    expect(description).not.toContain('or a publication date range)');
+    expect(description).toContain('"jorf" results are texts as published');
+    expect(description).toContain('"kali" results are the agreements currently in force');
+  });
+
   it('concise snippets stop at 200 characters', () => {
-    const { text } = renderSearch(
+    const text = renderSearch(
       { total: 1, page: 1, pageSize: 10, hits: [hit(1)] },
       { detailed: false, asked: 'a', filteredByArticleNumber: false },
     );
@@ -196,7 +281,6 @@ describe('legifrance_list_changes (fixtures)', () => {
     expect(text).toContain('LOI n°2026-667 du 27 juillet 2026 - art. 7');
     expect(text).toContain('61-3-1');
     expect(text).toContain('entry-into-force dates');
-    expect(changesOutputSchema.safeParse(result.structuredContent).success).toBe(true);
   });
 
   it('a bad date is an error', async () => {
@@ -235,26 +319,26 @@ function syntheticChanges(n: number, groups = 60): ChangesView {
 }
 
 describe('list changes paging', () => {
-  it('250 entries: page 1 shows 100 with a Next page hint, small outputs', () => {
+  it('250 entries: page 1 shows 100 with a Next page hint, text under the cap', () => {
     const view = syntheticChanges(250);
     const p1 = renderListChanges(view, { detailed: false, today: TODAY, page: 1 });
-    expect(p1.output.groups.reduce((n, g) => n + g.entries.length, 0)).toBe(100);
-    expect(p1.text).toContain('Next page: "page": 2');
-    expect(p1.text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-    expect(JSON.stringify(p1.output).length).toBeLessThan(JSON_LIMIT);
-    expect(p1.output.paging).toEqual({ page: 1, pageSize: 100, total: 250, hasMore: true });
-    expect(p1.text).toContain('### Code du travail — changes from 2026-01-01 to 2027-12-31');
+    expect(p1.split('\n').filter((l) => l.startsWith('- ')).length).toBe(100);
+    expect(p1).toContain('Next page: "page": 2');
+    expect(p1.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+    expect(p1).toContain('250 entries in');
+    expect(p1).toContain('page 1 of 3');
+    expect(p1).toContain('### Code du travail — changes from 2026-01-01 to 2027-12-31');
 
     const p3 = renderListChanges(view, { detailed: false, today: TODAY, page: 3 });
-    expect(p3.output.groups.reduce((n, g) => n + g.entries.length, 0)).toBe(50);
-    expect(p3.text).not.toContain('Next page');
+    expect(p3.split('\n').filter((l) => l.startsWith('- ')).length).toBe(50);
+    expect(p3).not.toContain('Next page');
     const allText = [1, 2, 3]
-      .map((page) => renderListChanges(view, { detailed: false, today: TODAY, page }).text)
+      .map((page) => renderListChanges(view, { detailed: false, today: TODAY, page }))
       .join('\n');
     expect(allText.match(/\(scheduled\)/g)?.length).toBe(3);
-    expect(p3.text).toContain('2 versions in this range have an entry-into-force date');
-    expect(p3.text).toContain('has not loaded the version detail for 2027');
-    expect(p3.text).toContain('### Code du travail — changes from');
+    expect(p3).toContain('2 versions in this range have an entry-into-force date');
+    expect(p3).toContain('has not loaded the version detail for 2027');
+    expect(p3).toContain('### Code du travail — changes from');
   });
 
   it('a page past the end is an error from the tool', async () => {
@@ -269,7 +353,7 @@ describe('list changes paging', () => {
     for (const g of view.groups) g.amendingTitle = 'T'.repeat(600);
     for (let page = 1; page <= 3; page++) {
       const r = renderListChanges(view, { detailed: true, today: TODAY, page });
-      expect(r.text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+      expect(r.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
     }
   });
 });
@@ -339,29 +423,25 @@ describe('article history paging', () => {
     const view = syntheticHistory(500);
     const opts = { detailed: false, today: TODAY, requestedId: null };
     const p1 = renderGetArticleHistory(view, { ...opts, page: 1 });
-    expect(p1.text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-    expect(p1.text).toContain('Next page: "page": 2');
-    expect(p1.text).toContain('date not determined — amended by Loi n°0');
-    expect(p1.text).toContain(
+    expect(p1.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+    expect(p1).toContain('Next page: "page": 2');
+    expect(p1).toContain('date not determined — amended by Loi n°0');
+    expect(p1).toContain(
       'Per Légifrance concordance — content formerly at art. 1 (version since 2020-01-01) now at: Code civil, art. 2',
     );
-    expect(JSON.stringify(p1.output).length).toBeLessThan(JSON_LIMIT);
-    const out = p1.output;
-    if (out.kind !== 'history') throw new Error('expected history');
-    expect(out.history.events.length).toBe(100);
-    expect(out.paging).toEqual({ page: 1, pageSize: 100, total: 500, hasMore: true });
+    expect(p1).toContain('(500 in total, page 1 of 5)');
 
     const p5 = renderGetArticleHistory(view, { ...opts, page: 5 });
-    expect(p5.text).not.toContain('Next page');
-    expect(p5.text).toContain(
+    expect(p5).not.toContain('Next page');
+    expect(p5).toContain(
       'Source: https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000001',
     );
-    expect(p5.text).toContain('#### Versions');
+    expect(p5).toContain('#### Versions');
   });
 
   it('shows the end of the current version, including an undetermined one', () => {
     const opts = { detailed: false, today: TODAY, requestedId: null, page: 1 };
-    const open = renderGetArticleHistory(syntheticHistory(1), opts).text;
+    const open = renderGetArticleHistory(syntheticHistory(1), opts);
     expect(open).toContain(
       'In force today (computed from validity dates): version 3.0, since 2020-01-01, no end date.',
     );
@@ -376,10 +456,7 @@ describe('article history paging', () => {
       validTo: null,
       validToUndetermined: true,
     };
-    const text = renderGetArticleHistory(
-      { ...view, current: pending, versions: [pending] },
-      opts,
-    ).text;
+    const text = renderGetArticleHistory({ ...view, current: pending, versions: [pending] }, opts);
     expect(text).toContain(
       'In force today (computed from validity dates): version 3.0, since 2020-01-01, until a date not yet determined.',
     );
@@ -416,7 +493,7 @@ describe('article history paging', () => {
       },
       warnings: [],
     };
-    const { text, output } = renderGetArticleHistory(view, {
+    const text = renderGetArticleHistory(view, {
       detailed: false,
       today: TODAY,
       requestedId: null,
@@ -429,7 +506,6 @@ describe('article history paging', () => {
         'Per Légifrance concordance — content now at art. 1240 came from: Code civil - art. 1382 (M)',
       ].join('\n'),
     );
-    expect(articleHistoryOutputSchema.safeParse(output).success).toBe(true);
   });
 
   it('shows the warnings of a partial answer', () => {
@@ -437,7 +513,7 @@ describe('article history paging', () => {
       ...syntheticHistory(1),
       warnings: ["Could not read Légifrance's concordance of LEGIARTI000000000001 (fetch failed)."],
     };
-    const { text, output } = renderGetArticleHistory(view, {
+    const text = renderGetArticleHistory(view, {
       detailed: false,
       today: TODAY,
       requestedId: null,
@@ -446,7 +522,6 @@ describe('article history paging', () => {
     expect(text).toContain(
       "⚠️ Could not read Légifrance's concordance of LEGIARTI000000000001 (fetch failed).",
     );
-    expect(articleHistoryOutputSchema.safeParse(output).success).toBe(true);
   });
 
   it('events whose lines are very long page by size, not only by count', () => {
@@ -458,17 +533,7 @@ describe('article history paging', () => {
       requestedId: null,
       page: 1,
     });
-    expect(p1.text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-    expect(p1.text).toContain('Next page');
-  });
-});
-
-describe('output schemas', () => {
-  it('mirror the output types exactly', () => {
-    expectTypeOf<
-      z.infer<typeof articleHistoryOutputSchema>
-    >().toEqualTypeOf<ArticleHistoryOutput>();
-    expectTypeOf<z.infer<typeof searchOutputSchema>>().toEqualTypeOf<SearchOutput>();
-    expectTypeOf<z.infer<typeof changesOutputSchema>>().toEqualTypeOf<ChangesOutput>();
+    expect(p1.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+    expect(p1).toContain('Next page');
   });
 });

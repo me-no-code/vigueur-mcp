@@ -16,7 +16,6 @@ import {
   responseFormatSchema,
 } from '../format.js';
 import { toToolError } from '../tool-error.js';
-import { type SearchHitOutput, type SearchOutput, searchOutputSchema } from './schemas.js';
 
 export type SearchLegislation = (
   input: SearchLegislationInput,
@@ -24,7 +23,7 @@ export type SearchLegislation = (
 ) => Promise<LegislationSearchPage>;
 
 const DESCRIPTION =
-  'Search French legislation on Légifrance. Collections: "codes" = consolidated codes (Code civil, Code du travail…), searchable by article number; "loda" = consolidated laws, ordinances, decrees and orders; "jorf" = the Journal officiel as published (by publication date, NOR or text number); "kali" = national collective agreements (by IDCC). Give at least one criterion (query, code, article_number, text_number, nor, nature, idcc, or a publication date range). By default results are the texts in force on at_date (default: today); set include_historical to get every version. Use legifrance_get_article to read the full text of an article hit.';
+  'Search French legislation on Légifrance. Collections: "codes" = consolidated codes (Code civil, Code du travail…), searchable by article number; "loda" = consolidated laws, ordinances, decrees and orders; "jorf" = the Journal officiel as published (by NOR, text number, or narrowed by publication date); "kali" = national collective agreements (by IDCC). Give at least one of query, article_number, text_number, nor or idcc; code, nature and the publication dates only narrow a search. "codes" and "loda" results are the versions in force on at_date (default: today); "jorf" results are texts as published (no in-force filter: use published_from / published_to); "kali" results are the agreements currently in force, extended or not (at_date does not apply). Set include_historical to get every version. Every hit has its legifrance.gouv.fr link; use legifrance_get_article to read the full text of a code or collective agreement article hit.';
 
 const inputSchema = z.object({
   collection: z
@@ -50,14 +49,20 @@ const inputSchema = z.object({
     .optional()
     .describe('IDCC number of a collective agreement (collection "kali").'),
   at_date: optionalIsoDateSchema.describe(
-    'Date the texts must be in force, YYYY-MM-DD. Default: today.',
+    'Date the texts must be in force, YYYY-MM-DD (collections "codes" and "loda" only). Default: today.',
   ),
   include_historical: z
     .boolean()
     .optional()
-    .describe('true = return every version, whatever its dates (at_date is then ignored).'),
-  published_from: optionalIsoDateSchema.describe('Earliest publication date, YYYY-MM-DD.'),
-  published_to: optionalIsoDateSchema.describe('Latest publication date, YYYY-MM-DD.'),
+    .describe(
+      'true = return every version, whatever its dates (at_date is then ignored). No effect on "jorf".',
+    ),
+  published_from: optionalIsoDateSchema.describe(
+    'Earliest publication date, YYYY-MM-DD (collection "jorf").',
+  ),
+  published_to: optionalIsoDateSchema.describe(
+    'Latest publication date, YYYY-MM-DD (collection "jorf").',
+  ),
   page: z.number().int().min(1).optional().describe('Page of results (default 1).'),
   page_size: z
     .number()
@@ -68,7 +73,7 @@ const inputSchema = z.object({
     .describe('Results per page, 1 to 50 (default 10).'),
   response_format: responseFormatSchema
     .optional()
-    .describe('"concise" (default): short snippets and ids. "detailed": full snippets and links.'),
+    .describe('"concise" (default): short snippets, ids and links. "detailed": full snippets.'),
 });
 
 const SNIPPET_CONCISE = 200;
@@ -83,11 +88,16 @@ function hitUrl(hit: LegislationHit): string {
   return lodaUrl(hit.id);
 }
 
-function hitLines(hit: LegislationHit, snippet: string | null, detailed: boolean): string {
+/** Article ids `legifrance_get_article` reads (a JORF article is read on its JO page). */
+const READABLE_ARTICLE = /^(?:LEGIARTI|KALIARTI)/;
+
+/** The hit line always carries the official link; then the snippet, if any. */
+function hitLines(hit: LegislationHit, snippet: string | null): string {
   const art = hit.articleNumber === null ? '' : ` — art. ${hit.articleNumber}`;
   const dates = `${hit.validFrom ?? '?'} → ${hit.validTo ?? 'no end'}`;
-  const lines = [`- ${hit.title}${art} · ${hit.rawStatus || hit.status} · ${dates} · id ${hit.id}`];
-  if (detailed) lines.push(`  ${hitUrl(hit)}`);
+  const lines = [
+    `- ${hit.title}${art} · ${hit.rawStatus || hit.status} · ${dates} · id ${hit.id} · ${hitUrl(hit)}`,
+  ];
   if (snippet !== null) lines.push(`  ${snippet}`);
   return lines.join('\n');
 }
@@ -100,11 +110,8 @@ export interface SearchRenderOptions {
   filteredByArticleNumber: boolean;
 }
 
-/** The text of a page of hits and its structured output (the hits shown, without snippets). */
-export function renderSearch(
-  result: LegislationSearchPage,
-  opts: SearchRenderOptions,
-): { text: string; output: SearchOutput } {
+/** The text of a page of hits. */
+export function renderSearch(result: LegislationSearchPage, opts: SearchRenderOptions): string {
   const { detailed } = opts;
   const hasMore = result.page * result.pageSize < result.total;
   const textSnippet = (h: LegislationHit) =>
@@ -117,39 +124,46 @@ export function renderSearch(
   if (opts.filteredByArticleNumber) {
     header.push('(Counts include texts filtered out by the article number; showing matches only.)');
   }
+  const readable = result.hits.some((h) => h.kind === 'article' && READABLE_ARTICLE.test(h.id));
   const footer = [
     ...(hasMore ? [nextPageHint(result.page)] : []),
-    'Use legifrance_get_article with a hit id to read the full text of an article.',
+    ...(readable
+      ? ['Use legifrance_get_article with a hit id to read the full text of an article.']
+      : []),
   ];
   const reserve = [...header, ...footer].join('\n').length + 200;
 
-  const shown: SearchHitOutput[] = [];
+  let shown = 0;
   const lines: string[] = [];
   let used = reserve;
   for (const hit of result.hits) {
-    const line = hitLines(hit, textSnippet(hit), detailed);
-    if (shown.length > 0 && used + line.length + 1 > MAX_TOOL_TEXT) break;
-    const { snippet: _snippet, ...structured } = hit;
-    shown.push(structured);
+    const line = hitLines(hit, textSnippet(hit));
+    if (shown > 0 && used + line.length + 1 > MAX_TOOL_TEXT) break;
+    shown += 1;
     lines.push(line);
     used += line.length + 1;
   }
-  if (shown.length < result.hits.length) {
+  if (shown < result.hits.length) {
     footer.unshift(
-      `(Only the first ${shown.length} of ${result.hits.length} hits of this page fit — use a smaller "page_size".)`,
+      `(Only the first ${shown} of ${result.hits.length} hits of this page fit — use a smaller "page_size".)`,
     );
   }
   const body = lines.length === 0 ? ['No results.'] : lines;
-  return {
-    text: [...header, ...body, ...footer].join('\n'),
-    output: {
-      paging: { page: result.page, pageSize: result.pageSize, total: result.total, hasMore },
-      hits: shown,
-    },
-  };
+  return [...header, ...body, ...footer].join('\n');
 }
 
-function askedLine(args: z.infer<typeof inputSchema>, today: IsoDate): string {
+/** What each collection's results really are: only codes and loda filter by date. */
+function scopeOf(args: SearchArgs, today: IsoDate): string {
+  if (args.collection === 'jorf') return 'as published';
+  if (args.include_historical) return 'all versions';
+  if (args.collection === 'kali') return 'currently in force (extended or not)';
+  return `in force on ${presentOrUndefined(args.at_date) ?? today}`;
+}
+
+type SearchArgs = z.infer<typeof inputSchema>;
+
+/** The header line repeating what was searched, and in which scope. */
+export function askedLine(args: SearchArgs, today: IsoDate): string {
   const given: Array<[string, string | undefined]> = [
     ['query', presentOrUndefined(args.query)],
     ['code', presentOrUndefined(args.code)],
@@ -162,10 +176,7 @@ function askedLine(args: z.infer<typeof inputSchema>, today: IsoDate): string {
     ['published to', presentOrUndefined(args.published_to)],
   ];
   const criteria = given.filter(([, v]) => v !== undefined).map(([k, v]) => `${k} "${v}"`);
-  const scope = args.include_historical
-    ? 'all versions'
-    : `in force on ${presentOrUndefined(args.at_date) ?? today}`;
-  return `Searched ${args.collection}${criteria.length > 0 ? ` · ${criteria.join(' · ')}` : ''} · ${scope}`;
+  return `Searched ${args.collection}${criteria.length > 0 ? ` · ${criteria.join(' · ')}` : ''} · ${scopeOf(args, today)}`;
 }
 
 export function registerSearchLegislationTool(
@@ -179,7 +190,6 @@ export function registerSearchLegislationTool(
       title: 'Search French legislation',
       description: DESCRIPTION,
       inputSchema,
-      outputSchema: searchOutputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -206,12 +216,12 @@ export function registerSearchLegislationTool(
           pageSize: args.page_size,
         };
         const result = await searchLegislation(input, { signal: ctx.mcpReq.signal });
-        const { text, output } = renderSearch(result, {
+        const text = renderSearch(result, {
           detailed: args.response_format === 'detailed',
           asked: askedLine(args, today()),
           filteredByArticleNumber: input.articleNumber !== undefined,
         });
-        return { content: [{ type: 'text', text }], structuredContent: output };
+        return { content: [{ type: 'text', text }] };
       } catch (err) {
         return toToolError(err);
       }

@@ -69,6 +69,64 @@ describe('createSearchLegislation', () => {
     });
   });
 
+  it.each([
+    ['jorf', '"published_from" / "published_to"'],
+    ['kali', 'currently in force (extended or not)'],
+  ] as const)('rejects at_date for %s, with guidance', async (collection, guidance) => {
+    const { repo, calls } = fakeLegislation();
+    const err = await createSearchLegislation(repo, { today })({
+      collection,
+      query: 'x',
+      atDate: '2015-01-01',
+    }).catch((e) => e);
+    expect(err).toMatchObject({ kind: 'invalid_input' });
+    expect(err.message).toContain(`"at_date" does not apply to the ${collection} collection`);
+    expect(err.message).toContain(guidance);
+    expect(calls.searchLegislation).toHaveLength(0);
+  });
+
+  it('accepts jorf and kali without at_date', async () => {
+    const { repo, calls } = fakeLegislation();
+    const run = createSearchLegislation(repo, { today });
+    await run({ collection: 'jorf', nor: 'JUSC1522466R' });
+    await run({ collection: 'kali', idcc: '1486' });
+    expect(calls.searchLegislation).toHaveLength(2);
+  });
+
+  it('rejects published_to before published_from', async () => {
+    const { repo, calls } = fakeLegislation();
+    const err = await createSearchLegislation(repo, { today })({
+      collection: 'jorf',
+      query: 'x',
+      publishedFrom: '2016-12-31',
+      publishedTo: '2016-01-01',
+    }).catch((e) => e);
+    expect(err).toMatchObject({ kind: 'invalid_input' });
+    expect(err.message).toBe(
+      '"published_to" (2016-01-01) is before "published_from" (2016-12-31).',
+    );
+    expect(calls.searchLegislation).toHaveLength(0);
+  });
+
+  it('names the tool parameters in its messages', async () => {
+    const { repo } = fakeLegislation();
+    const run = createSearchLegislation(repo, { today });
+    const message = (input: Parameters<typeof run>[0]) =>
+      run(input).then(
+        () => '',
+        (e: Error) => e.message,
+      );
+    expect(await message({ collection: 'codes', query: 'x', pageSize: 51 })).toBe(
+      '"page_size" must be a whole number from 1 to 50, got 51.',
+    );
+    expect(await message({ collection: 'codes', query: 'x', atDate: '2020-13-01' })).toContain(
+      '"at_date": "2020-13-01" is not a valid date',
+    );
+    expect(
+      await message({ collection: 'jorf', query: 'x', publishedFrom: '2016-02-30' }),
+    ).toContain('"published_from": "2016-02-30" is not a valid date');
+  });
+
   it('rejects an unknown code with suggestions in the message', async () => {
     const { repo, calls } = fakeLegislation();
     const run = createSearchLegislation(repo, { today });

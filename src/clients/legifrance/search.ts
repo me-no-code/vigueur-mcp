@@ -44,21 +44,38 @@ const SUPPORTED: Readonly<Record<LegislationCollection, readonly (keyof Legislat
 const CRITERIA: readonly Criterion[] = ['text', 'articleNumber', 'textNumber', 'nor', 'idcc'];
 const REFINEMENTS = ['codeTitle', 'nature', 'publishedFrom', 'publishedTo'] as const;
 
+/** The `legifrance_search_legislation` parameter of each query field: messages reach the caller. */
+const PARAM: Readonly<Record<Criterion | (typeof REFINEMENTS)[number], string>> = {
+  text: 'query',
+  articleNumber: 'article_number',
+  textNumber: 'text_number',
+  nor: 'nor',
+  idcc: 'idcc',
+  codeTitle: 'code',
+  nature: 'nature',
+  publishedFrom: 'published_from',
+  publishedTo: 'published_to',
+};
+
 const invalid = (message: string) => new VigueurError('invalid_input', message);
 
 const given = (v: string | undefined): v is string => v !== undefined && v.trim() !== '';
 
 function validate(q: LegislationQuery): void {
   if (!Number.isInteger(q.pageSize) || q.pageSize < 1 || q.pageSize > MAX_PAGE_SIZE) {
-    throw invalid(`pageSize must be an integer from 1 to ${MAX_PAGE_SIZE}.`);
+    throw invalid(`"page_size" must be a whole number from 1 to ${MAX_PAGE_SIZE}.`);
   }
-  if (!Number.isInteger(q.page) || q.page < 1) throw invalid('page must be an integer >= 1.');
+  if (!Number.isInteger(q.page) || q.page < 1) {
+    throw invalid('"page" must be a whole number from 1.');
+  }
   if (!CRITERIA.some((c) => given(q[c]))) {
-    throw invalid('Give at least one of text, articleNumber, textNumber, nor or idcc.');
+    throw invalid(
+      'Give at least one of "query", "article_number", "text_number", "nor" or "idcc": "code", "nature" and the publication dates only narrow a search.',
+    );
   }
   for (const key of [...CRITERIA, ...REFINEMENTS]) {
     if (q[key] !== undefined && !SUPPORTED[q.collection].includes(key)) {
-      throw invalid(`${key} does not apply to the ${q.collection} collection.`);
+      throw invalid(`"${PARAM[key]}" does not apply to the ${q.collection} collection.`);
     }
   }
 }
@@ -113,8 +130,13 @@ function buildFond(q: LegislationQuery): { fond: string; filtres: Filter[] } {
       }
       return { fond: 'JORF', filtres };
     case 'kali':
-      if (!historical)
-        filtres.push({ facette: 'LEGAL_STATUS', valeurs: ['VIGUEUR', 'VIGUEUR_ETEN'] });
+      // KALI has no date filter: "in force" means currently in force, extended or not.
+      if (!historical) {
+        filtres.push({
+          facette: 'LEGAL_STATUS',
+          valeurs: ['VIGUEUR', 'VIGUEUR_ETEN', 'VIGUEUR_NON_ETEN'],
+        });
+      }
       return { fond: 'KALI', filtres };
   }
 }
