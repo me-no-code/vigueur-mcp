@@ -28,6 +28,8 @@ No PISTE account yet? Enable the plugin with empty credentials and ask Claude to
 
 ## Tools
 
+*En français : [Outils](#outils).*
+
 - `vigueur_status` — checks your PISTE credentials and which sources are reachable.
   Example: "Run vigueur_status: is my Légifrance access working?"
 - `legifrance_get_article` — reads one article of a French code and says whether it is in force.
@@ -47,6 +49,30 @@ No PISTE account yet? Enable the plugin with empty credentials and ask Claude to
   Example: "Qu'a publié le Journal officiel aujourd'hui pour le ministère du travail ?"
 - `legifrance_list_reference_values` — lists the valid values (codes, JORF natures, emitters) to use as filters.
   Example: "Quelles natures de textes existe-t-il au Journal officiel ?"
+
+## Outils
+
+*In English: [Tools](#tools).*
+
+- `vigueur_status` — vérifie vos identifiants PISTE et les sources joignables.
+  Exemple : « Lance vigueur_status : mon accès à Légifrance fonctionne-t-il ? »
+- `legifrance_get_article` — lit un article d'un code français et indique s'il est en vigueur.
+  `at_date` donne le texte applicable à une date passée, `include_neighbours` ajoute les articles précédent et suivant.
+  Exemple : « Que dit l'article L1234-1 du Code du travail, et était-il en vigueur le 1er mars 2019 ? »
+- `legifrance_get_article_history` — liste les versions d'un article et les textes qui l'ont modifié.
+  Exemple : « Quelles lois ont modifié l'article 1240 du Code civil ? »
+- `legifrance_search_legislation` — cherche dans les codes, les lois et décrets (LODA), le Journal officiel (JORF) et les conventions collectives (KALI).
+  Exemple : « Cherche “préavis” dans le Code du travail. »
+- `legifrance_list_changes` — liste ce qui a changé dans un code entre deux dates ; avec `text`, l'historique des modifications d'une loi ou d'un décret.
+  Exemple : « Qu'est-ce qui a changé dans le Code civil depuis le 1er janvier 2026 ? » ou « Quelles modifications de la loi Informatique et Libertés depuis 2018 ? »
+- `legifrance_get_text` — lit une loi, un décret ou un autre texte (par nature et numéro, NOR ou identifiant) : son plan ou ses articles, et s'il est en vigueur.
+  Exemple : « Que dit la loi Informatique et Libertés à son article 1er ? »
+- `legifrance_browse_code` — affiche la table des matières d'un code, section par section.
+  Exemple : « Montre-moi le sommaire du Code de la consommation. »
+- `legifrance_latest_jo` — affiche le dernier Journal officiel et ce qu'il a publié.
+  Exemple : « Qu'a publié le Journal officiel aujourd'hui pour le ministère du travail ? »
+- `legifrance_list_reference_values` — liste les valeurs acceptées comme filtres (codes, natures et émetteurs du JORF).
+  Exemple : « Quelles natures de textes existe-t-il au Journal officiel ? »
 
 ## Development
 
