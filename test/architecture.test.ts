@@ -29,6 +29,18 @@ function resolvesOutside(file: string, spec: string, layer: string): boolean {
   return target.startsWith('..');
 }
 
+/** The relative imports of `file` that resolve inside `src/{layer}`. */
+function importsInto(file: string, layer: string): string[] {
+  return importsOf(file).filter((s) => s.startsWith('.') && !resolvesOutside(file, s, layer));
+}
+
+/** Layers each layer must never import (dependency rule: only compose.ts/index.ts wire clients). */
+const FORBIDDEN: ReadonlyArray<[layer: string, forbidden: string[]]> = [
+  ['services', ['clients', 'tools']],
+  ['clients', ['tools']],
+  ['tools', ['clients']],
+];
+
 describe('architecture', () => {
   for (const layer of ['shared', 'domain', 'services']) {
     it(`src/${layer} does not import @modelcontextprotocol`, () => {
@@ -39,11 +51,19 @@ describe('architecture', () => {
     });
   }
 
-  it('src/tools never imports clients/', () => {
-    for (const file of filesIn('tools')) {
-      const bad = importsOf(file).filter((s) => /(^|\/)clients\//.test(s));
-      expect(bad, relative(SRC, file)).toEqual([]);
-    }
+  for (const [layer, forbidden] of FORBIDDEN) {
+    it(`src/${layer} never imports ${forbidden.map((f) => `src/${f}`).join(' or ')}`, () => {
+      for (const file of filesIn(layer)) {
+        const bad = forbidden.flatMap((target) => importsInto(file, target));
+        expect(bad, relative(SRC, file)).toEqual([]);
+      }
+    });
+  }
+
+  it('resolves import paths: a sibling named like a layer is not that layer', () => {
+    const file = join(SRC, 'services', 'legislation', 'get-article.ts');
+    expect(resolvesOutside(file, '../../clients/legifrance/client.js', 'clients')).toBe(false);
+    expect(resolvesOutside(file, './clients.js', 'clients')).toBe(true);
   });
 
   it('src/domain imports only from src/domain', () => {
