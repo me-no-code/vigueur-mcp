@@ -168,10 +168,13 @@ export function dedupeById<T extends { id: string }>(items: readonly T[]): T[] {
   return [...byId.values()];
 }
 
-/** The latest period of a lineage: greatest start, a still-born version only as a last resort. */
+/** The latest period of a lineage: greatest start (an undated hit only when none is dated), a still-born version only as a last resort. */
 export function latestPeriod(hits: readonly ArticleHit[]): ArticleHit | undefined {
   const real = hits.filter((h) => h.status !== 'stillborn');
-  return [...(real.length > 0 ? real : hits)].sort(byStart).at(-1);
+  const pool = real.length > 0 ? real : hits;
+  // An unknown start sorts last, but it must never beat a dated version.
+  const dated = pool.filter((h) => h.validFrom !== null);
+  return [...(dated.length > 0 ? dated : pool)].sort(byStart).at(-1);
 }
 
 /** The code every hit belongs to, when they share one. */

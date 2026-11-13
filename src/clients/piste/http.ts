@@ -110,7 +110,7 @@ export function createPisteHttp(opts: {
     // Each loop iteration is one HTTP attempt; `retry` decides whether to go again.
     for (;;) {
       if (callerSignal?.aborted) throw cancelled();
-      const token = await opts.tokens.getToken();
+      const token = await opts.tokens.getToken(callerSignal);
       if (callerSignal?.aborted) throw cancelled();
       const headers: Record<string, string> = {
         Authorization: `Bearer ${token}`,
@@ -138,7 +138,7 @@ export function createPisteHttp(opts: {
             return JSON.parse(text) as T;
           } catch {
             const bad = fail(
-              'upstream_unavailable',
+              'unexpected_response',
               'unexpected response (not valid JSON)',
               res.status,
             );

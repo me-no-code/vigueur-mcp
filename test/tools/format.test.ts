@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  callSignal,
+  deadlineHit,
   isoDateSchema,
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
@@ -148,5 +150,23 @@ describe('renderStatusAt', () => {
     expect(renderStatusAt({ ...s, until: '2030-01-01' }, '2026-11-12')).toBe(
       '✅ In force on 2026-11-12 (until 2030-01-01)',
     );
+  });
+});
+
+describe('callSignal', () => {
+  it('aborts after the deadline with a TimeoutError reason', async () => {
+    const signal = callSignal(undefined, 20);
+    expect(signal.aborted).toBe(false);
+    await new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
+    expect(signal.reason).toMatchObject({ name: 'TimeoutError' });
+    expect(deadlineHit(signal)).toBe(true);
+  });
+
+  it('follows the MCP signal and is not a deadline hit then', () => {
+    const mcp = new AbortController();
+    const signal = callSignal(mcp.signal, 60_000);
+    mcp.abort();
+    expect(signal.aborted).toBe(true);
+    expect(deadlineHit(signal)).toBe(false);
   });
 });

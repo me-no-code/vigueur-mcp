@@ -6,6 +6,31 @@ import { VigueurError } from '../shared/errors.js';
 /** Upper bound of a tool's text answer, in characters; longer answers continue via `offset`. */
 export const MAX_TOOL_TEXT = 40_000;
 
+/** How long a tool call may take before it gives up, in milliseconds. */
+export const DEFAULT_DEADLINE_MS = 45_000;
+
+const deadlineSignals = new WeakMap<AbortSignal, AbortSignal>();
+
+/**
+ * The signal a tool call hands to its service: aborts when the MCP client cancels or after `ms`
+ * (the deadline). Use `deadlineHit` to tell the two apart.
+ */
+export function callSignal(
+  mcpSignal: AbortSignal | undefined,
+  ms: number = DEFAULT_DEADLINE_MS,
+): AbortSignal {
+  const timeout = AbortSignal.timeout(ms);
+  const signal = mcpSignal === undefined ? timeout : AbortSignal.any([mcpSignal, timeout]);
+  deadlineSignals.set(signal, timeout);
+  return signal;
+}
+
+/** True when `signal` (from `callSignal`) aborted because the deadline passed, not a cancel. */
+export function deadlineHit(signal: AbortSignal): boolean {
+  const timeout = deadlineSignals.get(signal);
+  return signal.aborted && timeout?.aborted === true && signal.reason === timeout.reason;
+}
+
 const DATE_MESSAGE = 'Use a real date as YYYY-MM-DD';
 
 export const isoDateSchema: z.ZodType<IsoDate> = z

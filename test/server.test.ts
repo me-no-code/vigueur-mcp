@@ -127,3 +127,22 @@ describe('createServer', () => {
     expect(client.getServerVersion()).toEqual({ name: 'vigueur', version: VERSION });
   });
 });
+
+describe('vigueur_status handler signal', () => {
+  it('hands getStatus a live signal bounding the call', async () => {
+    let seen: AbortSignal | undefined;
+    let abortedDuringCall: boolean | undefined;
+    const client = await connect(
+      deps({
+        getStatus: async (ctx) => {
+          seen = ctx?.signal;
+          abortedDuringCall = ctx?.signal?.aborted;
+          return unconfiguredReport;
+        },
+      }),
+    );
+    await client.callTool({ name: 'vigueur_status', arguments: {} });
+    expect(seen).toBeInstanceOf(AbortSignal);
+    expect(abortedDuringCall).toBe(false);
+  });
+});

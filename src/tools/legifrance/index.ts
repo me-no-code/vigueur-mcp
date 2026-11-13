@@ -30,19 +30,20 @@ export interface LegifranceServices {
   ) => Promise<ChangesView>;
 }
 
-/** The Légifrance tools; `today` (default: today in Paris) sets the tense of upcoming changes. */
+/** The Légifrance tools; `today` (default: today in Paris) sets the tense of upcoming changes; `deadlineMs`
+ * (default 45 000) bounds each call. */
 export function createLegifranceSource(
   services: LegifranceServices,
-  opts: { today?: () => IsoDate } = {},
+  opts: { today?: () => IsoDate; deadlineMs?: number } = {},
 ): SourceModule {
   const today = opts.today ?? todayInParis;
   return {
     id: 'legifrance',
     register(server) {
-      registerGetArticleTool(server, services.getArticle, today);
-      registerGetArticleHistoryTool(server, services.getArticleHistory, today);
-      registerSearchLegislationTool(server, services.searchLegislation, today);
-      registerListChangesTool(server, services.listChanges, today);
+      registerGetArticleTool(server, services.getArticle, today, opts.deadlineMs);
+      registerGetArticleHistoryTool(server, services.getArticleHistory, today, opts.deadlineMs);
+      registerSearchLegislationTool(server, services.searchLegislation, today, opts.deadlineMs);
+      registerListChangesTool(server, services.listChanges, today, opts.deadlineMs);
     },
   };
 }

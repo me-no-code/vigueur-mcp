@@ -13,6 +13,7 @@ import type {
 import type { ArticleHit, ArticleRecord, CallContext } from '../../services/legislation/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import {
+  callSignal,
   endCell,
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
@@ -305,6 +306,7 @@ export function registerGetArticleTool(
   server: McpServer,
   getArticle: GetArticle,
   today: () => IsoDate,
+  deadlineMs?: number,
 ): void {
   server.registerTool(
     'legifrance_get_article',
@@ -320,6 +322,7 @@ export function registerGetArticleTool(
       },
     },
     async (args, ctx) => {
+      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
       try {
         const id = presentOrUndefined(args.id);
         const input: GetArticleInput = {
@@ -328,7 +331,7 @@ export function registerGetArticleTool(
           id,
           atDate: presentOrUndefined(args.at_date),
         };
-        const result = await getArticle(input, { signal: ctx.mcpReq.signal });
+        const result = await getArticle(input, { signal });
         const text = renderGetArticle(result, {
           detailed: args.response_format === 'detailed',
           today: today(),
@@ -337,7 +340,7 @@ export function registerGetArticleTool(
         });
         return { content: [{ type: 'text', text }] };
       } catch (err) {
-        return toToolError(err);
+        return toToolError(err, signal);
       }
     },
   );

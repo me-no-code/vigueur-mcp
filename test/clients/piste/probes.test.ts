@@ -84,4 +84,12 @@ describe('probes', () => {
       detail: 'weird',
     });
   });
+
+  it('passes the status call signal to the request', async () => {
+    const { http, calls } = stub({});
+    const signal = new AbortController().signal;
+    await probeLegifrance(http, { signal });
+    await probeJudilibre(http, { signal });
+    expect(calls.map((c) => c.opts?.signal)).toEqual([signal, signal]);
+  });
 });

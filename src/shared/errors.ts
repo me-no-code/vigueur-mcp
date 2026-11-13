@@ -9,7 +9,9 @@ export type ErrorKind =
   | 'upstream_unavailable'
   | 'not_found'
   | 'invalid_input'
-  | 'cancelled';
+  | 'cancelled'
+  | 'unexpected_response'
+  | 'deadline';
 
 export interface ErrorDetails {
   source?: SourceId;

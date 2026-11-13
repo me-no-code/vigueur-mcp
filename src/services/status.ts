@@ -18,7 +18,12 @@ export interface SourceHealth {
   retryAfterSeconds?: number;
 }
 
-export type SourceProbe = () => Promise<SourceHealth>;
+/** What a status call carries: the signal that bounds it (deadline and client cancel). */
+export interface StatusContext {
+  signal?: AbortSignal;
+}
+
+export type SourceProbe = (ctx?: StatusContext) => Promise<SourceHealth>;
 
 export interface StatusReport {
   configured: boolean;
@@ -27,9 +32,13 @@ export interface StatusReport {
   sources: SourceHealth[];
 }
 
-async function runProbe(source: SourceId, probe: SourceProbe): Promise<SourceHealth> {
+async function runProbe(
+  source: SourceId,
+  probe: SourceProbe,
+  ctx: StatusContext | undefined,
+): Promise<SourceHealth> {
   try {
-    return await probe();
+    return await probe(ctx);
   } catch (err) {
     return {
       source,
@@ -39,10 +48,13 @@ async function runProbe(source: SourceId, probe: SourceProbe): Promise<SourceHea
   }
 }
 
-export async function getStatus(deps: {
-  config: Config;
-  probes: Partial<Record<SourceId, SourceProbe>>;
-}): Promise<StatusReport> {
+export async function getStatus(
+  deps: {
+    config: Config;
+    probes: Partial<Record<SourceId, SourceProbe>>;
+  },
+  ctx?: StatusContext,
+): Promise<StatusReport> {
   const { config, probes } = deps;
   if (config.piste === null) {
     return { configured: false, env: null, configProblems: config.problems, sources: [] };
@@ -50,7 +62,7 @@ export async function getStatus(deps: {
   const pending: Array<Promise<SourceHealth>> = [];
   for (const source of SOURCE_IDS) {
     const probe = probes[source];
-    if (probe) pending.push(runProbe(source, probe));
+    if (probe) pending.push(runProbe(source, probe, ctx));
   }
   return {
     configured: true,

@@ -1,13 +1,18 @@
-import type { SourceHealth } from '../../services/status.js';
+import type { SourceHealth, StatusContext } from '../../services/status.js';
 import { VigueurError } from '../../shared/errors.js';
 import type { SourceId } from '../../shared/source-id.js';
 import type { PisteHttp, PisteRequest } from './http.js';
 
 const PROBE_OPTIONS = { maxRetries: 0, timeoutMs: 8000 } as const;
 
-async function probe(http: PisteHttp, source: SourceId, req: PisteRequest): Promise<SourceHealth> {
+async function probe(
+  http: PisteHttp,
+  source: SourceId,
+  req: PisteRequest,
+  ctx?: StatusContext,
+): Promise<SourceHealth> {
   try {
-    await http.request(req, PROBE_OPTIONS);
+    await http.request(req, ctx?.signal ? { ...PROBE_OPTIONS, signal: ctx.signal } : PROBE_OPTIONS);
     return { source, state: 'ok' };
   } catch (err) {
     if (err instanceof VigueurError) {
@@ -32,14 +37,15 @@ async function probe(http: PisteHttp, source: SourceId, req: PisteRequest): Prom
   }
 }
 
-export function probeLegifrance(http: PisteHttp): Promise<SourceHealth> {
-  return probe(http, 'legifrance', {
-    method: 'POST',
-    path: '/list/code',
-    body: { pageNumber: 1, pageSize: 1 },
-  });
+export function probeLegifrance(http: PisteHttp, ctx?: StatusContext): Promise<SourceHealth> {
+  return probe(
+    http,
+    'legifrance',
+    { method: 'POST', path: '/list/code', body: { pageNumber: 1, pageSize: 1 } },
+    ctx,
+  );
 }
 
-export function probeJudilibre(http: PisteHttp): Promise<SourceHealth> {
-  return probe(http, 'judilibre', { method: 'GET', path: '/healthcheck' });
+export function probeJudilibre(http: PisteHttp, ctx?: StatusContext): Promise<SourceHealth> {
+  return probe(http, 'judilibre', { method: 'GET', path: '/healthcheck' }, ctx);
 }

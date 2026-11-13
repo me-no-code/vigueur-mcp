@@ -260,7 +260,7 @@ describe('searchLegislation mapping', () => {
     const repo = createLegifranceClient(fake.http);
     await expect(
       repo.searchLegislation({ ...base, collection: 'jorf', text: 'x' }),
-    ).rejects.toMatchObject({ kind: 'upstream_unavailable' });
+    ).rejects.toMatchObject({ kind: 'unexpected_response' });
   });
 });
 

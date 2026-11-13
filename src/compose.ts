@@ -9,7 +9,7 @@ import { createListChanges } from './services/legislation/changes.js';
 import { createGetArticle } from './services/legislation/get-article.js';
 import { createGetArticleHistory } from './services/legislation/history.js';
 import { createSearchLegislation } from './services/legislation/search.js';
-import { getStatus } from './services/status.js';
+import { getStatus, type StatusContext } from './services/status.js';
 import type { FetchLike } from './shared/fetch.js';
 import { createLegifranceSource } from './tools/legifrance/index.js';
 
@@ -17,7 +17,7 @@ import { createLegifranceSource } from './tools/legifrance/index.js';
 export function compose(config: Config, opts: { fetch?: FetchLike } = {}): ServerDeps {
   const { piste } = config;
   if (piste === null) {
-    return { config, getStatus: () => getStatus({ config, probes: {} }), sources: [] };
+    return { config, getStatus: (ctx) => getStatus({ config, probes: {} }, ctx), sources: [] };
   }
 
   const endpoints = pisteEndpoints(piste.env);
@@ -40,8 +40,8 @@ export function compose(config: Config, opts: { fetch?: FetchLike } = {}): Serve
     fetch: opts.fetch,
   });
   const probes = {
-    legifrance: () => probeLegifrance(legifrance),
-    judilibre: () => probeJudilibre(judilibre),
+    legifrance: (ctx?: StatusContext) => probeLegifrance(legifrance, ctx),
+    judilibre: (ctx?: StatusContext) => probeJudilibre(judilibre, ctx),
   };
 
   const legislation = createLegifranceClient(legifrance);
@@ -52,5 +52,9 @@ export function compose(config: Config, opts: { fetch?: FetchLike } = {}): Serve
     listChanges: createListChanges(legislation),
   });
 
-  return { config, getStatus: () => getStatus({ config, probes }), sources: [legifranceSource] };
+  return {
+    config,
+    getStatus: (ctx) => getStatus({ config, probes }, ctx),
+    sources: [legifranceSource],
+  };
 }

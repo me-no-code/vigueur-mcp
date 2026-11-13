@@ -8,6 +8,7 @@ import type {
   GetArticleResult,
 } from '../../../src/services/legislation/get-article.js';
 import type { CallContext, VersionSummary } from '../../../src/services/legislation/ports.js';
+import { VigueurError } from '../../../src/shared/errors.js';
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
 import { renderGetArticle } from '../../../src/tools/legifrance/get-article.js';
 import {
@@ -830,5 +831,30 @@ describe('renderGetArticle', () => {
     );
     expect(text).toContain('⚠️ Repeal scheduled; Légifrance has not set its date.');
     expect(text).toContain('| 2.0 (shown) | ABROGE_DIFF | 2010-01-01 | not yet determined |');
+  });
+
+  describe('per-call deadline', () => {
+    it('renders the deadline message when the service outlives it', async () => {
+      const client = await connect({
+        config: sandboxConfig(),
+        getStatus: () => Promise.reject(new Error('not used')),
+        sources: [
+          createLegifranceSource(
+            fakeServices(
+              (_input, ctx) =>
+                new Promise((_resolve, reject) => {
+                  ctx?.signal?.addEventListener('abort', () =>
+                    reject(new VigueurError('cancelled', 'cancelled')),
+                  );
+                }),
+            ),
+            { today: () => '2026-11-12', deadlineMs: 20 },
+          ),
+        ],
+      });
+      const result = await client.callTool({ name: TOOL, arguments: { number: '7' } });
+      expect(result.isError).toBe(true);
+      expect(firstText(result)).toContain('did not answer within');
+    });
   });
 });

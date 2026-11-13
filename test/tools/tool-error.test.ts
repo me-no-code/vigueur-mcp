@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { type ErrorKind, VigueurError } from '../../src/shared/errors.js';
+import { callSignal } from '../../src/tools/format.js';
 import { toToolError } from '../../src/tools/tool-error.js';
 
 const hints: Record<
@@ -16,6 +17,9 @@ const hints: Record<
     'PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application.',
   upstream_unavailable:
     'PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.',
+  unexpected_response:
+    'Légifrance returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.',
+  deadline: 'Légifrance did not answer within 45 s; try again in a moment.',
 };
 
 describe('toToolError', () => {
@@ -65,5 +69,37 @@ describe('toToolError', () => {
     expect((result.content[0] as { text: string }).text).toMatch(/^Unexpected error: boom/);
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  describe('with a call signal', () => {
+    const fired = async (mcp?: AbortSignal) => {
+      const signal = callSignal(mcp, 10);
+      await new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
+      return signal;
+    };
+    const textOf = (r: ReturnType<typeof toToolError>) => (r.content[0] as { text: string }).text;
+
+    it('deadline fired + cancelled renders the deadline hint', async () => {
+      const result = toToolError(new VigueurError('cancelled', 'x'), await fired());
+      expect(textOf(result)).toContain('did not answer within 45 s');
+    });
+
+    it('deadline fired + an abort-named error renders the deadline hint', async () => {
+      const abort = new DOMException('aborted', 'AbortError');
+      expect(textOf(toToolError(abort, await fired()))).toContain('did not answer within 45 s');
+    });
+
+    it('deadline fired + a genuine failure is not masked', async () => {
+      const result = toToolError(new VigueurError('invalid_input', 'bad date'), await fired());
+      expect(textOf(result)).toBe('bad date');
+    });
+
+    it('MCP cancel (deadline not fired) + cancelled renders the normal cancelled text', () => {
+      const mcp = new AbortController();
+      const signal = callSignal(mcp.signal, 60_000);
+      mcp.abort();
+      const result = toToolError(new VigueurError('cancelled', 'Request cancelled.'), signal);
+      expect(textOf(result)).toBe('Request cancelled.');
+    });
   });
 });

@@ -148,7 +148,7 @@ describe('listChanges', () => {
   it('reports a malformed body as an unexpected response', async () => {
     const { repo } = setup({ regroupements: 'nope' });
     await expect(repo.listChanges(CIVIL, '2025-01-01', '2026-12-31')).rejects.toMatchObject({
-      kind: 'upstream_unavailable',
+      kind: 'unexpected_response',
     });
   });
 });

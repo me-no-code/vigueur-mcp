@@ -2,7 +2,7 @@ import { VigueurError } from '../../shared/errors.js';
 import type { FetchLike } from '../../shared/fetch.js';
 
 export interface TokenProvider {
-  getToken(): Promise<string>;
+  getToken(signal?: AbortSignal): Promise<string>;
   invalidate(): void;
 }
 
@@ -12,6 +12,18 @@ interface CachedToken {
 }
 
 const EXPIRY_MARGIN_SECONDS = 60;
+
+const cancelled = () => new VigueurError('cancelled', 'PISTE authentication cancelled.');
+
+/** `p`, or a `cancelled` rejection as soon as `signal` aborts; `p` itself is left running. */
+function waitFor(p: Promise<string>, signal: AbortSignal | undefined): Promise<string> {
+  if (signal === undefined) return p;
+  return new Promise<string>((resolve, reject) => {
+    const onAbort = () => reject(cancelled());
+    signal.addEventListener('abort', onAbort, { once: true });
+    p.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
 
 export function createTokenProvider(opts: {
   tokenUrl: string;
@@ -91,19 +103,21 @@ export function createTokenProvider(opts: {
   }
 
   return {
-    getToken() {
+    getToken(signal) {
+      if (signal?.aborted) return Promise.reject(cancelled());
       if (cached && now() < cached.refreshAt) return Promise.resolve(cached.value);
-      if (inFlight) return inFlight;
-      const request: Promise<string> = requestToken()
-        .then((token) => {
-          if (inFlight === request) cached = token;
-          return token.value;
-        })
-        .finally(() => {
-          if (inFlight === request) inFlight = undefined;
-        });
-      inFlight = request;
-      return request;
+      if (inFlight === undefined) {
+        const request: Promise<string> = requestToken()
+          .then((token) => {
+            if (inFlight === request) cached = token;
+            return token.value;
+          })
+          .finally(() => {
+            if (inFlight === request) inFlight = undefined;
+          });
+        inFlight = request;
+      }
+      return waitFor(inFlight, signal);
     },
     invalidate() {
       cached = undefined;

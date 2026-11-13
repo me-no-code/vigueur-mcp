@@ -10,6 +10,7 @@ import type {
 } from '../../services/legislation/history.js';
 import type { CallContext, HistoryEntry } from '../../services/legislation/ports.js';
 import {
+  callSignal,
   endCell,
   MAX_TOOL_TEXT,
   nextPageHint,
@@ -162,6 +163,7 @@ export function registerGetArticleHistoryTool(
   server: McpServer,
   getArticleHistory: GetArticleHistory,
   today: () => IsoDate,
+  deadlineMs?: number,
 ): void {
   server.registerTool(
     'legifrance_get_article_history',
@@ -177,11 +179,12 @@ export function registerGetArticleHistoryTool(
       },
     },
     async (args, ctx) => {
+      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
       try {
         const id = presentOrUndefined(args.id);
         const result = await getArticleHistory(
           { code: presentOrUndefined(args.code), number: presentOrUndefined(args.number), id },
-          { signal: ctx.mcpReq.signal },
+          { signal },
         );
         const text = renderGetArticleHistory(result, {
           detailed: args.response_format === 'detailed',
@@ -191,7 +194,7 @@ export function registerGetArticleHistoryTool(
         });
         return { content: [{ type: 'text', text }] };
       } catch (err) {
-        return toToolError(err);
+        return toToolError(err, signal);
       }
     },
   );

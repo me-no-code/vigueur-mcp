@@ -68,4 +68,18 @@ describe('getStatus', () => {
       { source: 'judilibre', state: 'unavailable', detail: 'plain' },
     ]);
   });
+
+  it('hands the call context to every probe', async () => {
+    const seen: Array<AbortSignal | undefined> = [];
+    const probe = async (ctx?: { signal?: AbortSignal }) => {
+      seen.push(ctx?.signal);
+      return { source: 'legifrance' as const, state: 'ok' as const };
+    };
+    const signal = new AbortController().signal;
+    await getStatus(
+      { config: configured, probes: { legifrance: probe, judilibre: probe } },
+      { signal },
+    );
+    expect(seen).toEqual([signal, signal]);
+  });
 });

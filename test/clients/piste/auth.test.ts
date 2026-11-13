@@ -128,4 +128,28 @@ describe('createTokenProvider', () => {
     await expect(tp.getToken()).resolves.toBe('tok-1');
     expect(calls).toHaveLength(2);
   });
+
+  it('an aborted waiter rejects as cancelled without aborting the shared request', async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { tp, calls } = provider(async () => {
+      await gate;
+      return tokenResponse();
+    });
+    const controller = new AbortController();
+    const first = tp.getToken(controller.signal).catch((e: unknown) => e);
+    const second = tp.getToken();
+    controller.abort();
+    expect(await first).toMatchObject({ kind: 'cancelled' });
+    release();
+    await expect(second).resolves.toBe('tok-1');
+    expect(calls).toHaveLength(1);
+  });
+
+  it('an already-aborted signal rejects as cancelled', async () => {
+    const { tp } = provider(tokenResponse);
+    await expect(tp.getToken(AbortSignal.abort())).rejects.toMatchObject({ kind: 'cancelled' });
+  });
 });

@@ -4,6 +4,7 @@ import type { IsoDate } from '../../domain/dates.js';
 import type { ChangesView } from '../../services/legislation/changes.js';
 import type { CallContext, ChangeEntry } from '../../services/legislation/ports.js';
 import {
+  callSignal,
   isoDateSchema,
   MAX_TOOL_TEXT,
   nextPageHint,
@@ -121,6 +122,7 @@ export function registerListChangesTool(
   server: McpServer,
   listChanges: ListChanges,
   today: () => IsoDate,
+  deadlineMs?: number,
 ): void {
   server.registerTool(
     'legifrance_list_changes',
@@ -136,10 +138,11 @@ export function registerListChangesTool(
       },
     },
     async (args, ctx) => {
+      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
       try {
         const view = await listChanges(
           { code: args.code, since: args.since, until: presentOrUndefined(args.until) },
-          { signal: ctx.mcpReq.signal },
+          { signal },
         );
         const text = renderListChanges(view, {
           detailed: args.response_format === 'detailed',
@@ -148,7 +151,7 @@ export function registerListChangesTool(
         });
         return { content: [{ type: 'text', text }] };
       } catch (err) {
-        return toToolError(err);
+        return toToolError(err, signal);
       }
     },
   );

@@ -9,6 +9,7 @@ import type {
 } from '../../services/legislation/ports.js';
 import type { SearchLegislationInput } from '../../services/legislation/search.js';
 import {
+  callSignal,
   MAX_TOOL_TEXT,
   nextPageHint,
   optionalIsoDateSchema,
@@ -183,6 +184,7 @@ export function registerSearchLegislationTool(
   server: McpServer,
   searchLegislation: SearchLegislation,
   today: () => IsoDate,
+  deadlineMs?: number,
 ): void {
   server.registerTool(
     'legifrance_search_legislation',
@@ -198,6 +200,7 @@ export function registerSearchLegislationTool(
       },
     },
     async (args, ctx) => {
+      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
       try {
         const input: SearchLegislationInput = {
           collection: args.collection,
@@ -215,7 +218,7 @@ export function registerSearchLegislationTool(
           page: args.page,
           pageSize: args.page_size,
         };
-        const result = await searchLegislation(input, { signal: ctx.mcpReq.signal });
+        const result = await searchLegislation(input, { signal });
         const text = renderSearch(result, {
           detailed: args.response_format === 'detailed',
           asked: askedLine(args, today()),
@@ -223,7 +226,7 @@ export function registerSearchLegislationTool(
         });
         return { content: [{ type: 'text', text }] };
       } catch (err) {
-        return toToolError(err);
+        return toToolError(err, signal);
       }
     },
   );

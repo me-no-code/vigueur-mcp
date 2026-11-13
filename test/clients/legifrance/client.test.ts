@@ -879,7 +879,7 @@ describe('unexpected payloads', () => {
       const call = CALLS.find(([n]) => n === name)?.[1];
       if (call === undefined) throw new Error(name);
       const err = await rejection(call(client(routes).repo));
-      expect(err.kind).toBe('upstream_unavailable');
+      expect(err.kind).toBe('unexpected_response');
       expect(err.message).toMatch(/^Légifrance: unexpected response/);
     });
   }
@@ -888,7 +888,7 @@ describe('unexpected payloads', () => {
     it(`${name} rejects a null body`, async () => {
       const routes = ALL_PATHS.map((r) => reply(r.path, null));
       const err = await rejection(call(client(routes).repo));
-      expect(err.kind).toBe('upstream_unavailable');
+      expect(err.kind).toBe('unexpected_response');
     });
   }
 });

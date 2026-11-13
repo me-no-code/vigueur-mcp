@@ -85,7 +85,7 @@ export async function postJson<T>(
     if (err instanceof VigueurError) throw err;
     const detail = err instanceof Error ? err.message : String(err);
     throw new VigueurError(
-      'upstream_unavailable',
+      'unexpected_response',
       `Légifrance: unexpected response from ${path} (${detail}).`,
       { source: 'legifrance' },
     );

@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/server';
-import type { StatusReport } from '../services/status.js';
+import type { StatusContext, StatusReport } from '../services/status.js';
 import { SOURCE_LABELS } from '../shared/source-id.js';
+import { callSignal } from './format.js';
 import { toToolError } from './tool-error.js';
 
 const CONSENT_STEP =
@@ -76,7 +77,7 @@ export function formatStatus(report: StatusReport): string {
 
 export function registerStatusTool(
   server: McpServer,
-  getStatus: () => Promise<StatusReport>,
+  getStatus: (ctx?: StatusContext) => Promise<StatusReport>,
 ): void {
   server.registerTool(
     'vigueur_status',
@@ -91,9 +92,10 @@ export function registerStatusTool(
         openWorldHint: true,
       },
     },
-    async () => {
+    async (ctx) => {
+      const signal = callSignal(ctx.mcpReq.signal);
       try {
-        const report = await getStatus();
+        const report = await getStatus({ signal });
         return { content: [{ type: 'text', text: formatStatus(report) }] };
       } catch (err) {
         return toToolError(err);

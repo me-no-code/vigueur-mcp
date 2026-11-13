@@ -137,10 +137,10 @@ describe('createPisteHttp', () => {
     expect(err.message.length).toBeLessThan(400);
   });
 
-  it('HTML on 200 is upstream_unavailable', async () => {
+  it('HTML on 200 is an unexpected_response', async () => {
     const { http } = setup(() => new Response('<html>Maintenance</html>', { status: 200 }));
     const err = await failure(http.request({ method: 'GET', path: '/a' }));
-    expect(err.kind).toBe('upstream_unavailable');
+    expect(err.kind).toBe('unexpected_response');
     expect(err.message).toContain('unexpected response');
   });
 
@@ -342,5 +342,24 @@ describe('400 body redaction', () => {
     });
     const err = await failure(http.request({ method: 'GET', path: '/a' }));
     expect(err.message).toBe('Légifrance: request rejected (HTTP 400): plain body');
+  });
+
+  it('hands the request signal to the token provider', async () => {
+    const seen: Array<AbortSignal | undefined> = [];
+    const http = createPisteHttp({
+      baseUrl: 'https://x.test/base',
+      source: 'legifrance',
+      tokens: {
+        getToken: async (signal?: AbortSignal) => {
+          seen.push(signal);
+          return 'tok-1';
+        },
+        invalidate: () => {},
+      },
+      fetch: fakeFetch(() => json({})).fetch,
+    });
+    const controller = new AbortController();
+    await http.request({ method: 'GET', path: '/a' }, { signal: controller.signal });
+    expect(seen).toEqual([controller.signal]);
   });
 });

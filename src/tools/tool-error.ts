@@ -1,5 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import { VigueurError } from '../shared/errors.js';
+import { deadlineHit } from './format.js';
 
 function hintFor(err: VigueurError): string | undefined {
   switch (err.kind) {
@@ -17,6 +18,10 @@ function hintFor(err: VigueurError): string | undefined {
         : 'PISTE quota reached. Wait a moment and try again.';
     case 'upstream_unavailable':
       return 'PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.';
+    case 'unexpected_response':
+      return 'Légifrance returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.';
+    case 'deadline':
+      return 'Légifrance did not answer within 45 s; try again in a moment.';
     case 'not_found':
     case 'invalid_input':
     case 'cancelled':
@@ -28,7 +33,21 @@ function textResult(text: string): CallToolResult {
   return { isError: true, content: [{ type: 'text', text }] };
 }
 
-export function toToolError(err: unknown): CallToolResult {
+const isAbortShaped = (err: unknown): boolean =>
+  (err instanceof VigueurError && err.kind === 'cancelled') ||
+  (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError'));
+
+/**
+ * The error result for a failed tool call. Pass the call's `callSignal`: when its deadline (not
+ * the MCP client) cut the call short and the error is an abort, the answer is the `deadline`
+ * error. Any other error is rendered as it is, so a real failure is never masked.
+ */
+export function toToolError(err: unknown, signal?: AbortSignal): CallToolResult {
+  if (signal !== undefined && deadlineHit(signal) && isAbortShaped(err)) {
+    return toToolError(
+      new VigueurError('deadline', 'Légifrance did not answer in time.', { source: 'legifrance' }),
+    );
+  }
   if (err instanceof VigueurError) {
     const hint = hintFor(err);
     return textResult(hint ? `${err.message}\n\n${hint}` : err.message);
