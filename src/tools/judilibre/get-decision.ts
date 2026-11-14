@@ -110,13 +110,19 @@ export function renderDecision(result: JudilibreDecisionResult, offset: number):
           d.files.map((f) => `${f.name} · ${f.type} · ${f.url}`),
           lim,
         ),
-        zones.length > 0
-          ? `Zones: ${zones.join(', ')}`
-          : 'No zone markup (common for unpublished decisions): read the full text.',
+        ...(zones.length > 0
+          ? [`Zones: ${zones.join(', ')}`]
+          : zoneMissing === null
+            ? ['This decision has no zone markup; showing the full text.']
+            : []),
       );
     }
     if (zoneMissing !== null) {
-      head.push(`This decision has no "${zoneMissing}" zone; showing the full text.`);
+      head.push(
+        d.zones.length > 0
+          ? `This decision has no "${zoneMissing}" zone; showing the full text.`
+          : `This decision has no zone markup, so no "${zoneMissing}" zone; showing the full text.`,
+      );
     }
     head.push(heading);
     return head.join('\n');

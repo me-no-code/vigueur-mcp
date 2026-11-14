@@ -38,6 +38,11 @@ const ROUTES: FixtureRoute[] = [
     (q) => q.get('id') === '6af2c6c06c2e1778126fe2c7',
   ),
   J('/decision', '45-decision-24-16.924', (q) => q.get('id') === '694252ab61c46255e1711cac'),
+  J(
+    '/decision',
+    '67-decision-11-16.304-bulletin-no-zones',
+    (q) => q.get('id') === '607976659ba5988459c49f42',
+  ),
   {
     ...J(
       '/decision',
@@ -175,14 +180,44 @@ describe('judilibre_get_decision', () => {
       id: '694252ab61c46255e1711cac',
       zone: 'motivations',
     });
-    expect(text).toContain('has no "motivations" zone');
+    expect(text).toContain(
+      'This decision has no zone markup, so no "motivations" zone; showing the full text.',
+    );
+    expect(count(text, 'showing the full text')).toBe(1);
   });
 
   it('a decision without zones, no zone requested: no zone markup note', async () => {
     const { text } = await call('judilibre_get_decision', { id: '694252ab61c46255e1711cac' });
+    expect(text).toContain('This decision has no zone markup; showing the full text.');
+  });
+
+  it('a Bulletin decision without zones gets the same note, with no claim about why', async () => {
+    const { text } = await call('judilibre_get_decision', { id: '607976659ba5988459c49f42' });
+    expect(text).toContain('Publié au Bulletin');
+    expect(text).toContain('This decision has no zone markup; showing the full text.');
+    expect(text).not.toContain('unpublished');
+  });
+
+  it('a court of appeal decision with zone moyens: the decision has zones, just not that one', async () => {
+    const { text } = await call('judilibre_get_decision', {
+      id: '6aead2477a1020213711b3db',
+      zone: 'moyens',
+    });
+    expect(text).toContain('This decision has no "moyens" zone; showing the full text.');
+    expect(text).toMatch(/^Zones: /m);
+    expect(text).not.toContain('no zone markup');
+  });
+
+  it('the same Bulletin decision with zone motivations: one note, then the full text', async () => {
+    const { text } = await call('judilibre_get_decision', {
+      id: '607976659ba5988459c49f42',
+      zone: 'motivations',
+    });
     expect(text).toContain(
-      'No zone markup (common for unpublished decisions): read the full text.',
+      'This decision has no zone markup, so no "motivations" zone; showing the full text.',
     );
+    expect(count(text, 'showing the full text')).toBe(1);
+    expect(text).toContain('── Full text ──');
   });
 
   it('unknown id', async () => {
