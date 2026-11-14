@@ -18,8 +18,10 @@ Until the repository is published, install it from a local clone (build it first
 /plugin install vigueur@vigueur
 ```
 
-The plugin loads in place from the clone, so `/reload-plugins` picks up a new build. To try it for
-one session without installing: `claude --plugin-dir /absolute/path/to/vigueur-mcp`.
+The plugin loads in place from the clone. After a new build, restart the server in each open
+session: `/mcp`, select vigueur, then Reconnect (`/reload-plugins` alone keeps the server already
+running). A new session also starts the new build. To try it for one session without installing:
+`claude --plugin-dir /absolute/path/to/vigueur-mcp`.
 
 Once published: `/plugin install vigueur --marketplace <owner>/vigueur-mcp`.
 
