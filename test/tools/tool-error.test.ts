@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { type ErrorKind, VigueurError } from '../../src/shared/errors.js';
+import { MAX_TOOL_TEXT } from '../../src/tools/format.js';
 import { toolError } from '../../src/tools/tool-error.js';
 import { expectToolError } from '../helpers/answer.js';
 
@@ -66,6 +67,30 @@ describe('toolError hints', () => {
         kind,
       );
       expect(e.error.message).toBe('exact message');
+    }
+  });
+});
+
+describe('toolError size', () => {
+  it('logs one stderr line for an error over MAX_TOOL_TEXT, and answers unchanged', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const message = 'm'.repeat(MAX_TOOL_TEXT);
+      const r = toolError(new VigueurError('invalid_input', message), {
+        source: 'legifrance',
+        request,
+      });
+      const e = expectToolError(r, 'invalid_input');
+      expect(e.error.message).toBe(message);
+      const text = (r.content as Array<{ text: string }>)[0]?.text ?? '';
+      expect(errors).toHaveBeenCalledTimes(1);
+      expect(errors).toHaveBeenCalledWith(
+        `legifrance_get_article answer (Légifrance, error) is ${text.length} characters, over the ${MAX_TOOL_TEXT}-character cap.`,
+      );
+      toolError(new VigueurError('invalid_input', 'short'), { source: 'legifrance', request });
+      expect(errors).toHaveBeenCalledTimes(1);
+    } finally {
+      errors.mockRestore();
     }
   });
 });

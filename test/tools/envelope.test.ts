@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as z from 'zod/v4';
 import { VigueurError } from '../../src/shared/errors.js';
 import { answerSchema, requestEcho, statusValue, toolAnswer } from '../../src/tools/envelope.js';
-import { callSignal, listPage, sliceForJson } from '../../src/tools/format.js';
+import { callSignal, listPage, MAX_TOOL_TEXT, sliceForJson } from '../../src/tools/format.js';
 import { toolError } from '../../src/tools/tool-error.js';
 import { VERSION } from '../../src/version.js';
 import { expectToolError } from '../helpers/answer.js';
@@ -42,6 +42,31 @@ describe('toolAnswer', () => {
     expect(answer.retrieved).toBe('2026-11-16T10:42:07Z');
     expect(answer.vigueur_version).toBe(VERSION);
     expect(r.content).toEqual([{ type: 'text', text: JSON.stringify(answer) }]);
+  });
+
+  it('toolAnswer logs one stderr line for an answer over MAX_TOOL_TEXT, and answers unchanged', () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const body = {
+        source: 'Légifrance' as const,
+        outcome: 'found' as const,
+        warnings: [],
+        id: 'x'.repeat(MAX_TOOL_TEXT),
+        request: { tool: 'legifrance_get_article', id: 'X' },
+        cached: [],
+      };
+      const r = toolAnswer(schema, body, { now: NOW });
+      const text = JSON.stringify(r.structuredContent);
+      expect(r.content).toEqual([{ type: 'text', text }]);
+      expect(errors).toHaveBeenCalledTimes(1);
+      expect(errors).toHaveBeenCalledWith(
+        `legifrance_get_article answer (Légifrance, found) is ${text.length} characters, over the ${MAX_TOOL_TEXT}-character cap.`,
+      );
+      toolAnswer(schema, { ...body, id: 'X' }, { now: NOW });
+      expect(errors).toHaveBeenCalledTimes(1);
+    } finally {
+      errors.mockRestore();
+    }
   });
 
   it('toolAnswer throws when the body does not match its schema', () => {

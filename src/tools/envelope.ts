@@ -5,7 +5,7 @@ import type { StatusAt } from '../domain/status-at.js';
 import type { HistoryEntry } from '../services/legislation/ports.js';
 import { todayInParis } from '../services/legislation/resolve.js';
 import { VERSION } from '../version.js';
-import { DEFAULT_DEADLINE_MS, presentOrUndefined } from './format.js';
+import { DEFAULT_DEADLINE_MS, MAX_TOOL_TEXT, presentOrUndefined } from './format.js';
 
 /** The `source` of an answer: a legal source, or PISTE for `vigueur_status`. */
 export type SourceName = 'Légifrance' | 'Judilibre' | 'PISTE';
@@ -235,7 +235,8 @@ export type AnswerBody<T> = T extends unknown ? Omit<T, 'retrieved' | 'vigueur_v
 /**
  * The result of a successful call: `body` with `retrieved` (from `ctx.now`) and
  * `vigueur_version`, parsed by `schema` (key order fixed, unknown keys dropped; throws on a
- * mismatch), as `structuredContent` and as its JSON text.
+ * mismatch), as `structuredContent` and as its JSON text. A text over `MAX_TOOL_TEXT` is logged
+ * on stderr (`logOversize`).
  */
 export function toolAnswer<S extends z.ZodType>(
   schema: S,
@@ -247,7 +248,21 @@ export function toolAnswer<S extends z.ZodType>(
     retrieved: isoSecond(ctx.now()),
     vigueur_version: VERSION,
   }) as Record<string, unknown>;
-  return { content: [{ type: 'text', text: JSON.stringify(answer) }], structuredContent: answer };
+  const text = JSON.stringify(answer);
+  const tool = (answer.request as Pointer | undefined)?.tool ?? '?';
+  logOversize(text, tool, String(answer.source), String(answer.outcome));
+  return { content: [{ type: 'text', text }], structuredContent: answer };
+}
+
+/**
+ * Writes one line on stderr when an answer's `text` is longer than `MAX_TOOL_TEXT` (a paging
+ * defect); the answer itself is not changed.
+ */
+export function logOversize(text: string, tool: string, source: string, outcome: string): void {
+  if (text.length <= MAX_TOOL_TEXT) return;
+  console.error(
+    `${tool} answer (${source}, ${outcome}) is ${text.length} characters, over the ${MAX_TOOL_TEXT}-character cap.`,
+  );
 }
 
 /**

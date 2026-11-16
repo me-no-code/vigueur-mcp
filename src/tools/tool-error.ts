@@ -3,7 +3,7 @@ import { CREDENTIALS_WHERE } from '../config.js';
 import { VigueurError } from '../shared/errors.js';
 import { SOURCE_LABELS, type SourceId } from '../shared/source-id.js';
 import { VERSION } from '../version.js';
-import { isoSecond, type Pointer } from './envelope.js';
+import { isoSecond, logOversize, type Pointer } from './envelope.js';
 import { DEFAULT_DEADLINE_MS, deadlineHit } from './format.js';
 
 /** The hint that follows an error's message; `label` names the source in it. */
@@ -70,7 +70,8 @@ const sourceName = (source: SourceId | 'piste'): string =>
  * `message`), `request`, `retrieved` when the source answered with an HTTP status, and
  * `vigueur_version`. When the call's deadline (not the MCP client) cut it short and the error is
  * an abort, the error is `deadline`; any other error is reported as it is, so a real failure is
- * never masked. A non-Vigueur error is `unexpected`, its stack logged on stderr.
+ * never masked. A non-Vigueur error is `unexpected`, its stack logged on stderr. A text over
+ * `MAX_TOOL_TEXT` is logged on stderr (`logOversize`).
  */
 export function toolError(err: unknown, ctx: ErrorContext): CallToolResult {
   let source = sourceName(ctx.source);
@@ -98,5 +99,7 @@ export function toolError(err: unknown, ctx: ErrorContext): CallToolResult {
     ...(status !== undefined && { retrieved: isoSecond(ctx.now?.() ?? new Date()) }),
     vigueur_version: VERSION,
   };
-  return textResult(JSON.stringify(answer));
+  const text = JSON.stringify(answer);
+  logOversize(text, ctx.request.tool, source, 'error');
+  return textResult(text);
 }
