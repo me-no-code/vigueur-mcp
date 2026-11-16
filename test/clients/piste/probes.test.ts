@@ -67,14 +67,29 @@ describe('probes', () => {
     });
   });
 
-  it('maps any other VigueurError kind to unavailable', async () => {
-    const { http } = stub(new VigueurError('not_found', 'nope'));
-    expect(await probeLegifrance(http)).toEqual({
-      source: 'legifrance',
-      state: 'unavailable',
-      detail: 'nope',
+  // PISTE answered, but not as expected: a 404, another 4xx, or a body Vigueur cannot read.
+  for (const kind of ['not_found', 'invalid_input', 'unexpected_response'] as const) {
+    it(`maps ${kind} to unexpected_response with detail`, async () => {
+      const { http } = stub(new VigueurError(kind, 'Légifrance: not found (HTTP 404)'));
+      expect(await probeLegifrance(http)).toEqual({
+        source: 'legifrance',
+        state: 'unexpected_response',
+        detail: 'Légifrance: not found (HTTP 404)',
+      });
     });
-  });
+  }
+
+  // No answer in time: the call's deadline or cancel stopped the probe.
+  for (const kind of ['deadline', 'cancelled'] as const) {
+    it(`maps ${kind} to unavailable with detail`, async () => {
+      const { http } = stub(new VigueurError(kind, 'Légifrance: request cancelled.'));
+      expect(await probeLegifrance(http)).toEqual({
+        source: 'legifrance',
+        state: 'unavailable',
+        detail: 'Légifrance: request cancelled.',
+      });
+    });
+  }
 
   it('maps a non-VigueurError to unavailable with its message', async () => {
     const { http } = stub(new Error('weird'));

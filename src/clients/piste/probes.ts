@@ -25,6 +25,11 @@ async function probe(
           return err.details?.retryAfterSeconds !== undefined
             ? { source, state: 'quota_exceeded', retryAfterSeconds: err.details.retryAfterSeconds }
             : { source, state: 'quota_exceeded' };
+        // PISTE answered, but not as expected: a 404, another 4xx, or an unreadable body.
+        case 'not_found':
+        case 'invalid_input':
+        case 'unexpected_response':
+          return { source, state: 'unexpected_response', detail: err.message };
         default:
           return { source, state: 'unavailable', detail: err.message };
       }

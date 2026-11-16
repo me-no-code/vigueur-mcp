@@ -1,4 +1,5 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
+import { CREDENTIALS_WHERE } from '../config.js';
 import { VigueurError } from '../shared/errors.js';
 import { SOURCE_LABELS, type SourceId } from '../shared/source-id.js';
 import { VERSION } from '../version.js';
@@ -11,7 +12,7 @@ function hintFor(err: VigueurError, label: string): string | undefined {
     case 'credentials_missing':
       return 'PISTE credentials are not configured. Call vigueur_status for setup instructions.';
     case 'credentials_invalid':
-      return 'PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). Call vigueur_status to diagnose.';
+      return `PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). ${CREDENTIALS_WHERE} Call vigueur_status to diagnose.`;
     case 'api_not_enabled':
       return 'This API is not enabled on your PISTE application. Call vigueur_status for the steps to enable it.';
     case 'forbidden':

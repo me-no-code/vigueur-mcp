@@ -10,7 +10,7 @@ import {
   sandboxConfig,
 } from '../helpers/fixture-fetch.js';
 import { JUDILIBRE_ROUTES } from '../helpers/judilibre-routes.js';
-import { connectClient, firstText } from '../helpers/mcp-client.js';
+import { connectClient } from '../helpers/mcp-client.js';
 
 /** Tools answering through the envelope. */
 const CONVERTED = new Set<string>([
@@ -27,6 +27,7 @@ const CONVERTED = new Set<string>([
   'judilibre_search_decisions',
   'judilibre_get_decision',
   'judilibre_list_taxonomy',
+  'vigueur_status',
 ]);
 
 interface Case {
@@ -34,7 +35,7 @@ interface Case {
   args: Record<string, unknown>;
   outcome: string;
   /** The fixture routes the call is answered from (default `fixtures`). */
-  fetch?: 'fixtures' | 'judilibre';
+  fetch?: 'fixtures' | 'judilibre' | 'status';
 }
 
 /** Per tool: one success case and one miss case (not_found / no_results / several_matches) where the tool has one.
@@ -135,11 +136,17 @@ const CASES: Case[] = [
     outcome: 'no_results',
     fetch: 'judilibre',
   },
+  { tool: 'vigueur_status', args: {}, outcome: 'results', fetch: 'status' },
 ];
 
 const ROUTES: Record<NonNullable<Case['fetch']>, readonly FixtureRoute[]> = {
   fixtures: LEGIFRANCE_FIXTURE_ROUTES,
   judilibre: JUDILIBRE_ROUTES,
+  // The status probes: Légifrance's code list and Judilibre's health check (a body built here, no recorded sample).
+  status: [
+    ...LEGIFRANCE_FIXTURE_ROUTES,
+    { api: 'judilibre', path: '/healthcheck', body: () => ({ status: 'ok' }) },
+  ],
 };
 
 /** The `source` a tool's answers name. */
@@ -196,12 +203,11 @@ describe('envelope contract', () => {
     }
   });
 
-  it('vigueur_status (unconfigured) returns the setup guide as text, no structuredContent', async () => {
+  it('vigueur_status (unconfigured) answers not_configured with the setup guide', async () => {
     const client = await connect(compose(loadConfig({})));
     const result = await client.callTool({ name: 'vigueur_status' });
-    expect(result.structuredContent).toBeUndefined();
-    const text = firstText(result);
-    expect(text).toContain('PISTE_CLIENT_ID');
-    expect(text).toContain('Validate my ToS choices');
+    const a = expectAnswer(result, { source: 'PISTE', outcome: 'not_configured' });
+    expect(a.setup_guide).toContain('PISTE_CLIENT_ID');
+    expect(a.setup_guide).toContain('Validate my ToS choices');
   });
 });

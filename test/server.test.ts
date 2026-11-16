@@ -9,6 +9,7 @@ import type { StatusReport } from '../src/services/status.js';
 import { VigueurError } from '../src/shared/errors.js';
 import type { SourceModule } from '../src/sources.js';
 import { VERSION } from '../src/version.js';
+import { expectAnswer } from './helpers/answer.js';
 
 const unconfigured: Config = { piste: null, problems: [] };
 const configured: Config = {
@@ -74,14 +75,11 @@ describe('createServer', () => {
     expect(await toolNames(client)).toEqual(['vigueur_status']);
   });
 
-  it('unconfigured: vigueur_status returns the setup guide as text', async () => {
+  it('unconfigured: vigueur_status answers not_configured with the setup guide', async () => {
     const client = await connect(deps());
     const result = await client.callTool({ name: 'vigueur_status' });
-    expect(result.isError).toBeFalsy();
-    expect(result.structuredContent).toBeUndefined();
-    const [first] = result.content as Array<{ type: string; text: string }>;
-    expect(first?.type).toBe('text');
-    expect(first?.text).toContain('PISTE_CLIENT_ID');
+    const a = expectAnswer(result, { source: 'PISTE', outcome: 'not_configured' });
+    expect(a.setup_guide).toContain('PISTE_CLIENT_ID');
   });
 
   it('configured: registers source modules', async () => {

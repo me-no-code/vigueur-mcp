@@ -10,7 +10,7 @@ const hints: Record<
   credentials_missing:
     'PISTE credentials are not configured. Call vigueur_status for setup instructions.',
   credentials_invalid:
-    'PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). Call vigueur_status to diagnose.',
+    'PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration. Call vigueur_status to diagnose.',
   api_not_enabled:
     'This API is not enabled on your PISTE application. Call vigueur_status for the steps to enable it.',
   forbidden:

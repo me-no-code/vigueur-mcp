@@ -7,6 +7,7 @@ export const HEALTH_STATES = [
   'not_enabled',
   'credentials_invalid',
   'quota_exceeded',
+  'unexpected_response',
   'unavailable',
 ] as const;
 export type HealthState = (typeof HEALTH_STATES)[number];
