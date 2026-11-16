@@ -93,6 +93,8 @@ export type GetArticleResult =
       warnings: string[];
       /** Present when the latest period ended and Légifrance concordance says where it went. */
       relocation?: PeriodRelocation;
+      /** The all-versions page was full: more periods may exist, so no period is called latest. */
+      possiblyIncomplete?: boolean;
     }
   | NotFound;
 
@@ -332,10 +334,12 @@ async function byCitation(
       );
     case 'periods': {
       // Nothing in force on that date, but versions on record: repealed, or not yet in force.
-      const { num, codeTitle, periods } = lookup;
+      const { num, codeTitle, periods, truncated } = lookup;
       const warnings = periods.filter((p) => coversDate(p, asOf)).map((p) => coverWarning(p, asOf));
       const relocation =
-        codeTitle === null ? null : await periodRelocation(repo, periods, warnings, ctx);
+        codeTitle === null || truncated
+          ? null
+          : await periodRelocation(repo, periods, warnings, ctx);
       return {
         kind: 'not_in_force_at_date',
         num,
@@ -344,6 +348,7 @@ async function byCitation(
         periods,
         warnings,
         ...(relocation !== null && { relocation }),
+        ...(truncated && { possiblyIncomplete: true }),
       };
     }
     default:

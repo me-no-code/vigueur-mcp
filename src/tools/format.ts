@@ -6,6 +6,12 @@ import { VigueurError } from '../shared/errors.js';
 /** Upper bound of a tool's text answer, in characters; longer answers continue via `offset`. */
 export const MAX_TOOL_TEXT = 40_000;
 
+/**
+ * Characters a page budget keeps beyond the serialized frame of an answer (the answer with an
+ * empty list or text): `retrieved`, `vigueur_version`, and wider page numbers or offsets.
+ */
+export const FRAME_SLACK = 200;
+
 /** How long a tool call may take before it gives up, in milliseconds. */
 export const DEFAULT_DEADLINE_MS = 45_000;
 

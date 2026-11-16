@@ -244,6 +244,22 @@ describe('createGetArticle — resolution outcomes', () => {
     expect(result).toMatchObject({ kind: 'not_in_force_at_date', codeTitle: 'Code du travail' });
   });
 
+  it('a full page of versions: says more may exist, and names no latest period', async () => {
+    const { getArticle, calls } = setup({
+      overrides: {
+        findArticleAllVersions: async () => ({
+          hits: [hitOf(OLD_1382), hitOf(NEW_1382)],
+          truncated: true,
+        }),
+      },
+      concordance: { [NEW_1382.version.id]: { from: [], to: [REF_1240] } },
+    });
+    const result = await getArticle({ code: 'Code civil', number: '1382', atDate: '1700-01-01' });
+    expect(result).toMatchObject({ kind: 'not_in_force_at_date', possiblyIncomplete: true });
+    expect(result.kind === 'not_in_force_at_date' && result.relocation).toBeUndefined();
+    expect(calls.getConcordance).toEqual([]);
+  });
+
   it('lists the periods oldest first', async () => {
     const { getArticle } = setup({
       overrides: {

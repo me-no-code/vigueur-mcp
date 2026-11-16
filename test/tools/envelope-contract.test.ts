@@ -12,7 +12,7 @@ import {
 import { connectClient, firstText } from '../helpers/mcp-client.js';
 
 /** Tools answering through the envelope. */
-const CONVERTED = new Set<string>([]);
+const CONVERTED = new Set<string>(['legifrance_get_article', 'legifrance_get_article_history']);
 
 interface Case {
   tool: string;
@@ -24,7 +24,24 @@ interface Case {
 
 /** Per tool: one success case and one miss case (not_found / no_results / several_matches) where the tool has one.
  * The denied (HTTP 403) case is generated for every converted tool below. */
-const CASES: Case[] = [];
+const CASES: Case[] = [
+  {
+    tool: 'legifrance_get_article',
+    args: { code: 'Code civil', number: '1240' },
+    outcome: 'found',
+  },
+  { tool: 'legifrance_get_article', args: { number: 'L1234-1' }, outcome: 'several_matches' },
+  {
+    tool: 'legifrance_get_article_history',
+    args: { code: 'Code civil', number: '1382' },
+    outcome: 'found',
+  },
+  {
+    tool: 'legifrance_get_article_history',
+    args: { number: 'L1234-1' },
+    outcome: 'several_matches',
+  },
+];
 
 const ROUTES: Record<NonNullable<Case['fetch']>, readonly FixtureRoute[]> = {
   fixtures: LEGIFRANCE_FIXTURE_ROUTES,

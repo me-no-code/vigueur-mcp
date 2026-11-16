@@ -10,22 +10,35 @@ import type {
 } from '../../services/legislation/history.js';
 import type { CallContext, HistoryEntry } from '../../services/legislation/ports.js';
 import {
+  type AnswerBody,
+  answerSchema,
+  dateSchema,
+  nextSchema,
+  type Pointer,
+  pageSchema,
+  requestEcho,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import {
   callSignal,
-  endCell,
+  FRAME_SLACK,
+  jsonCost,
+  listPage,
   MAX_TOOL_TEXT,
-  nextPageHint,
-  pageByBudget,
   presentOrUndefined,
   responseFormatSchema,
-  untilPhrase,
 } from '../format.js';
-import { toToolError } from '../tool-error.js';
-import { renderLookupMiss } from './get-article.js';
+import { toolError } from '../tool-error.js';
+import { buildLookupMiss, lookupMissBranches } from './get-article.js';
 
 export type GetArticleHistory = (
   input: GetArticleHistoryInput,
   ctx?: CallContext,
 ) => Promise<ArticleHistoryResult>;
+
+const TOOL = 'legifrance_get_article_history';
+const SOURCE = 'Légifrance';
 
 const DESCRIPTION =
   'List every version of a French code article on Légifrance with its validity dates, status, and the texts that created, amended or repealed it (e.g. "Ordonnance n°2016-131 du 10 février 2016 - art. 4"), plus Légifrance\'s concordance links showing where content moved when articles were renumbered. Use it to explain how an article evolved or to find the version that applied on a date.';
@@ -54,12 +67,47 @@ const inputSchema = z.object({
     .describe('"concise" (default) or "detailed" (also the id of each amending article).'),
 });
 
-/** Events per page, at most; fewer when the text would pass `MAX_TOOL_TEXT`. */
+/** Events per page, at most; fewer when the answer would pass `MAX_TOOL_TEXT`. */
 const EVENTS_PER_PAGE = 100;
-/** Room kept for everything around the events list. */
-const FRAME_RESERVE = 1_500;
 
-const ACTION_LABELS: Readonly<Record<HistoryEntry['action'], string>> = {
+// ---------------------------------------------------------------------------------------------
+// Output schema
+
+const fromSchema = dateSchema.nullable().describe('Start of validity; null when unknown.');
+const untilSchema = dateSchema.nullable().describe('End of validity; null when none is dated.');
+const untilUndeterminedSchema = z
+  .boolean()
+  .describe('Légifrance records an end whose date it has not set.');
+
+const currentSchema = z
+  .object({
+    id: z.string().describe('Légifrance id of the version.'),
+    version: z.string().describe("Légifrance's version number."),
+    from: fromSchema,
+    until: untilSchema,
+    until_undetermined: untilUndeterminedSchema,
+  })
+  .nullable()
+  .describe('The version whose validity dates cover `on`; null when none does.');
+
+const versionSchema = z.object({
+  id: z.string().describe('Légifrance id of the version.'),
+  version: z.string().describe("Légifrance's version number."),
+  legifrance_status: z
+    .string()
+    .nullable()
+    .describe("Légifrance's own status label (VIGUEUR, MODIFIE…); null when it gives none."),
+  from: fromSchema,
+  until: untilSchema,
+  until_undetermined: untilUndeterminedSchema,
+});
+
+const ACTIONS: Readonly<
+  Record<
+    HistoryEntry['action'],
+    'created' | 'amended' | 'repealed' | 'codified' | 'transferred' | 'linked'
+  >
+> = {
   creation: 'created',
   modification: 'amended',
   abrogation: 'repealed',
@@ -68,109 +116,187 @@ const ACTION_LABELS: Readonly<Record<HistoryEntry['action'], string>> = {
   other: 'linked',
 };
 
-const refList = (refs: readonly ArticleRef[]) => refs.map((r) => r.label).join('; ');
+const eventSchema = z.object({
+  date: dateSchema
+    .nullable()
+    .describe('Entry-into-force date of the change; null when Légifrance has not determined it.'),
+  date_undetermined: z.boolean().describe('Légifrance records the date as not determined.'),
+  action: z.enum(['created', 'amended', 'repealed', 'codified', 'transferred', 'linked']),
+  by: z.string().describe('Title of the amending text.'),
+  by_article_id: z
+    .string()
+    .nullable()
+    .describe('Légifrance id of the amending article; null in a concise answer or when not given.'),
+  scheduled: z.boolean().describe('The date is after `on`.'),
+});
 
-function versionsTable(view: ArticleHistoryView): string {
-  const rows = view.versions.map(
-    (v) =>
-      `| ${v.version || '?'} | ${v.rawStatus || v.status} | ${v.validFrom ?? 'unknown'} | ${endCell(v)} |`,
-  );
-  return [
-    '#### Versions',
-    '| Version | Status | From | Until |',
-    '| --- | --- | --- | --- |',
-    ...rows,
-  ].join('\n');
-}
+const historyShape = {
+  code: z.string().nullable().describe('Title of the code; null when Légifrance gives none.'),
+  number: z.string().describe('Article number.'),
+  link: z
+    .string()
+    .nullable()
+    .describe(
+      'Official page of the version in force on `on`, else of the latest version; null when there is no version.',
+    ),
+  on: dateSchema.describe('Today: the date `current` and `scheduled` are computed for.'),
+  current: currentSchema,
+  versions: z
+    .array(versionSchema)
+    .describe('Every version of the article, by start date (unknown starts last).'),
+  results: z.number().int().describe('Number of events over all pages.'),
+  page: pageSchema,
+  next: nextSchema,
+  items: z
+    .array(eventSchema)
+    .describe('The events of this page: texts that created, amended or repealed the article.'),
+  concordance: z
+    .object({
+      moved: z
+        .array(
+          z.object({
+            version: z.string().describe("Légifrance's number of the version whose content moved."),
+            from: fromSchema,
+            until: untilSchema,
+            to: z.array(z.string()).describe('The articles where that content now is.'),
+          }),
+        )
+        .describe(
+          'Where the content of the first and of the current (else latest) version moved, per Légifrance concordance.',
+        ),
+      came_from: z
+        .array(z.string())
+        .describe(
+          'Articles whose content is now at this article number, per Légifrance concordance.',
+        ),
+    })
+    .describe("Légifrance's concordance links."),
+};
 
-function eventLine(e: HistoryEntry, detailed: boolean, today: IsoDate): string {
-  const when = e.date ?? 'date not determined';
-  const scheduled = e.date !== null && e.date > today ? ' (scheduled)' : '';
-  const via = detailed && e.amendingArticleId !== null ? ` [${e.amendingArticleId}]` : '';
-  return `- ${when} — ${ACTION_LABELS[e.action]} by ${e.amendingTitle}${via}${scheduled}`;
-}
+const foundBranch = answerSchema(SOURCE, 'found', historyShape);
+const noResultsBranch = answerSchema(SOURCE, 'no_results', historyShape);
 
-export interface HistoryRenderOptions {
+export const getArticleHistoryOutput = z.discriminatedUnion('outcome', [
+  foundBranch,
+  noResultsBranch,
+  ...lookupMissBranches,
+]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type GetArticleHistoryAnswer = AnswerBody<z.input<typeof getArticleHistoryOutput>>;
+type HistoryAnswer = AnswerBody<z.input<typeof foundBranch | typeof noResultsBranch>>;
+type HistoryItem = HistoryAnswer['items'][number];
+
+export interface HistoryAnswerOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
   detailed: boolean;
+  /** The date `current` and `scheduled` are computed for. */
   today: IsoDate;
+  /** The id asked for, echoed when no article has it. */
   requestedId: string | null;
   page: number;
 }
 
+const labels = (refs: readonly ArticleRef[]) => refs.map((r) => r.label);
+
+function eventItem(e: HistoryEntry, opts: HistoryAnswerOptions): HistoryItem {
+  return {
+    date: e.date,
+    date_undetermined: e.undetermined,
+    action: ACTIONS[e.action],
+    by: e.amendingTitle,
+    by_article_id: opts.detailed ? e.amendingArticleId : null,
+    scheduled: e.date !== null && e.date > opts.today,
+  };
+}
+
 /**
- * One page of an article history. Only the events list is split; every page repeats the
- * heading, the versions table, the concordance and the source link.
+ * One page of an article history. Only the events are paged; every page carries the versions,
+ * the concordance and the link. A page past the last one is `no_results` with no events.
  */
-export function renderGetArticleHistory(
-  result: ArticleHistoryResult,
-  opts: HistoryRenderOptions,
-): string {
-  if (result.kind !== 'history') return renderLookupMiss(result, opts);
-  const view = result;
-  const heading = `### ${view.codeTitle ?? 'Code'} — art. ${view.num || '?'}: version history`;
+function historyAnswer(view: ArticleHistoryView, opts: HistoryAnswerOptions): HistoryAnswer {
   const { current } = view;
-  const currentLine =
-    current === null
-      ? 'No version is in force today (computed from validity dates).'
-      : `In force today (computed from validity dates): version ${current.version || '?'}, since ${current.validFrom ?? 'an unknown date'}, ${untilPhrase(current.validTo, current.validToUndetermined) ?? 'no end date'}.`;
-  // Each line says which content it is about: a move belongs to the version that reported it.
-  const num = view.num || '?';
-  const concordance = [
-    ...view.concordance.moved.map(
-      ({ version: v, to }) =>
-        `Per Légifrance concordance — content formerly at art. ${num} (${untilPhrase(v.validTo, v.validToUndetermined) ?? `version since ${v.validFrom ?? 'an unknown date'}`}) now at: ${refList(to)}`,
-    ),
-    ...(view.concordance.from.length > 0
-      ? [
-          `Per Légifrance concordance — content now at art. ${num} came from: ${refList(view.concordance.from)}`,
-        ]
-      : []),
-  ];
-  const linked = view.current ?? view.versions.at(-1);
-  const before = [heading, currentLine, ...(view.versions.length > 0 ? [versionsTable(view)] : [])];
-  const after = [
-    ...(concordance.length > 0 ? [`#### Concordance\n${concordance.join('\n')}`] : []),
-    ...(view.warnings.length > 0 ? [view.warnings.map((w) => `⚠️ ${w}`).join('\n')] : []),
-    ...(linked === undefined ? [] : [`Source: ${articleUrlFor(linked.id)}`]),
-  ];
-  const frameLength = [...before, ...after].join('\n\n').length;
+  const linked = current ?? view.versions.at(-1);
+  const items = view.events.map((e) => eventItem(e, opts));
+  const page = (
+    outcome: 'found' | 'no_results',
+    pageItems: HistoryItem[],
+    pageCount: number,
+    hasMore: boolean,
+  ): HistoryAnswer => ({
+    source: SOURCE,
+    outcome,
+    warnings: view.warnings,
+    code: view.codeTitle,
+    number: view.num,
+    link: linked === undefined ? null : articleUrlFor(linked.id),
+    on: opts.today,
+    current:
+      current === null
+        ? null
+        : {
+            id: current.id,
+            version: current.version,
+            from: current.validFrom,
+            until: current.validTo,
+            until_undetermined: current.validToUndetermined,
+          },
+    versions: view.versions.map((v) => ({
+      id: v.id,
+      version: v.version,
+      legifrance_status: v.rawStatus || null,
+      from: v.validFrom,
+      until: v.validTo,
+      until_undetermined: v.validToUndetermined,
+    })),
+    results: items.length,
+    page: { number: opts.page, of: pageCount },
+    next: hasMore ? { page: opts.page + 1 } : null,
+    items: pageItems,
+    concordance: {
+      moved: view.concordance.moved.map(({ version: v, to }) => ({
+        version: v.version,
+        from: v.validFrom,
+        until: v.validTo,
+        to: labels(to),
+      })),
+      came_from: labels(view.concordance.from),
+    },
+    request: opts.request,
+    cached: [],
+  });
 
-  const budget = Math.max(2_000, MAX_TOOL_TEXT - frameLength - FRAME_RESERVE);
-  const paged = pageByBudget(
-    view.events,
-    opts.page,
-    (e) => eventLine(e, opts.detailed, opts.today).length + 1,
-    { maxItems: EVENTS_PER_PAGE, budget },
-  );
+  const frame = JSON.stringify(page('found', [], opts.page, true)).length + FRAME_SLACK;
+  const paged = listPage(items, opts.page, (item) => jsonCost(item), {
+    maxItems: EVENTS_PER_PAGE,
+    budget: MAX_TOOL_TEXT - frame,
+  });
+  return page(paged.pastEnd ? 'no_results' : 'found', paged.items, paged.pageCount, paged.hasMore);
+}
 
-  const eventsBlock =
-    paged.total === 0
-      ? '#### Events\nLégifrance lists no amending text for this article.'
-      : [
-          `#### Events — entry-into-force dates (${paged.total} in total, page ${opts.page} of ${paged.pageCount})`,
-          ...paged.items.map((e) => eventLine(e, opts.detailed, opts.today)),
-        ].join('\n');
-  const parts = [
-    ...before,
-    eventsBlock,
-    ...after,
-    ...(paged.hasMore ? [nextPageHint(opts.page)] : []),
-  ];
-  return parts.join('\n\n');
+/** The answer body: one page of the history, or the shared answer for a bad citation. */
+export function buildGetArticleHistoryAnswer(
+  result: ArticleHistoryResult,
+  opts: HistoryAnswerOptions,
+): GetArticleHistoryAnswer {
+  return result.kind === 'history' ? historyAnswer(result, opts) : buildLookupMiss(result, opts);
 }
 
 export function registerGetArticleHistoryTool(
   server: McpServer,
   getArticleHistory: GetArticleHistory,
-  today: () => IsoDate,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'legifrance_get_article_history',
+    TOOL,
     {
       title: 'Get the history of a French code article',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: getArticleHistoryOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -178,23 +304,34 @@ export function registerGetArticleHistoryTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, {
+        page: 1,
+        response_format: 'concise',
+      });
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const id = presentOrUndefined(args.id);
         const result = await getArticleHistory(
           { code: presentOrUndefined(args.code), number: presentOrUndefined(args.number), id },
           { signal },
         );
-        const text = renderGetArticleHistory(result, {
+        const body = buildGetArticleHistoryAnswer(result, {
+          request,
           detailed: args.response_format === 'detailed',
-          today: today(),
+          today: ctx.today(),
           requestedId: id ?? null,
           page: args.page ?? 1,
         });
-        return { content: [{ type: 'text', text }] };
+        return toolAnswer(getArticleHistoryOutput, body, ctx);
       } catch (err) {
-        return toToolError(err, signal, 'legifrance');
+        return toolError(err, {
+          source: 'legifrance',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );

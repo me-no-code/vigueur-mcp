@@ -5,6 +5,7 @@ import {
   createLegifranceSource,
   type LegifranceServices,
 } from '../../src/tools/legifrance/index.js';
+import { expectToolError } from '../helpers/answer.js';
 import { sandboxConfig } from '../helpers/fixture-fetch.js';
 import { connectClient, firstText } from '../helpers/mcp-client.js';
 
@@ -93,7 +94,15 @@ describe('per-call deadline over every tool', () => {
       const result = await client.callTool({ name, arguments: args });
       expect(result.isError).toBe(true);
       const source = name.startsWith('judilibre_') ? 'Judilibre' : 'Légifrance';
-      expect(firstText(result)).toContain(`${source} did not answer within 45 s`);
+      const text = firstText(result);
+      if (text.startsWith('{')) {
+        // A tool answering in JSON states the deadline it was given: 20 ms here.
+        const e = expectToolError(result, 'deadline');
+        expect(e.error.message).toBe(`${source} did not answer within 0 s. Try again in a moment.`);
+        expect(e.request.tool).toBe(name);
+      } else {
+        expect(text).toContain(`${source} did not answer within 45 s`);
+      }
     });
   }
 });

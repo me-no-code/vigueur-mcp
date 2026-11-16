@@ -56,8 +56,8 @@ export function createLegifranceSource(
   return {
     id: 'legifrance',
     register(server) {
-      registerGetArticleTool(server, services.getArticle, ctx.today, ctx.deadlineMs);
-      registerGetArticleHistoryTool(server, services.getArticleHistory, ctx.today, ctx.deadlineMs);
+      registerGetArticleTool(server, services.getArticle, ctx);
+      registerGetArticleHistoryTool(server, services.getArticleHistory, ctx);
       registerSearchLegislationTool(server, services.searchLegislation, ctx.today, ctx.deadlineMs);
       registerListChangesTool(server, services.listChanges, ctx.today, ctx.deadlineMs);
       registerGetTextTool(server, services.getText, ctx.deadlineMs);

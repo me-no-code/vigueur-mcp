@@ -11,22 +11,37 @@ import type {
   Neighbour,
   RelocationView,
 } from '../../services/legislation/get-article.js';
-import type { ArticleHit, ArticleRecord, CallContext } from '../../services/legislation/ports.js';
+import type { ArticleHit, CallContext } from '../../services/legislation/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import {
+  type AnswerBody,
+  answerSchema,
+  dateSchema,
+  nextSchema,
+  type Pointer,
+  partSchema,
+  pointerSchema,
+  requestEcho,
+  statusSchema,
+  statusValue,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import {
   callSignal,
-  endCell,
+  FRAME_SLACK,
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
-  paginateText,
   presentOrUndefined,
-  renderStatusAt,
   responseFormatSchema,
-  truncationNotice,
+  sliceForJson,
 } from '../format.js';
-import { toToolError } from '../tool-error.js';
+import { toolError } from '../tool-error.js';
 
 export type GetArticle = (input: GetArticleInput, ctx?: CallContext) => Promise<GetArticleResult>;
+
+const TOOL = 'legifrance_get_article';
+const SOURCE = 'Légifrance';
 
 const DESCRIPTION =
   'Fetch one article of a French code (Code civil, Code du travail…) from Légifrance by citation (code + article number, e.g. code "Code du travail", number "L1234-1") or by Légifrance id (LEGIARTI…). Optionally as of a past or future date (at_date, YYYY-MM-DD) — use it to check what applied when a contract was signed or a dispute arose. Returns the official text, whether it is in force on that date (computed from its validity dates), where it sits in the code, its notes, and a link to legifrance.gouv.fr. If the number exists in several codes and no code is given, it lists the candidates instead of guessing. If the article was repealed, replaced or not yet in force on that date, it says so and, when Légifrance records it, where the content moved (e.g. old art. 1382 → 1240 of the Code civil).';
@@ -70,30 +85,213 @@ const inputSchema = z.object({
     ),
 });
 
-export interface RenderOptions {
-  detailed: boolean;
-  /** Decides past or future tense for the next version. */
-  today: IsoDate;
+// ---------------------------------------------------------------------------------------------
+// Output schema
+
+const labelSchema = z
+  .string()
+  .nullable()
+  .describe("Légifrance's own status label (VIGUEUR, ABROGE_DIFF…); null when it gives none.");
+const fromSchema = dateSchema.nullable().describe('Start of validity; null when unknown.');
+const untilSchema = dateSchema.nullable().describe('End of validity; null when none is dated.');
+const untilUndeterminedSchema = z
+  .boolean()
+  .describe('Légifrance records an end whose date it has not set.');
+
+const candidateSchema = z.object({
+  id: z.string().describe('Légifrance id of the article version.'),
+  code: z.string().describe('Title of the code the version belongs to.'),
+  code_id: z.string().describe('Légifrance id of that code.'),
+  from: fromSchema,
+  legifrance_status: labelSchema,
+  read_with: pointerSchema.describe('The tool call that returns this version.'),
+});
+
+/**
+ * The answers when no single article was found, shared with `legifrance_get_article_history`:
+ * several matching versions (`several_matches`) or none (`not_found`).
+ */
+export const lookupMissBranches = [
+  answerSchema(SOURCE, 'several_matches', {
+    number: z.string().describe('The article number looked up.'),
+    code: z
+      .string()
+      .nullable()
+      .describe('The code every candidate belongs to; null when they span several codes.'),
+    candidates: z.array(candidateSchema).describe('The article versions matching the citation.'),
+    incomplete: z
+      .boolean()
+      .describe('Légifrance returned a full page of matches: more candidates may exist.'),
+  }),
+  answerSchema(SOURCE, 'not_found', {
+    reason: z
+      .enum(['unknown_id', 'no_article', 'unknown_code'])
+      .describe(
+        'unknown_id: no article has the id; no_article: no version of the number is on record; unknown_code: no code has the given title, so nothing was searched.',
+      ),
+    id: z.string().nullable().describe('The article id looked up; null when none was given.'),
+    number: z.string().nullable().describe('The article number looked up; null for an id.'),
+    code: z
+      .string()
+      .nullable()
+      .describe(
+        'The code as given (unknown_code), else its official title; null when every code was searched.',
+      ),
+    did_you_mean: z
+      .array(z.string())
+      .describe(
+        'Code titles containing the given code (unknown_code); none was used in its place.',
+      ),
+  }),
+] as const;
+
+const neighbourSchema = z
+  .object({
+    number: z.string().describe('Article number.'),
+    id: z.string().describe('Légifrance id of the article version.'),
+    excerpt: z.string().describe('The start of its text.'),
+    excerpt_cut: z.boolean().describe('Its text is longer than the excerpt.'),
+    link: z.string().describe('Official page on legifrance.gouv.fr.'),
+  })
+  .nullable()
+  .describe('null when there is none, or when it could not be read (a warning then says why).');
+
+const versionRowSchema = z.object({
+  id: z.string().describe('Légifrance id of the version.'),
+  version: z.string().describe("Légifrance's version number."),
+  legifrance_status: labelSchema,
+  from: fromSchema,
+  until: untilSchema,
+  until_undetermined: untilUndeterminedSchema,
+  shown: z.boolean().describe('This is the version of this answer.'),
+});
+
+const MODIFICATION_ACTIONS: Readonly<
+  Record<ModificationLink['kind'], 'created' | 'amended' | 'repealed' | 'codified' | 'linked'>
+> = {
+  creation: 'created',
+  modification: 'amended',
+  abrogation: 'repealed',
+  codification: 'codified',
+  other: 'linked',
+};
+
+const modificationSchema = z.object({
+  action: z.enum(['created', 'amended', 'repealed', 'codified', 'linked']),
+  by: z.string().describe('Title of the text.'),
+  effective: dateSchema.nullable().describe('Date the change took effect; null when not given.'),
+});
+
+const foundBranch = answerSchema(SOURCE, 'found', {
+  id: z.string().describe('Légifrance id of the article version.'),
+  link: z.string().describe('Official page of the version on legifrance.gouv.fr.'),
+  status: statusSchema,
+  legifrance_status: labelSchema,
+  code: z.string().nullable().describe('Title of the code; null when Légifrance gives none.'),
+  code_id: z.string().nullable().describe('Légifrance id of the code; null when not given.'),
+  number: z.string().describe('Article number.'),
+  section: z
+    .array(z.string())
+    .describe('Titles of the sections holding the article, outermost first, as of `status.on`.'),
+  section_id: z
+    .string()
+    .nullable()
+    .describe('Légifrance id of the section holding the article; null when not given.'),
+  note: z.string().nullable().describe("Légifrance's note on the article; null when none."),
+  relocation: z
+    .string()
+    .nullable()
+    .describe('Where the content of this version went; null when no move or change is recorded.'),
+  neighbours: z
+    .object({ previous: neighbourSchema, next: neighbourSchema })
+    .nullable()
+    .describe(
+      'The articles before and after this one in its section, in force on `status.on`; null when not asked for.',
+    ),
+  versions: z
+    .array(versionRowSchema)
+    .nullable()
+    .describe('Every version of the article; null in a concise answer.'),
+  modifications: z
+    .array(modificationSchema)
+    .nullable()
+    .describe('Texts that created, amended or repealed this version; null in a concise answer.'),
+  cited_by: z
+    .number()
+    .int()
+    .nullable()
+    .describe('Number of texts citing the article; null in a concise answer.'),
+  part: partSchema.nullable().describe('The characters of the text shown; null when it is whole.'),
+  next: nextSchema,
+  text: z
+    .string()
+    .describe('The official text of the version (the part shown); empty when Légifrance has none.'),
+});
+
+const notInForceBranch = answerSchema(SOURCE, 'not_in_force', {
+  number: z.string().describe('The article number looked up.'),
+  code: z
+    .string()
+    .nullable()
+    .describe(
+      'The code asked for, else the code every period shares; null when they span several.',
+    ),
+  on: dateSchema.describe('The date looked up.'),
+  periods: z
+    .array(
+      z.object({
+        id: z.string().describe('Légifrance id of the version.'),
+        code: z.string().describe('Title of the code the version belongs to.'),
+        legifrance_status: labelSchema,
+        from: fromSchema,
+        until: untilSchema,
+        until_undetermined: untilUndeterminedSchema,
+        link: z.string().describe('Official page of the version on legifrance.gouv.fr.'),
+      }),
+    )
+    .describe('The versions on record with this number, oldest first (unknown starts last).'),
+  relocation: z
+    .string()
+    .nullable()
+    .describe('Where the content of the latest period went; null when none is recorded.'),
+  incomplete: z
+    .boolean()
+    .describe('Légifrance returned a full page of versions: more versions may exist.'),
+});
+
+export const getArticleOutput = z.discriminatedUnion('outcome', [
+  foundBranch,
+  notInForceBranch,
+  ...lookupMissBranches,
+]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type GetArticleAnswer = AnswerBody<z.input<typeof getArticleOutput>>;
+type FoundAnswer = AnswerBody<z.input<typeof foundBranch>>;
+type NotInForceAnswer = AnswerBody<z.input<typeof notInForceBranch>>;
+export type LookupMissAnswer = AnswerBody<z.input<(typeof lookupMissBranches)[number]>>;
+
+/** A lookup that found no single article: several candidates, or none. */
+export type LookupMiss = Extract<GetArticleResult, { kind: 'ambiguous' | 'not_found' }>;
+
+export interface LookupMissOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
   /** The id asked for, echoed when no article has it. */
   requestedId: string | null;
+}
+
+export interface GetArticleAnswerOptions extends LookupMissOptions {
+  detailed: boolean;
+  /** Decides past or future tense for where the content moved. */
+  today: IsoDate;
   /** Where the page of the article text starts. */
   offset: number;
 }
 
-/** Article text pages never shrink below this, however large the frame around them. */
-const MIN_TEXT_PAGE = 2_000;
-
-const LINK_LABELS: Readonly<Record<ModificationLink['kind'], string>> = {
-  creation: 'Created by',
-  modification: 'Amended by',
-  abrogation: 'Repealed by',
-  codification: 'Codified by',
-  other: 'Linked to',
-};
-
-const since = (validFrom: IsoDate | null) =>
-  validFrom === null ? 'in force' : `in force since ${validFrom}`;
-const statusLabel = (v: { status: string; rawStatus?: string }) => v.rawStatus || v.status;
+const labelOf = (rawStatus: string | undefined): string | null => rawStatus || null;
 
 /** A move recorded by Légifrance concordance (a source fact); `what` names the text that moved. */
 function movedSentence(
@@ -123,143 +321,104 @@ function relocationSentence(r: RelocationView, num: string, asOf: IsoDate, today
   return `The content of this article ${change} (inferred from text comparison).`;
 }
 
-function detailedBlocks(record: ArticleRecord): string[] {
-  const blocks: string[] = [];
-  if (record.versions.length > 0) {
-    const rows = record.versions.map((v) => {
-      const version = `${v.version || '?'}${v.id === record.version.id ? ' (shown)' : ''}`;
-      return `| ${version} | ${statusLabel(v)} | ${v.validFrom ?? 'unknown'} | ${endCell(v)} |`;
-    });
-    blocks.push(
-      [
-        '#### Versions',
-        '| Version | Status | From | Until |',
-        '| --- | --- | --- | --- |',
-        ...rows,
-      ].join('\n'),
-    );
-  }
-  if (record.modifications.length > 0) {
-    const lines = record.modifications.map(
-      (m) =>
-        `- ${LINK_LABELS[m.kind]} ${m.textTitle}${m.effectiveDate === null ? '' : ` (effective ${m.effectiveDate})`}`,
-    );
-    blocks.push(['#### Modifications', ...lines].join('\n'));
-  }
-  const n = record.citationsCount;
-  blocks.push(`Cited by ${n} ${n === 1 ? 'text' : 'texts'}`);
-  return blocks;
+function neighbourValue(n: Neighbour | null) {
+  return n === null
+    ? null
+    : { number: n.num, id: n.id, excerpt: n.excerpt, excerpt_cut: n.truncated, link: n.url };
 }
 
-function headerOf(a: ArticleView): string {
+/**
+ * One page of a found article: only the text is cut; every page carries every other field, so
+ * the status and the link travel with every part of the text.
+ */
+function foundAnswer(a: ArticleView, opts: GetArticleAnswerOptions): FoundAnswer {
   const { record } = a;
   const { version } = record;
-  const num = version.number || '?';
-  const status = renderStatusAt(a.statusAt, a.asOf, {
-    validToUndetermined: version.validToUndetermined,
-  });
-  const lines = [
-    record.textTitle === null ? `### Art. ${num}` : `### ${record.textTitle} — art. ${num}`,
-    `${status}${version.rawStatus ? ` (${version.rawStatus})` : ''}`,
-  ];
-  if (record.sectionPath.length > 0) lines.push(record.sectionPath.join(' › '));
-  return lines.join('\n');
-}
-
-/**
- * One neighbour on one line: the excerpt's line breaks and runs of spaces become single spaces;
- * "…" marks an excerpt cut short of the article's text.
- */
-function neighbourLine(label: string, n: Neighbour | null): string {
-  if (n === null) return `- ${label}: none`;
-  const excerpt = n.excerpt.replace(/\s+/g, ' ').trim();
-  return `- ${label}: art. ${n.num || '?'} — ${excerpt}${n.truncated ? '…' : ''} · ${n.url}`;
-}
-
-function trailerOf(a: ArticleView, opts: RenderOptions): string[] {
-  const { record } = a;
-  const blocks: string[] = [];
-  if (record.nota !== null) blocks.push(`Note: ${record.nota}`);
-  if (a.relocation !== null) {
-    blocks.push(relocationSentence(a.relocation, record.version.number || '?', a.asOf, opts.today));
-  }
-  // Best effort: a neighbour that could not be read is `none` here and explained in the warnings.
-  if (a.neighbours !== undefined) {
-    blocks.push(
-      [
-        '#### Neighbouring articles',
-        neighbourLine('Previous', a.neighbours.previous),
-        neighbourLine('Next', a.neighbours.next),
-      ].join('\n'),
-    );
-  }
-  if (a.warnings.length > 0) blocks.push(a.warnings.map((w) => `⚠️ ${w}`).join('\n'));
-  if (opts.detailed) blocks.push(...detailedBlocks(record));
-  blocks.push(`Source: ${a.url}\nLégifrance id: ${record.version.id}`);
-  return blocks;
-}
-
-/**
- * One page of a found article: only the article text is paginated. Every page repeats the
- * header (heading, status, location) and the trailer (note, relocation, warnings, source), so
- * the in-force verdict and the link travel with every part of the text.
- */
-function renderFound(a: ArticleView, opts: RenderOptions): string {
-  const articleText = a.record.version.text;
+  const fullText = version.text;
   const { offset } = opts;
-  if (offset > 0 && offset >= articleText.length) {
+  if (offset > 0 && offset >= fullText.length) {
     throw new VigueurError(
       'invalid_input',
-      `"offset" ${offset} is past the end of the article text (${articleText.length} characters). Call again without "offset".`,
+      `"offset" ${offset} is past the end of the article text (${fullText.length} characters). Call again without "offset".`,
     );
   }
-  const header = headerOf(a);
-  const trailer = trailerOf(a, opts);
-  const page = (slice: string, nextOffset: number | null) =>
-    [
-      header,
-      ...(offset > 0 ? [`(continued from character ${offset})`] : []),
-      slice,
-      ...(nextOffset === null ? [] : [truncationNotice(nextOffset)]),
-      ...trailer,
-    ].join('\n\n');
+  const page = (
+    text: string,
+    part: FoundAnswer['part'],
+    next: FoundAnswer['next'],
+  ): FoundAnswer => ({
+    source: SOURCE,
+    outcome: 'found',
+    warnings: a.warnings,
+    id: version.id,
+    link: a.url,
+    status: statusValue(a.statusAt, a.asOf, version.validToUndetermined === true),
+    legifrance_status: labelOf(version.rawStatus),
+    code: record.textTitle,
+    code_id: record.textId,
+    number: version.number,
+    section: record.sectionPath,
+    section_id: record.sectionCid,
+    note: record.nota,
+    relocation:
+      a.relocation === null
+        ? null
+        : relocationSentence(a.relocation, version.number || '?', a.asOf, opts.today),
+    neighbours:
+      a.neighbours === undefined
+        ? null
+        : {
+            previous: neighbourValue(a.neighbours.previous),
+            next: neighbourValue(a.neighbours.next),
+          },
+    versions: opts.detailed
+      ? record.versions.map((v) => ({
+          id: v.id,
+          version: v.version,
+          legifrance_status: labelOf(v.rawStatus),
+          from: v.validFrom,
+          until: v.validTo,
+          until_undetermined: v.validToUndetermined,
+          shown: v.id === version.id,
+        }))
+      : null,
+    modifications: opts.detailed
+      ? record.modifications.map((m) => ({
+          action: MODIFICATION_ACTIONS[m.kind],
+          by: m.textTitle,
+          effective: m.effectiveDate,
+        }))
+      : null,
+    cited_by: opts.detailed ? record.citationsCount : null,
+    part,
+    next,
+    text,
+    request: opts.request,
+    cached: [],
+  });
 
-  // The frame with the longest possible notice: what is left of the budget is for the text.
-  const frame = page('', articleText.length).length;
-  const slice = paginateText(articleText, offset, Math.max(MIN_TEXT_PAGE, MAX_TOOL_TEXT - frame));
-  return page(slice.text || '(Légifrance has no text for this version.)', slice.nextOffset);
+  // The frame with the widest part and next: what is left of the budget is for the text.
+  const end = fullText.length;
+  const frame =
+    JSON.stringify(page('', { from: offset, to: end, of: end }, { offset: end })).length +
+    FRAME_SLACK;
+  const slice = sliceForJson(fullText, offset, MAX_TOOL_TEXT - frame);
+  const whole = offset === 0 && slice.nextOffset === null;
+  return page(
+    slice.text,
+    whole ? null : { from: offset, to: slice.nextOffset ?? end, of: end },
+    slice.nextOffset === null ? null : { offset: slice.nextOffset },
+  );
 }
 
-function renderAmbiguous(num: string, candidates: ArticleHit[], incomplete: boolean): string {
-  const codes = new Set(candidates.map((c) => c.codeTitle));
-  const lines: string[] = [];
-  if (codes.size === 1) {
-    // Several versions in force in one code: only the id can tell them apart.
-    lines.push(
-      `Article ${num} has several versions in force in ${candidates[0]?.codeTitle} — call again with "id":`,
-      ...candidates.map(
-        (c) => `- ${c.id} (${since(c.validFrom)}${c.rawStatus ? `, ${c.rawStatus}` : ''})`,
-      ),
-    );
-  } else {
-    const withIds = codes.size < candidates.length;
-    lines.push(
-      `Article ${num} exists in several codes — call again with "code":`,
-      ...candidates.map(
-        (c) => `- ${c.codeTitle} (${since(c.validFrom)})${withIds ? ` · id ${c.id}` : ''}`,
-      ),
-    );
-    if (withIds) lines.push('Some codes have several versions in force: for those, give the "id".');
-  }
-  if (incomplete)
-    lines.push('(Only the first matches are listed — give the code to narrow it down.)');
-  return lines.join('\n');
-}
+/** The end of a period in a sentence. */
+const periodEnd = (p: { validTo: IsoDate | null; validToUndetermined: boolean }) =>
+  p.validTo ?? (p.validToUndetermined ? 'not yet determined' : 'no end');
 
-function renderNotInForce(
+function notInForceAnswer(
   r: Extract<GetArticleResult, { kind: 'not_in_force_at_date' }>,
-  today: IsoDate,
-): string {
+  opts: GetArticleAnswerOptions,
+): NotInForceAnswer {
   const article = `Art. ${r.num}${r.codeTitle === null ? '' : ` of ${r.codeTitle}`}`;
   // When a period's dates cover the date, the dated search and the dates disagree: say only
   // what the search found (a warning names the period), never "was not in force".
@@ -267,80 +426,163 @@ function renderNotInForce(
     ? `${article}: Légifrance's dated search found no version in force on ${r.asOf}. Versions on record:`
     : `${article} exists but was not in force on ${r.asOf}:`;
   const moved = r.relocation;
-  const lines = [
-    heading,
-    ...r.periods.map(
-      (p) =>
-        `- ${statusLabel(p)} ${p.validFrom ?? 'unknown'} → ${endCell(p, 'date not yet determined')}${r.codeTitle === null ? ` (${p.codeTitle})` : ''} · id ${p.id} · ${articleUrlFor(p.id)}`,
-    ),
-    ...(moved === undefined
-      ? []
-      : [
-          movedSentence(
-            `the text of art. ${r.num} (version ${moved.from.validFrom ?? 'unknown'} → ${endCell(moved.from)})`,
+  return {
+    source: SOURCE,
+    outcome: 'not_in_force',
+    warnings: [
+      heading,
+      ...r.warnings,
+      ...(r.possiblyIncomplete === true
+        ? ['Légifrance returned a full page of versions: more versions may exist.']
+        : []),
+      'Call again with an "at_date" inside one of these periods to read that version.',
+    ],
+    number: r.num,
+    code: r.codeTitle,
+    on: r.asOf,
+    periods: r.periods.map((p) => ({
+      id: p.id,
+      code: p.codeTitle,
+      legifrance_status: labelOf(p.rawStatus),
+      from: p.validFrom,
+      until: p.validTo,
+      until_undetermined: p.validToUndetermined,
+      link: articleUrlFor(p.id),
+    })),
+    relocation:
+      moved === undefined
+        ? null
+        : movedSentence(
+            `the text of art. ${r.num} (version ${moved.from.validFrom ?? 'unknown'} → ${periodEnd(moved.from)})`,
             moved.movedTo,
             moved.from.validTo,
-            today,
+            opts.today,
           ),
-        ]),
-    ...r.warnings.map((w) => `⚠️ ${w}`),
-    'Call again with an "at_date" inside one of these periods to read that version.',
-  ];
-  return lines.join('\n');
+    incomplete: r.possiblyIncomplete === true,
+    request: opts.request,
+    cached: [],
+  };
 }
 
-/** The text answer (one page of it, for an article). */
-export function renderGetArticle(result: GetArticleResult, opts: RenderOptions): string {
-  if (result.kind === 'found') return renderFound(result.article, opts);
-  // Lists of at most a page of hits, periods or suggestions: well under MAX_TOOL_TEXT.
-  return renderLookupMiss(result, opts);
+function severalMatches(
+  num: string,
+  candidates: readonly ArticleHit[],
+  incomplete: boolean,
+  request: Pointer,
+): LookupMissAnswer {
+  const codes = new Set(candidates.map((c) => c.codeTitle));
+  const oneCode = codes.size === 1 ? (candidates[0]?.codeTitle ?? null) : null;
+  const warnings: string[] = [];
+  if (oneCode !== null) {
+    // Several versions in force in one code: only the id can tell them apart.
+    warnings.push(
+      `Article ${num} has several versions in force in ${oneCode} — call again with "id":`,
+    );
+  } else {
+    warnings.push(`Article ${num} exists in several codes — call again with "code":`);
+    if (codes.size < candidates.length) {
+      warnings.push('Some codes have several versions in force: for those, give the "id".');
+    }
+  }
+  if (incomplete) {
+    warnings.push('(Only the first matches are listed — give the code to narrow it down.)');
+  }
+  return {
+    source: SOURCE,
+    outcome: 'several_matches',
+    warnings,
+    number: num,
+    code: oneCode,
+    candidates: candidates.map((c) => ({
+      id: c.id,
+      code: c.codeTitle,
+      code_id: c.codeId,
+      from: c.validFrom,
+      legifrance_status: labelOf(c.rawStatus),
+      read_with: { tool: TOOL, id: c.id },
+    })),
+    incomplete,
+    request,
+    cached: [],
+  };
+}
+
+function notFoundSentences(
+  r: Extract<LookupMiss, { kind: 'not_found' }>,
+  requestedId: string | null,
+): string[] {
+  switch (r.reason) {
+    case 'unknown_id':
+      return [`No Légifrance article with id ${requestedId ?? '?'}.`];
+    case 'no_article':
+      return [`No article ${r.num} in ${r.codeTitle ?? 'any code'} on Légifrance.`];
+    case 'unknown_code':
+      return [
+        `Unknown code "${r.codeTitle}": no Légifrance code has this title. Use the full title (e.g. "Code de la route") or omit the code.`,
+        ...(r.didYouMean.length > 0
+          ? [
+              `Did you mean: ${r.didYouMean.join('; ')}? (suggestions only — call again with the exact code title)`,
+            ]
+          : []),
+      ];
+  }
 }
 
 /**
- * The answer when no single article was found: candidates, not-in-force periods or a miss.
- * Shared with the history tool so both answer a bad citation identically.
+ * The answer when no single article was found: the candidates, or the miss. Shared with the
+ * history tool so both answer a bad citation identically.
  */
-export function renderLookupMiss(
-  result: Exclude<GetArticleResult, { kind: 'found' }>,
-  opts: { requestedId: string | null; today: IsoDate },
-): string {
-  const { requestedId } = opts;
+export function buildLookupMiss(result: LookupMiss, opts: LookupMissOptions): LookupMissAnswer {
+  if (result.kind === 'ambiguous') {
+    return severalMatches(
+      result.num,
+      result.candidates,
+      result.possiblyIncomplete === true,
+      opts.request,
+    );
+  }
+  return {
+    source: SOURCE,
+    outcome: 'not_found',
+    warnings: notFoundSentences(result, opts.requestedId),
+    reason: result.reason,
+    id: opts.requestedId,
+    number: result.num,
+    code: result.codeTitle,
+    did_you_mean: result.didYouMean,
+    request: opts.request,
+    cached: [],
+  };
+}
+
+/** The answer body (one page of it, for an article). */
+export function buildGetArticleAnswer(
+  result: GetArticleResult,
+  opts: GetArticleAnswerOptions,
+): GetArticleAnswer {
   switch (result.kind) {
-    case 'ambiguous':
-      return renderAmbiguous(result.num, result.candidates, result.possiblyIncomplete === true);
+    case 'found':
+      return foundAnswer(result.article, opts);
     case 'not_in_force_at_date':
-      return renderNotInForce(result, opts.today);
-    case 'not_found':
-      switch (result.reason) {
-        case 'unknown_id':
-          return `No Légifrance article with id ${requestedId ?? '?'}.`;
-        case 'no_article':
-          return `No article ${result.num} in ${result.codeTitle ?? 'any code'} on Légifrance.`;
-        case 'unknown_code':
-          return [
-            `Unknown code "${result.codeTitle}": no Légifrance code has this title. Use the full title (e.g. "Code de la route") or omit the code.`,
-            ...(result.didYouMean.length > 0
-              ? [
-                  `Did you mean: ${result.didYouMean.join('; ')}? (suggestions only — call again with the exact code title)`,
-                ]
-              : []),
-          ].join('\n');
-      }
+      // A page of periods, at most: well under MAX_TOOL_TEXT.
+      return notInForceAnswer(result, opts);
+    default:
+      return buildLookupMiss(result, opts);
   }
 }
 
 export function registerGetArticleTool(
   server: McpServer,
   getArticle: GetArticle,
-  today: () => IsoDate,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'legifrance_get_article',
+    TOOL,
     {
       title: 'Get a French code article',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: getArticleOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -348,8 +590,14 @@ export function registerGetArticleTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, {
+        at_date: ctx.today(),
+        response_format: 'concise',
+        offset: 0,
+        include_neighbours: false,
+      });
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const id = presentOrUndefined(args.id);
         const input: GetArticleInput = {
@@ -360,15 +608,22 @@ export function registerGetArticleTool(
           ...(args.include_neighbours === true && { includeNeighbours: true }),
         };
         const result = await getArticle(input, { signal });
-        const text = renderGetArticle(result, {
+        const body = buildGetArticleAnswer(result, {
+          request,
           detailed: args.response_format === 'detailed',
-          today: today(),
+          today: ctx.today(),
           requestedId: id ?? null,
           offset: args.offset ?? 0,
         });
-        return { content: [{ type: 'text', text }] };
+        return toolAnswer(getArticleOutput, body, ctx);
       } catch (err) {
-        return toToolError(err, signal, 'legifrance');
+        return toolError(err, {
+          source: 'legifrance',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );
