@@ -220,7 +220,8 @@ describe('createListJudilibreTaxonomy', () => {
   ];
 
   it('lists entries, defaulting the jurisdiction to cc', async () => {
-    const { repo, calls } = fakeJudilibre({ taxonomies: { chamber: entries } });
+    const fetchedAt = new Date('2026-11-13T10:00:00Z');
+    const { repo, calls } = fakeJudilibre({ taxonomies: { chamber: entries }, fetchedAt });
     const res = await createListJudilibreTaxonomy(repo)({ list: 'chamber' });
     expect(res).toEqual({
       kind: 'list',
@@ -229,6 +230,7 @@ describe('createListJudilibreTaxonomy', () => {
       entries,
       total: 4,
       contains: null,
+      fetchedAt,
     });
     expect(calls.taxonomy).toEqual([{ id: 'chamber', context: 'cc' }]);
   });

@@ -101,7 +101,8 @@ export interface JudilibreDecision extends Omit<JudilibreHit, 'highlights'> {
     judilibreId: string | null;
   } | null;
   /** `url` is the file's `rawUrl`, else its `url`. */
-  files: Array<{ name: string; type: string; url: string }>;
+  /** `url` is `null` when the source's link is not an https link to Judilibre's file store or site. */
+  files: Array<{ name: string; type: string; url: string | null }>;
 }
 
 export type JudilibreTaxonomyId =
@@ -120,6 +121,12 @@ export interface TaxonomyEntry {
   group: string | null;
 }
 
+/** A taxonomy list and when Vigueur fetched it (the original fetch, on a cache hit). */
+export interface TaxonomyList {
+  entries: TaxonomyEntry[];
+  fetchedAt: Date;
+}
+
 export interface JudilibreRepository {
   search(q: JudilibreQuery, ctx?: CallContext): Promise<JudilibreSearchPage>;
   /** `null` when the id is unknown (HTTP 404). */
@@ -128,7 +135,7 @@ export interface JudilibreRepository {
     id: JudilibreTaxonomyId,
     context: JudilibreJurisdiction,
     ctx?: CallContext,
-  ): Promise<TaxonomyEntry[]>;
+  ): Promise<TaxonomyList>;
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -20,6 +20,8 @@ export interface FakeJudilibreOptions {
   hits?: JudilibreHit[];
   decisions?: Record<string, JudilibreDecision>;
   taxonomies?: Partial<Record<JudilibreTaxonomyId, TaxonomyEntry[]>>;
+  /** When the taxonomy lists were fetched (default 2026-11-16T08:00:00Z). */
+  fetchedAt?: Date;
 }
 
 export interface FakeJudilibre {
@@ -51,7 +53,10 @@ export function fakeJudilibre(opts: FakeJudilibreOptions = {}): FakeJudilibre {
     },
     async taxonomy(id, context) {
       calls.taxonomy.push({ id, context });
-      return opts.taxonomies?.[id] ?? [];
+      return {
+        entries: opts.taxonomies?.[id] ?? [],
+        fetchedAt: opts.fetchedAt ?? new Date('2026-11-16T08:00:00Z'),
+      };
     },
   };
   return { repo, calls };

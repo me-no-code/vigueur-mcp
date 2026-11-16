@@ -60,7 +60,9 @@ const inputSchema = z.object({
     .int()
     .min(1)
     .optional()
-    .describe('Page of the change list, 100 entries per page (default 1).'),
+    .describe(
+      'Page of the change list (default 1): at most 100 entries, fewer when the entries are long; the answer gives the next page.',
+    ),
 });
 
 const ENTRIES_PER_PAGE = 100;

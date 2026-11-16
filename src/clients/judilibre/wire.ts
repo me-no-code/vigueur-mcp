@@ -213,11 +213,21 @@ function titles(o: Obj): string[] {
   return list(o, 'titlesAndSummaries').flatMap((t) => strList(t, 'titles'));
 }
 
+/** Hosts of Judilibre's attachment links: its file store and its own site. */
+const FILE_HOSTS = [/^[a-z0-9-]+\.s3\.fr-par\.scw\.cloud$/, /^search\.judilibre\.io$/];
+
+/** `raw` when it is an https link to a Judilibre host, else `null`. */
+function fileUrl(raw: string | null): string | null {
+  if (raw === null || !URL.canParse(raw)) return null;
+  const { protocol, hostname } = new URL(raw);
+  return protocol === 'https:' && FILE_HOSTS.some((h) => h.test(hostname)) ? raw : null;
+}
+
 function files(o: Obj): JudilibreDecision['files'] {
   return list(o, 'files').map((f) => ({
     name: optStr(f, 'name') ?? '',
     type: optStr(f, 'type') ?? '',
-    url: optStr(f, 'rawUrl') ?? str(f, 'url'),
+    url: fileUrl(optStr(f, 'rawUrl')) ?? fileUrl(optStr(f, 'url')),
   }));
 }
 

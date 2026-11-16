@@ -48,7 +48,7 @@ const TOOL = 'legifrance_get_article_history';
 const SOURCE = 'Légifrance';
 
 const DESCRIPTION =
-  'List every version of a French code article on Légifrance with its validity dates, status, and the texts that created, amended or repealed it (e.g. "Ordonnance n°2016-131 du 10 février 2016 - art. 4"), plus Légifrance\'s concordance links showing where content moved when articles were renumbered. Use it to explain how an article evolved or to find the version that applied on a date.';
+  'List every version of a French code article on Légifrance with its validity dates, status, and the texts that created, amended or repealed it (e.g. "Ordonnance n°2016-131 du 10 février 2016 - art. 4"), plus Légifrance\'s concordance links showing where content moved when articles were renumbered. Use it to explain how an article evolved or to find the version that applied on a date. It takes no date: to read the text in force on a date, use legifrance_get_article with at_date.';
 
 const inputSchema = z.object({
   code: z
@@ -62,7 +62,9 @@ const inputSchema = z.object({
   id: z
     .string()
     .optional()
-    .describe('Légifrance article id (LEGIARTI + 12 digits), instead of code + number.'),
+    .describe(
+      'Légifrance article id, instead of code + number: LEGIARTI + 12 digits (code or law article) or KALIARTI + 12 digits (collective agreement article).',
+    ),
   page: z
     .number()
     .int()

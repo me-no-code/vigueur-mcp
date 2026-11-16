@@ -64,6 +64,39 @@ describe("mapDecision: the outcome is this decision's own timeline entry", () =>
   });
 });
 
+describe('mapDecision: attachment links', () => {
+  const withFiles = (files: unknown[]) =>
+    mapDecision({ ...(loadFixture(J47, 'judilibre') as object), files });
+
+  it('keeps https links to the Judilibre file store or site, and no other', () => {
+    const d = withFiles([
+      {
+        name: 'a',
+        type: 'x',
+        rawUrl: 'https://b.s3.fr-par.scw.cloud/a.pdf',
+        url: 'https://search.judilibre.io/a',
+      },
+      {
+        name: 'b',
+        type: 'x',
+        rawUrl: 'http://b.s3.fr-par.scw.cloud/b.pdf',
+        url: 'https://search.judilibre.io/b',
+      },
+      {
+        name: 'c',
+        type: 'x',
+        rawUrl: 'https://attacker.example/c.pdf',
+        url: 'javascript:alert(1)',
+      },
+    ]);
+    expect(d.files.map((f) => f.url)).toEqual([
+      'https://b.s3.fr-par.scw.cloud/a.pdf',
+      'https://search.judilibre.io/b',
+      null,
+    ]);
+  });
+});
+
 describe('getDecision', () => {
   it('maps a Cour de cassation decision with its zones, outcome and files', async () => {
     const { repo, unmatched } = viaFixture(J47);

@@ -18,8 +18,19 @@ import type {
 const MAX_QUERY_LENGTH = 512;
 /** The API answers 416 beyond its first 10 000 results. */
 const MAX_WINDOW = 10_000;
-const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 20;
+
+/** What a search uses for each parameter the call leaves out. */
+export const JUDILIBRE_SEARCH_DEFAULTS = {
+  match: 'all_words',
+  jurisdiction: 'cc',
+  sort: 'relevance',
+  page: 1,
+  page_size: 10,
+} as const;
+
+/** What a taxonomy listing uses for each parameter the call leaves out. */
+export const JUDILIBRE_TAXONOMY_DEFAULTS = { jurisdiction: 'cc', page: 1 } as const;
 const DECISION_ID = /^[0-9a-f]{24}$/;
 const ZONE_JOINER = '\n[…]\n';
 
@@ -71,7 +82,7 @@ export function createSearchJudilibre(repo: JudilibreRepository) {
     if (query.length > MAX_QUERY_LENGTH) {
       throw invalid(`"query" is limited to ${MAX_QUERY_LENGTH} characters.`);
     }
-    const jurisdiction = input.jurisdiction ?? 'cc';
+    const jurisdiction = input.jurisdiction ?? JUDILIBRE_SEARCH_DEFAULTS.jurisdiction;
     const solution = blankToNull(input.solution) ?? undefined;
     const location = blankToNull(input.location) ?? undefined;
     if (
@@ -87,8 +98,8 @@ export function createSearchJudilibre(repo: JudilibreRepository) {
         '"location" applies to courts of appeal and first-instance courts (jurisdiction ca, tj, tcom or cph).',
       );
     }
-    const page = input.page ?? 1;
-    const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+    const page = input.page ?? JUDILIBRE_SEARCH_DEFAULTS.page;
+    const pageSize = input.pageSize ?? JUDILIBRE_SEARCH_DEFAULTS.page_size;
     if (!Number.isInteger(page) || page < 1) {
       throw invalid('"page" must be a whole number, 1 or more.');
     }
@@ -107,8 +118,8 @@ export function createSearchJudilibre(repo: JudilibreRepository) {
     if (dateFrom !== undefined && dateTo !== undefined && dateFrom > dateTo) {
       throw invalid('"date_from" must not be after "date_to".');
     }
-    const match = input.match ?? 'all_words';
-    const sort = input.sort ?? 'relevance';
+    const match = input.match ?? JUDILIBRE_SEARCH_DEFAULTS.match;
+    const sort = input.sort ?? JUDILIBRE_SEARCH_DEFAULTS.sort;
 
     const wire: JudilibreQuery = {
       query,
@@ -177,6 +188,8 @@ export type TaxonomyResult =
       entries: TaxonomyEntry[];
       total: number;
       contains: string | null;
+      /** When Vigueur fetched the list (the original fetch, on a cache hit). */
+      fetchedAt: Date;
     }
   | { kind: 'free_text'; list: JudilibreTaxonomyId; jurisdiction: JudilibreJurisdiction };
 
@@ -192,11 +205,11 @@ export function createListJudilibreTaxonomy(repo: JudilibreRepository) {
     input: { list: JudilibreTaxonomyId; jurisdiction?: JudilibreJurisdiction; contains?: string },
     ctx?: CallContext,
   ): Promise<TaxonomyResult> => {
-    const jurisdiction = input.jurisdiction ?? 'cc';
+    const jurisdiction = input.jurisdiction ?? JUDILIBRE_TAXONOMY_DEFAULTS.jurisdiction;
     if (jurisdiction !== 'cc' && CC_ONLY_LISTS.includes(input.list)) {
       return { kind: 'free_text', list: input.list, jurisdiction };
     }
-    const all = await repo.taxonomy(input.list, jurisdiction, ctx);
+    const { entries: all, fetchedAt } = await repo.taxonomy(input.list, jurisdiction, ctx);
     const contains = blankToNull(input.contains);
     const needle = contains === null ? '' : foldKey(contains);
     const entries =
@@ -205,6 +218,14 @@ export function createListJudilibreTaxonomy(repo: JudilibreRepository) {
         : all.filter(
             (e) => foldKey(e.label).includes(needle) || foldKey(e.group ?? '').includes(needle),
           );
-    return { kind: 'list', list: input.list, jurisdiction, entries, total: all.length, contains };
+    return {
+      kind: 'list',
+      list: input.list,
+      jurisdiction,
+      entries,
+      total: all.length,
+      contains,
+      fetchedAt,
+    };
   };
 }

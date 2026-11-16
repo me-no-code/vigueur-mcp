@@ -9,6 +9,7 @@ import {
   LEGIFRANCE_FIXTURE_ROUTES,
   sandboxConfig,
 } from '../helpers/fixture-fetch.js';
+import { JUDILIBRE_ROUTES } from '../helpers/judilibre-routes.js';
 import { connectClient, firstText } from '../helpers/mcp-client.js';
 
 /** Tools answering through the envelope. */
@@ -23,6 +24,9 @@ const CONVERTED = new Set<string>([
   'legifrance_list_reference_values',
   'legifrance_search_case_law',
   'legifrance_get_decision',
+  'judilibre_search_decisions',
+  'judilibre_get_decision',
+  'judilibre_list_taxonomy',
 ]);
 
 interface Case {
@@ -95,11 +99,47 @@ const CASES: Case[] = [
   },
   { tool: 'legifrance_get_decision', args: { id: 'JURITEXT000053197030' }, outcome: 'found' },
   { tool: 'legifrance_get_decision', args: { id: 'JURITEXT000099999999' }, outcome: 'not_found' },
+  {
+    tool: 'judilibre_search_decisions',
+    args: { query: 'forfait jours' },
+    outcome: 'results',
+    fetch: 'judilibre',
+  },
+  {
+    tool: 'judilibre_search_decisions',
+    args: { query: '24-16.924', page: 6 },
+    outcome: 'no_results',
+    fetch: 'judilibre',
+  },
+  {
+    tool: 'judilibre_get_decision',
+    args: { id: '6a0e9ff1cdc6046d47668703' },
+    outcome: 'found',
+    fetch: 'judilibre',
+  },
+  {
+    tool: 'judilibre_get_decision',
+    args: { id: '000000000000000000000000' },
+    outcome: 'not_found',
+    fetch: 'judilibre',
+  },
+  {
+    tool: 'judilibre_list_taxonomy',
+    args: { list: 'chamber' },
+    outcome: 'results',
+    fetch: 'judilibre',
+  },
+  {
+    tool: 'judilibre_list_taxonomy',
+    args: { list: 'chamber', jurisdiction: 'ca' },
+    outcome: 'no_results',
+    fetch: 'judilibre',
+  },
 ];
 
 const ROUTES: Record<NonNullable<Case['fetch']>, readonly FixtureRoute[]> = {
   fixtures: LEGIFRANCE_FIXTURE_ROUTES,
-  judilibre: [],
+  judilibre: JUDILIBRE_ROUTES,
 };
 
 /** The `source` a tool's answers name. */

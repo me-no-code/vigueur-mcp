@@ -83,7 +83,7 @@ const inputSchema = z.object({
     .boolean()
     .optional()
     .describe(
-      'true = return every version, whatever its dates (at_date is then ignored). For "codes" and "loda"; no effect on "jorf" and "kali", where at_date is rejected.',
+      'true = return every version, whatever its dates or status. "codes" and "loda": at_date is then ignored. "kali": also the agreements no longer in force. No effect on "jorf".',
     ),
   published_from: optionalIsoDateSchema.describe(
     'Earliest publication date, YYYY-MM-DD (collection "jorf").',

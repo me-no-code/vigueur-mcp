@@ -65,13 +65,17 @@ function mapGroups(structure: unknown): JoGroup[] | null {
   return groups;
 }
 
+/** An ELI path, so that the issue's link stays on legifrance.gouv.fr. */
+const ELI_PATH = /^\/eli\/[\w/.-]+$/;
+
 function mapIssue(c: Obj): JoIssue {
+  const eliPath = orNull(c, 'idEli');
   return {
     id: stripIdSuffix(str(c, 'id')),
     title: cleanTitle(str(c, 'titre')),
     number: orNull(c, 'num'),
     publishedOn: parseApiDate(c.datePubli).date,
-    eliPath: orNull(c, 'idEli'),
+    eliPath: eliPath !== null && ELI_PATH.test(eliPath) ? eliPath : null,
     groups: mapGroups(c.structure),
   };
 }

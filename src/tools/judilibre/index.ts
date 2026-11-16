@@ -25,9 +25,9 @@ export function createJudilibreSource(
   return {
     id: 'judilibre',
     register(server) {
-      registerSearchDecisionsTool(server, services.searchDecisions, ctx.deadlineMs);
-      registerGetDecisionTool(server, services.getDecision, ctx.deadlineMs);
-      registerListTaxonomyTool(server, services.listTaxonomy, ctx.deadlineMs);
+      registerSearchDecisionsTool(server, services.searchDecisions, ctx);
+      registerGetDecisionTool(server, services.getDecision, ctx);
+      registerListTaxonomyTool(server, services.listTaxonomy, ctx);
     },
   };
 }

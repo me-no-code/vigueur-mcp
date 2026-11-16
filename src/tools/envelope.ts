@@ -123,6 +123,40 @@ export const decisionPublicationSchema = z
   .nullable()
   .describe('How the source records the decision as published; null when not given.');
 
+export const ecliSchema = z
+  .string()
+  .nullable()
+  .describe('ECLI of the decision; null when not given.');
+
+/** Fields of the Judilibre tools (shared by `judilibre_search_decisions` and `judilibre_get_decision`). */
+export const judilibreIdSchema = z.string().describe('Judilibre id of the decision.');
+
+export const judilibreLinkSchema = z
+  .string()
+  .describe('Official page of the decision on courdecassation.fr.');
+
+export const judilibreJurisdictionSchema = z
+  .string()
+  .describe(
+    "Judilibre's key for the jurisdiction: cc Cour de cassation, ca court of appeal, tj tribunal judiciaire, tcom commercial court, cph labour court.",
+  );
+
+export const locationSchema = z
+  .string()
+  .nullable()
+  .describe('The court within its jurisdiction, as Judilibre labels it; null when not given.');
+
+export const formationSchema = z
+  .string()
+  .nullable()
+  .describe('Formation of the Cour de cassation, as Judilibre labels it; null when not given.');
+
+export const publicationListSchema = z
+  .array(z.string())
+  .describe(
+    'How the Cour de cassation published the decision, as Judilibre labels it; empty when it is not published in the Bulletin.',
+  );
+
 export const changeActionSchema = z
   .enum(['created', 'amended', 'repealed', 'codified', 'transferred', 'linked'])
   .describe('What the change did to the article.');

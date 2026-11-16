@@ -1,20 +1,40 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import { JURISDICTION_LABELS } from '../../domain/judilibre-labels.js';
-import type { TaxonomyResult } from '../../services/case-law/judilibre.js';
+import {
+  JUDILIBRE_TAXONOMY_DEFAULTS,
+  type TaxonomyResult,
+} from '../../services/case-law/judilibre.js';
 import type {
   CallContext,
   JudilibreJurisdiction,
   JudilibreTaxonomyId,
 } from '../../services/case-law/ports.js';
 import {
+  type AnswerBody,
+  answerSchema,
+  isoSecond,
+  judilibreJurisdictionSchema,
+  nextSchema,
+  type Pointer,
+  pageSchema,
+  requestEcho,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import {
   callSignal,
+  FRAME_SLACK,
+  jsonCost,
+  listPage,
   MAX_TOOL_TEXT,
-  nextPageHint,
-  pageByBudget,
   presentOrUndefined,
+  WIDE_PAGE,
 } from '../format.js';
-import { toToolError } from '../tool-error.js';
+import { toolError } from '../tool-error.js';
+
+const TOOL = 'judilibre_list_taxonomy';
+const SOURCE = 'Judilibre';
 
 export type ListTaxonomy = (
   input: { list: JudilibreTaxonomyId; jurisdiction?: JudilibreJurisdiction; contains?: string },
@@ -22,7 +42,7 @@ export type ListTaxonomy = (
 ) => Promise<TaxonomyResult>;
 
 const DESCRIPTION =
-  'List the values Judilibre uses to classify decisions, with their keys: "chamber", "formation", "publication", "solution" (outcomes), "location" (courts of the other jurisdictions), "jurisdiction", "theme" and "field". The keys are what the filters of judilibre_search_decisions take. ' +
+  'List the values Judilibre uses to classify decisions, with their keys: "chamber", "formation", "publication", "solution" (outcomes), "location" (courts of the other jurisdictions), "jurisdiction", "theme" and "field". In judilibre_search_decisions, the jurisdiction, formation, solution and location filters take these keys and search_in takes the "field" keys (all but "annexes"); the chamber and publication filters take Vigueur\'s own names instead (e.g. "social", not "soc"; "bulletin", not "b"), listed in that tool\'s input schema; "theme" has no filter. ' +
   'For the Cour de cassation (jurisdiction cc, the default) the lists are Judilibre\'s own; for courts of appeal and first-instance courts, chambers, formations, publications and outcomes are recorded as free text and there is no list. "contains" filters by label.';
 
 const inputSchema = z.object({
@@ -47,62 +67,161 @@ const inputSchema = z.object({
 });
 
 const MAX_ENTRIES = 200;
-const SOURCE_LINE = 'Source: Judilibre · https://www.courdecassation.fr';
 
-type Entry = Extract<TaxonomyResult, { kind: 'list' }>['entries'][number];
-const entryLine = (e: Entry): string => (e.key === null ? e.label : `${e.key} — ${e.label}`);
+// ---------------------------------------------------------------------------------------------
+// Output schema
 
-/** One page of a list: `{key} — {label}` per line, under `{group}:` headings when the source groups. */
-export function renderTaxonomy(result: TaxonomyResult, page: number): string {
+const entrySchema = z.object({
+  key: z
+    .string()
+    .nullable()
+    .describe(
+      "The value's key in Judilibre; null when the list has none. The tool description says which judilibre_search_decisions filters take it.",
+    ),
+  label: z.string().describe('The value as Judilibre labels it.'),
+  group: z.string().nullable().describe('The heading the value is listed under; null when none.'),
+});
+
+const listShape = {
+  list: z
+    .enum([
+      'jurisdiction',
+      'chamber',
+      'formation',
+      'publication',
+      'solution',
+      'location',
+      'theme',
+      'field',
+    ])
+    .describe('The list asked for.'),
+  jurisdiction: judilibreJurisdictionSchema.describe('The jurisdiction the list is for.'),
+  contains: z
+    .string()
+    .nullable()
+    .describe('The words the labels are filtered by; null when there is no filter.'),
+  results: z.number().int().describe('Number of values after the filter, over all pages.'),
+  total: z.number().int().describe('Number of values in the whole list.'),
+  free_text: z
+    .boolean()
+    .describe(
+      'Judilibre records this list as free text for this jurisdiction, so there is no list.',
+    ),
+  page: pageSchema,
+  next: nextSchema,
+  items: z.array(entrySchema).describe('The values of this page.'),
+};
+
+const resultsBranch = answerSchema(SOURCE, 'results', listShape);
+const noResultsBranch = answerSchema(SOURCE, 'no_results', listShape);
+
+export const listTaxonomyOutput = z.discriminatedUnion('outcome', [resultsBranch, noResultsBranch]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type ListTaxonomyAnswer = AnswerBody<z.input<typeof listTaxonomyOutput>>;
+type ListAnswer = AnswerBody<z.input<typeof resultsBranch | typeof noResultsBranch>>;
+type Entry = ListAnswer['items'][number];
+
+export interface ListTaxonomyAnswerOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
+  /** The page asked for, 1-based. */
+  page: number;
+}
+
+/**
+ * One page of a list. A list that is free text for the jurisdiction, no value matching `contains`
+ * and a page past the end are `no_results`.
+ */
+export function buildListTaxonomyAnswer(
+  result: TaxonomyResult,
+  opts: ListTaxonomyAnswerOptions,
+): ListTaxonomyAnswer {
+  const { request, page } = opts;
   const court = JURISDICTION_LABELS[result.jurisdiction];
+  const head = { list: result.list, jurisdiction: result.jurisdiction };
   if (result.kind === 'free_text') {
-    return [
-      `For ${court}, Judilibre records ${result.list}s as free text, so there is no list to filter on: put the words in "query" instead.`,
-      SOURCE_LINE,
-    ].join('\n');
+    return {
+      source: SOURCE,
+      outcome: 'no_results',
+      warnings: [
+        `For ${court}, Judilibre records ${result.list}s as free text, so there is no list to filter on: put the words in "query" instead.`,
+      ],
+      ...head,
+      contains: null,
+      results: 0,
+      total: 0,
+      free_text: true,
+      page: { number: page, of: 1 },
+      next: null,
+      items: [],
+      request,
+      cached: [],
+    };
   }
   const matching = result.contains === null ? '' : ` matching "${result.contains}"`;
+  const answer = (
+    items: Entry[],
+    pageNumber: number,
+    pages: number,
+    echo: Pointer,
+    warnings: string[],
+  ): ListAnswer => ({
+    source: SOURCE,
+    outcome: items.length === 0 ? 'no_results' : 'results',
+    warnings,
+    ...head,
+    contains: result.contains,
+    results: result.entries.length,
+    total: result.total,
+    free_text: false,
+    page: { number: pageNumber, of: pages },
+    next: pageNumber < pages ? { page: pageNumber + 1 } : null,
+    items,
+    request: echo,
+    cached: [
+      {
+        what: `Judilibre ${result.list} list (${result.jurisdiction})`,
+        retrieved: isoSecond(result.fetchedAt),
+      },
+    ],
+  });
   if (result.entries.length === 0) {
-    return [
+    return answer([], page, 1, request, [
       `Judilibre has no ${result.list} value${matching} for ${court} (${result.total} values in the list).`,
-      SOURCE_LINE,
-    ].join('\n');
+    ]);
   }
-  const paged = pageByBudget(
-    result.entries,
+  // The frame is measured with the widest page numbers, so the split does not depend on the page.
+  const frame = JSON.stringify(
+    answer([], WIDE_PAGE, WIDE_PAGE + 1, { ...request, page: WIDE_PAGE }, []),
+  ).length;
+  const paged = listPage(result.entries, page, (e) => jsonCost(e), {
+    maxItems: MAX_ENTRIES,
+    budget: MAX_TOOL_TEXT - frame - FRAME_SLACK,
+  });
+  return answer(
+    paged.items.map((e) => ({ key: e.key, label: e.label, group: e.group })),
     page,
-    (e, prev) =>
-      entryLine(e).length +
-      1 +
-      (e.group !== null && e.group !== prev?.group ? e.group.length + 2 : 0),
-    { maxItems: MAX_ENTRIES, budget: MAX_TOOL_TEXT - 600 },
+    paged.pageCount,
+    request,
+    [],
   );
-  const lines: string[] = [];
-  let group: string | null | undefined;
-  for (const e of paged.items) {
-    if (e.group !== null && e.group !== group) lines.push(`${e.group}:`);
-    group = e.group;
-    lines.push(entryLine(e));
-  }
-  return [
-    `Judilibre — ${result.entries.length} ${result.list} values${matching} for ${court}. Page ${page} of ${paged.pageCount}.`,
-    lines.join('\n'),
-    ...(paged.hasMore ? [nextPageHint(page)] : []),
-    SOURCE_LINE,
-  ].join('\n\n');
 }
 
 export function registerListTaxonomyTool(
   server: McpServer,
   listTaxonomy: ListTaxonomy,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'judilibre_list_taxonomy',
+    TOOL,
     {
       title: 'List Judilibre values',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: listTaxonomyOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -110,8 +229,9 @@ export function registerListTaxonomyTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, JUDILIBRE_TAXONOMY_DEFAULTS);
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const result = await listTaxonomy(
           {
@@ -121,9 +241,16 @@ export function registerListTaxonomyTool(
           },
           { signal },
         );
-        return { content: [{ type: 'text', text: renderTaxonomy(result, args.page ?? 1) }] };
+        const body = buildListTaxonomyAnswer(result, { request, page: args.page ?? 1 });
+        return toolAnswer(listTaxonomyOutput, body, ctx);
       } catch (err) {
-        return toToolError(err, signal, 'judilibre');
+        return toolError(err, {
+          source: 'judilibre',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );

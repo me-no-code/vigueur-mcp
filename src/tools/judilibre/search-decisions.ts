@@ -11,21 +11,52 @@ import {
   SOLUTION_LABELS,
 } from '../../domain/judilibre-labels.js';
 import { judilibreDecisionUrl } from '../../domain/links.js';
-import type {
-  JudilibreMatch,
-  JudilibreSearchView,
-  SearchJudilibreInput,
+import {
+  JUDILIBRE_SEARCH_DEFAULTS,
+  type JudilibreMatch,
+  type JudilibreSearchView,
+  type SearchJudilibreInput,
 } from '../../services/case-law/judilibre.js';
 import type { CallContext, JudilibreHit } from '../../services/case-law/ports.js';
 import {
+  type AnswerBody,
+  answerSchema,
+  chamberSchema,
+  DECISION_TITLE_MAX,
+  decidedSchema,
+  decisionTitleSchema,
+  ecliSchema,
+  formationSchema,
+  judilibreIdSchema,
+  judilibreJurisdictionSchema,
+  judilibreLinkSchema,
+  locationSchema,
+  nextSchema,
+  numbersSchema,
+  orderSchema,
+  type Pointer,
+  pageSchema,
+  pointerSchema,
+  publicationListSchema,
+  requestEcho,
+  solutionSchema,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import {
   callSignal,
   cut,
+  FRAME_SLACK,
+  jsonCost,
   MAX_TOOL_TEXT,
-  nextPageHint,
   optionalIsoDateSchema,
   presentOrUndefined,
+  WIDE_PAGE,
 } from '../format.js';
-import { toToolError } from '../tool-error.js';
+import { toolError } from '../tool-error.js';
+
+const TOOL = 'judilibre_search_decisions';
+const SOURCE = 'Judilibre';
 
 export type SearchDecisions = (
   input: SearchJudilibreInput,
@@ -115,16 +146,66 @@ const MATCH_WORDS: Record<JudilibreMatch, string> = {
   any_word: 'any word',
   exact_phrase: 'exact phrase',
 };
-const SORT_WORDS = {
-  relevance: 'most relevant first',
-  newest: 'newest first',
-  oldest: 'oldest first',
-} as const;
 
 /** Judilibre pages through its first 10 000 results only. */
 const MAX_WINDOW = 10_000;
 const SUMMARY_MAX = 600;
 const EXCERPT_MAX = 700;
+
+// ---------------------------------------------------------------------------------------------
+// Output schema
+
+const hitSchema = z.object({
+  title: decisionTitleSchema.describe(
+    'Court, chamber, decision date, numbers and ECLI as one line; cut to 300 characters.',
+  ),
+  id: judilibreIdSchema,
+  ecli: ecliSchema,
+  link: judilibreLinkSchema,
+  jurisdiction: judilibreJurisdictionSchema,
+  location: locationSchema,
+  chamber: chamberSchema,
+  decided: decidedSchema,
+  numbers: numbersSchema,
+  formation: formationSchema,
+  publication: publicationListSchema,
+  solution: solutionSchema,
+  summary: z
+    .string()
+    .nullable()
+    .describe("The Cour de cassation's summary; cut to 600 characters; null when none."),
+  excerpt: z
+    .string()
+    .nullable()
+    .describe('The matching passages joined with " … "; cut to 700 characters; null when none.'),
+  read_with: pointerSchema.describe('The tool call that returns the full decision.'),
+});
+
+const searchShape = {
+  results: z.number().int().describe('Number of decisions over all pages.'),
+  page: pageSchema,
+  order: orderSchema,
+  next: nextSchema,
+  relaxed: z
+    .boolean()
+    .describe('Judilibre found no exact match and loosened the search to some of the words.'),
+  items: z.array(hitSchema).describe('The decisions of this page.'),
+};
+
+const resultsBranch = answerSchema(SOURCE, 'results', searchShape);
+const noResultsBranch = answerSchema(SOURCE, 'no_results', searchShape);
+
+export const searchDecisionsOutput = z.discriminatedUnion('outcome', [
+  resultsBranch,
+  noResultsBranch,
+]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type SearchDecisionsAnswer = AnswerBody<z.input<typeof searchDecisionsOutput>>;
+type SearchAnswer = AnswerBody<z.input<typeof resultsBranch | typeof noResultsBranch>>;
+type SearchItem = SearchAnswer['items'][number];
 
 /** The criteria of a search other than the query, as short phrases. */
 function filtersOf(input: JudilibreSearchView['input']): string[] {
@@ -142,7 +223,7 @@ function filtersOf(input: JudilibreSearchView['input']): string[] {
   ];
 }
 
-/** `{court}, {chamber} — decision of {date} — n° {numbers} — {ecli}`: shared with the decision page. */
+/** `{court}, {chamber} — decision of {date} — n° {numbers} — {ecli}`: the title of a decision. */
 export function identityLine(
   d: Pick<
     JudilibreHit,
@@ -162,93 +243,142 @@ export function identityLine(
   ].join(' — ');
 }
 
-/** The publication labels, or for a Cour de cassation decision without any, that it is not in the Bulletin. */
-export function publicationText(
-  d: Pick<JudilibreHit, 'jurisdiction' | 'publication'>,
-): string | null {
-  if (d.publication.length > 0) return d.publication.map((p) => p.label).join(', ');
-  return d.jurisdiction.key === 'cc' ? 'not published in the Bulletin' : null;
+function searchItem(hit: JudilibreHit): SearchItem {
+  return {
+    title: cut(identityLine(hit), DECISION_TITLE_MAX),
+    id: hit.id,
+    ecli: hit.ecli,
+    link: judilibreDecisionUrl(hit.id),
+    jurisdiction: hit.jurisdiction.key,
+    location: hit.location?.label ?? null,
+    chamber: hit.chamber?.label ?? null,
+    decided: hit.decisionDate,
+    numbers: hit.numbers,
+    formation: hit.formation?.label ?? null,
+    publication: hit.publication.map((p) => p.label),
+    solution: hit.solution?.label ?? hit.solutionText,
+    summary: hit.summary === null ? null : cut(hit.summary, SUMMARY_MAX),
+    excerpt: hit.highlights.length > 0 ? cut(hit.highlights.join(' … '), EXCERPT_MAX) : null,
+    read_with: { tool: 'judilibre_get_decision', id: hit.id },
+  };
 }
 
-function renderHit(hit: JudilibreHit, n: number): string {
-  const publication = publicationText(hit);
-  const second = [hit.formation?.label, publication, hit.solution?.label ?? hit.solutionText]
-    .filter((p): p is string => Boolean(p))
-    .join(' · ');
-  return [
-    `${n}. ${identityLine(hit)}`,
-    ...(second ? [second] : []),
-    ...(hit.summary ? [`Summary: ${cut(hit.summary, SUMMARY_MAX)}`] : []),
-    ...(hit.highlights.length > 0
-      ? [`Excerpt: ${cut(hit.highlights.join(' … '), EXCERPT_MAX)}`]
-      : []),
-    `Source: Judilibre · ${judilibreDecisionUrl(hit.id)}`,
-    `Full text: judilibre_get_decision id "${hit.id}"`,
-  ].join('\n');
+const ORDERS = {
+  relevance: 'most_relevant_first',
+  newest: 'newest_first',
+  oldest: 'oldest_first',
+} as const;
+
+const RELAXED_NOTICE =
+  'Judilibre found no exact match and loosened the search: these results match only some of the words.';
+const CAPPED_NOTICE =
+  'Only the first 10 000 are reachable by paging; narrow the search to see the others.';
+
+const onlyFirst = (shown: number, total: number) =>
+  `(Only the first ${shown} of ${total} hits of this page fit — use a smaller "page_size".)`;
+
+export interface SearchDecisionsAnswerOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
 }
 
-/** A page of hits with its header; every hit carries its source and a pointer to its full text. */
-export function renderSearch(view: JudilibreSearchView): string {
+/**
+ * One page of decisions. Hits that would take the answer past `MAX_TOOL_TEXT` are left out, with a
+ * warning. A page without hits (none found, or past the last page) is `no_results`.
+ */
+export function buildSearchDecisionsAnswer(
+  view: JudilibreSearchView,
+  opts: SearchDecisionsAnswerOptions,
+): SearchDecisionsAnswer {
   const { input, result } = view;
-  const court = labelOf(JURISDICTION_LABELS, input.jurisdiction);
-  const filters = filtersOf(input);
-  const criteria = [MATCH_WORDS[input.match], court, ...filters].join(', ');
-  if (result.total === 0) {
-    const tries = [
-      ...(input.match === 'any_word' ? [] : ['"match": "any_word"']),
-      'fewer filters',
-      'another jurisdiction',
-      "legifrance_search_case_law (Conseil d'État, Conseil constitutionnel, CNIL, financial courts, older Cour de cassation decisions)",
-    ];
-    return [
-      `No Judilibre decision matches "${input.query}" with these criteria: ${criteria}.`,
-      `Try ${tries.slice(0, -1).join(', ')} or ${tries.at(-1)}.`,
-    ].join('\n');
-  }
-  const capped =
-    result.total > MAX_WINDOW
-      ? ' Only the first 10 000 are reachable by paging; narrow the search to see the others.'
-      : '';
-  const header = `Judilibre — ${result.total} ${result.total === 1 ? 'decision matches' : 'decisions match'} "${input.query}" (${criteria}).${capped} Page ${input.page} of ${view.pageCount}, ${SORT_WORDS[input.sort]}.`;
-  if (result.hits.length === 0) {
-    return `${header}\nPage ${input.page} is past the last page (${view.pageCount}).`;
-  }
-  const first = (input.page - 1) * input.pageSize;
-  const tail = input.page < view.pageCount ? [nextPageHint(input.page)] : [];
-  const relaxed = result.relaxed
-    ? [
-        'Judilibre found no exact match and loosened the search: these results match only some of the words.',
-      ]
-    : [];
-  // Cap the page: a hit is up to ~1 900 characters, so 20 long ones could pass MAX_TOOL_TEXT.
-  let used = [header, ...relaxed, ...tail].join('\n\n').length + 200;
-  const blocks: string[] = [];
-  for (const [i, hit] of result.hits.entries()) {
-    const block = renderHit(hit, first + i + 1);
-    if (blocks.length > 0 && used + block.length + 2 > MAX_TOOL_TEXT) break;
-    blocks.push(block);
-    used += block.length + 2;
-  }
-  const shown =
-    blocks.length < result.hits.length
-      ? [
-          `(Only the first ${blocks.length} of ${result.hits.length} hits of this page fit — use a smaller "page_size".)`,
-        ]
+  const pageCount = Math.max(1, view.pageCount);
+  const page = input.page;
+  const pastEnd = result.total > 0 && page > view.pageCount;
+  const { request } = opts;
+  const none =
+    result.total === 0
+      ? (() => {
+          const criteria = [
+            MATCH_WORDS[input.match],
+            labelOf(JURISDICTION_LABELS, input.jurisdiction),
+            ...filtersOf(input),
+          ].join(', ');
+          const tries = [
+            ...(input.match === 'any_word' ? [] : ['"match": "any_word"']),
+            'fewer filters',
+            'another jurisdiction',
+            "legifrance_search_case_law (Conseil d'État, Conseil constitutionnel, CNIL, financial courts, older Cour de cassation decisions)",
+          ];
+          return [
+            `No Judilibre decision matches "${input.query}" with these criteria: ${criteria}.`,
+            `Try ${tries.slice(0, -1).join(', ')} or ${tries.at(-1)}.`,
+          ];
+        })()
       : [];
-  return [header, ...relaxed, ...blocks, ...shown, ...tail].join('\n\n');
+  const notices = [
+    ...(result.total > MAX_WINDOW ? [CAPPED_NOTICE] : []),
+    ...(result.relaxed ? [RELAXED_NOTICE] : []),
+  ];
+  const answer = (
+    outcome: 'results' | 'no_results',
+    items: SearchItem[],
+    extra: string[],
+    pageNumber: number,
+    pages: number,
+    echo: Pointer,
+  ): SearchAnswer => ({
+    source: SOURCE,
+    outcome,
+    warnings: [...none, ...notices, ...extra],
+    results: result.total,
+    page: { number: pageNumber, of: pages },
+    order: ORDERS[input.sort],
+    next: pageNumber < pages ? { page: pageNumber + 1 } : null,
+    relaxed: result.relaxed,
+    items,
+    request: echo,
+    cached: [],
+  });
+
+  const hits = pastEnd ? [] : result.hits.map(searchItem);
+  // The frame is measured with the widest page numbers, so the split does not depend on the page.
+  const frame = JSON.stringify(
+    answer('results', [], [onlyFirst(hits.length, hits.length)], WIDE_PAGE, WIDE_PAGE + 1, {
+      ...request,
+      page: WIDE_PAGE,
+    }),
+  ).length;
+  let used = frame + FRAME_SLACK;
+  let shown = 0;
+  for (const item of hits) {
+    const cost = jsonCost(item);
+    if (shown > 0 && used + cost > MAX_TOOL_TEXT) break;
+    used += cost;
+    shown += 1;
+  }
+  const extra = shown < hits.length ? [onlyFirst(shown, hits.length)] : [];
+  return answer(
+    shown === 0 ? 'no_results' : 'results',
+    hits.slice(0, shown),
+    extra,
+    page,
+    pageCount,
+    request,
+  );
 }
 
 export function registerSearchDecisionsTool(
   server: McpServer,
   searchDecisions: SearchDecisions,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'judilibre_search_decisions',
+    TOOL,
     {
       title: 'Search Judilibre decisions',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: searchDecisionsOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -256,8 +386,9 @@ export function registerSearchDecisionsTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, JUDILIBRE_SEARCH_DEFAULTS);
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const view = await searchDecisions(
           {
@@ -278,9 +409,19 @@ export function registerSearchDecisionsTool(
           },
           { signal },
         );
-        return { content: [{ type: 'text', text: renderSearch(view) }] };
+        return toolAnswer(
+          searchDecisionsOutput,
+          buildSearchDecisionsAnswer(view, { request }),
+          ctx,
+        );
       } catch (err) {
-        return toToolError(err, signal, 'judilibre');
+        return toolError(err, {
+          source: 'judilibre',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );

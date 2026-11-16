@@ -18,6 +18,7 @@ import {
   decisionIdSchema,
   decisionPublicationSchema,
   decisionTitleSchema,
+  ecliSchema,
   legifranceLinkSchema,
   legifranceStatusSchema,
   natureSchema,
@@ -69,7 +70,7 @@ const SUMMARY_MAX = [2000, 1000, 500, 200] as const;
 
 const foundBranch = answerSchema(SOURCE, 'found', {
   id: decisionIdSchema,
-  ecli: z.string().nullable().describe('ECLI of the decision; null when not given.'),
+  ecli: ecliSchema,
   link: legifranceLinkSchema,
   title: decisionTitleSchema,
   court: courtSchema,
@@ -166,7 +167,7 @@ export function buildGetDecisionAnswer(
   const d = result.decision;
   const { offset } = opts;
   const end = d.text.length;
-  if (offset > end) {
+  if (offset > 0 && offset >= end) {
     throw new VigueurError(
       'invalid_input',
       `"offset" ${offset} is past the end of the text (${end} characters).`,

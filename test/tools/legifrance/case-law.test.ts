@@ -230,6 +230,28 @@ describe('legifrance_get_decision', () => {
     expect(e.error.message).toContain('offset');
     expect(e.request).toEqual({ tool: DECISION, id: 'JURITEXT000053197030', offset: 10_000_000 });
   });
+
+  it('rejects an offset at the end of the text, like legifrance_get_article; offset 0 reads an empty text', async () => {
+    const d = decisionFixture({ text: 'texte' });
+    const repo = fakeLegifrance({ decisions: { [d.id]: d } }).repo;
+    const e = expectToolError(
+      await callOver(repo, DECISION, { id: d.id, offset: 5 }),
+      'invalid_input',
+    );
+    expect(e.error.message).toBe('"offset" 5 is past the end of the text (5 characters).');
+    expect(e.request).toEqual({ tool: DECISION, id: d.id, offset: 5 });
+    const empty = decisionFixture({ text: '' });
+    const a = expectAnswer(
+      await callOver(fakeLegifrance({ decisions: { [empty.id]: empty } }).repo, DECISION, {
+        id: empty.id,
+        offset: 0,
+      }),
+      { source: SOURCE, outcome: 'found' },
+    );
+    expect(a.text).toBe('');
+    expect(a.part).toBeNull();
+    expect(a.next).toBeNull();
+  });
 });
 
 function decisionFixture(over: Partial<LegifranceDecision> = {}): LegifranceDecision {

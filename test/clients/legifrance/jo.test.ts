@@ -55,6 +55,24 @@ describe('latestJo (fixture 47)', () => {
     expect(natures.has('DECRET')).toBe(true);
   });
 
+  it('keeps an ELI path only when it is one, so a link cannot leave legifrance.gouv.fr', async () => {
+    const issue = (idEli: string) => ({ id: 'JORFCONT000000000001', titre: 'JO', idEli });
+    const { repo } = client([
+      {
+        path: '/consult/lastNJo',
+        reply: {
+          containers: [
+            issue('/eli/jo/2026/11/11/0264'),
+            issue('.attacker.example/x'),
+            issue('@attacker.example/x'),
+          ],
+        },
+      },
+    ]);
+    const issues = await repo.latestJo(3);
+    expect(issues.map((i) => i.eliPath)).toEqual(['/eli/jo/2026/11/11/0264', null, null]);
+  });
+
   it('turns empty strings into null', async () => {
     const { repo } = client([serve('/consult/lastNJo', '47-lastNJo-3')]);
     const [first] = await repo.latestJo(3);

@@ -1,7 +1,7 @@
 import type {
   CallContext,
   JudilibreRepository,
-  TaxonomyEntry,
+  TaxonomyList,
 } from '../../services/case-law/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
@@ -38,7 +38,7 @@ export function createJudilibreClient(
   http: PisteHttp,
   now: () => Date = () => new Date(),
 ): JudilibreRepository {
-  const taxonomies = new Map<string, { fetchedAt: number; entries: TaxonomyEntry[] }>();
+  const taxonomies = new Map<string, { fetchedAt: Date; entries: TaxonomyList['entries'] }>();
 
   return {
     search: (q, ctx) => getJson(http, '/search', searchParams(q), ctx, mapSearch),
@@ -56,8 +56,8 @@ export function createJudilibreClient(
     async taxonomy(id, context, ctx) {
       const key = `${id}|${context}`;
       const hit = taxonomies.get(key);
-      if (hit !== undefined && now().getTime() - hit.fetchedAt < TAXONOMY_MAX_AGE_MS) {
-        return hit.entries;
+      if (hit !== undefined && now().getTime() - hit.fetchedAt.getTime() < TAXONOMY_MAX_AGE_MS) {
+        return { entries: hit.entries, fetchedAt: hit.fetchedAt };
       }
       const entries = await getJson(
         http,
@@ -66,8 +66,9 @@ export function createJudilibreClient(
         ctx,
         mapTaxonomy,
       );
-      taxonomies.set(key, { fetchedAt: now().getTime(), entries });
-      return entries;
+      const fetchedAt = now();
+      taxonomies.set(key, { fetchedAt, entries });
+      return { entries, fetchedAt };
     },
   };
 }

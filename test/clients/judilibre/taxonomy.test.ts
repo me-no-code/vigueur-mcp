@@ -17,14 +17,14 @@ function serving(fixture: string) {
 describe('taxonomy', () => {
   it('maps a key-to-label map', async () => {
     const { http, requests } = serving('29-taxonomy-cc-chamber');
-    const entries = await createJudilibreClient(http).taxonomy('chamber', 'cc');
+    const { entries } = await createJudilibreClient(http).taxonomy('chamber', 'cc');
     expect(entries).toContainEqual({ key: 'soc', label: 'Chambre sociale', group: null });
     expect(requests[0]?.path).toBe('/taxonomy');
     expect(requests[0]?.query).toEqual({ id: 'chamber', context_value: 'cc' });
   });
 
   it('maps a flat list to entries without a key', async () => {
-    const entries = await createJudilibreClient(serving('34-taxonomy-cc-theme').http).taxonomy(
+    const { entries } = await createJudilibreClient(serving('34-taxonomy-cc-theme').http).taxonomy(
       'theme',
       'cc',
     );
@@ -33,7 +33,7 @@ describe('taxonomy', () => {
   });
 
   it('maps nested lists to groups headed by their first string', async () => {
-    const entries = await createJudilibreClient(serving('42-taxonomy-ca-theme').http).taxonomy(
+    const { entries } = await createJudilibreClient(serving('42-taxonomy-ca-theme').http).taxonomy(
       'theme',
       'ca',
     );
@@ -55,5 +55,19 @@ describe('taxonomy', () => {
     at += 24 * 60 * 60 * 1000;
     await repo.taxonomy('chamber', 'cc');
     expect(requests).toHaveLength(3);
+  });
+
+  it('gives the time the list was fetched, also when it is served from the cache', async () => {
+    const { http } = serving('29-taxonomy-cc-chamber');
+    let at = Date.parse('2026-11-13T10:00:00Z');
+    const repo = createJudilibreClient(http, () => new Date(at));
+    const first = await repo.taxonomy('chamber', 'cc');
+    expect(first.fetchedAt).toEqual(new Date('2026-11-13T10:00:00Z'));
+    at += 60_000;
+    const second = await repo.taxonomy('chamber', 'cc');
+    expect(second.fetchedAt).toEqual(new Date('2026-11-13T10:00:00Z'));
+    expect(second.entries).toBe(first.entries);
+    at += 24 * 60 * 60 * 1000;
+    expect((await repo.taxonomy('chamber', 'cc')).fetchedAt).toEqual(new Date(at));
   });
 });
