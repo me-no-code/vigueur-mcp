@@ -5,17 +5,38 @@ import {
   LEGIFRANCE_CASE_LAW_COVERAGE_NOTE,
   type LegifranceDecisionResult,
 } from '../../services/case-law/legifrance.js';
-import type { CallContext, LegifranceDecision } from '../../services/case-law/ports.js';
+import type { CallContext } from '../../services/case-law/ports.js';
 import { VigueurError } from '../../shared/errors.js';
 import {
-  callSignal,
-  cut,
-  fitHead,
-  MAX_TOOL_TEXT,
-  paginateText,
-  truncationNotice,
-} from '../format.js';
-import { toToolError } from '../tool-error.js';
+  type AnswerBody,
+  answerSchema,
+  chamberSchema,
+  courtSchema,
+  DECISION_TITLE_MAX,
+  dateSchema,
+  decidedSchema,
+  decisionIdSchema,
+  decisionPublicationSchema,
+  decisionTitleSchema,
+  legifranceLinkSchema,
+  legifranceStatusSchema,
+  natureSchema,
+  nextSchema,
+  numbersSchema,
+  type Pointer,
+  partSchema,
+  pointerSchema,
+  publishedSchema,
+  requestEcho,
+  solutionSchema,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import { callSignal, cut, FRAME_SLACK, fitHead, MAX_TOOL_TEXT, sliceForJson } from '../format.js';
+import { toolError } from '../tool-error.js';
+
+const TOOL = 'legifrance_get_decision';
+const SOURCE = 'Légifrance';
 
 export type GetDecision = (
   input: { id: string },
@@ -42,99 +63,199 @@ const inputSchema = z.object({
 
 /** The summary's cut, fullest first (see `fitHead`). */
 const SUMMARY_MAX = [2000, 1000, 500, 200] as const;
-const TITLE_MAX = 300;
 
-const notFound = (id: string): string =>
-  [
-    `No Légifrance decision with id "${id}".`,
-    'Find decisions with legifrance_search_case_law.',
-    ...(id.startsWith('JURITEXT') ? [LEGIFRANCE_CASE_LAW_COVERAGE_NOTE] : []),
-  ].join('\n');
+// ---------------------------------------------------------------------------------------------
+// Output schema
 
-function identityLine(d: LegifranceDecision): string {
-  if (d.court === null && d.decisionDate === null) return d.title;
-  return [
-    [d.court, d.chamber].filter(Boolean).join(', '),
-    ...(d.decisionDate ? [`decision of ${d.decisionDate}`] : []),
-    ...(d.numbers.length > 0 ? [`n° ${d.numbers.join(', ')}`] : []),
-    ...(d.ecli ? [d.ecli] : []),
-  ]
-    .filter((p) => p !== '')
-    .join(' — ');
+const foundBranch = answerSchema(SOURCE, 'found', {
+  id: decisionIdSchema,
+  ecli: z.string().nullable().describe('ECLI of the decision; null when not given.'),
+  link: legifranceLinkSchema,
+  title: decisionTitleSchema,
+  court: courtSchema,
+  chamber: chamberSchema,
+  nature: natureSchema,
+  decided: decidedSchema,
+  numbers: numbersSchema,
+  publication: decisionPublicationSchema,
+  solution: solutionSchema,
+  legifrance_status: legifranceStatusSchema.describe(
+    "Légifrance's status label of a CNIL deliberation; null when it gives none.",
+  ),
+  published: publishedSchema,
+  attacked: z
+    .object({
+      court: z.string().describe('The court that gave the attacked decision.'),
+      decided: dateSchema
+        .nullable()
+        .describe('Date of the attacked decision; null when not given.'),
+    })
+    .nullable()
+    .describe('The attacked decision, when the source states it; null otherwise.'),
+  constitutional_council_link: z
+    .string()
+    .nullable()
+    .describe('Page of the decision on conseil-constitutionnel.fr; null when none.'),
+  jo_link: z
+    .string()
+    .nullable()
+    .describe('Link to the Journal officiel publication; null when none.'),
+  summary: z
+    .string()
+    .nullable()
+    .describe(
+      'The summary (sommaire), cut when long; null when there is none and on every page after the first.',
+    ),
+  part: partSchema.nullable().describe('The characters of the text shown; null when it is whole.'),
+  next: nextSchema,
+  text: z
+    .string()
+    .describe(
+      'The text of the decision verbatim (the part shown); names are pseudonymised by the source.',
+    ),
+  other_source: pointerSchema
+    .nullable()
+    .describe(
+      'The call that finds the same decision on Judilibre; given on the last page of a judicial decision with an ECLI, else null.',
+    ),
+});
+
+const notFoundBranch = answerSchema(SOURCE, 'not_found', {
+  id: z.string().describe('The decision id looked up.'),
+});
+
+export const getDecisionOutput = z.discriminatedUnion('outcome', [foundBranch, notFoundBranch]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type GetDecisionAnswer = AnswerBody<z.input<typeof getDecisionOutput>>;
+type FoundAnswer = AnswerBody<z.input<typeof foundBranch>>;
+
+export interface GetDecisionAnswerOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
+  /** Where the page of the decision text starts. */
+  offset: number;
 }
 
-/** One page (`offset`) of a decision: identity, source and, at offset 0, the decision's metadata. */
-export function renderDecision(result: LegifranceDecisionResult, offset: number): string {
-  if (result.kind === 'not_found') return notFound(result.id);
+const JUDILIBRE_FACT = 'Same decision on Judilibre (usually earlier, with zones).';
+
+/**
+ * One page (`offset`) of a decision. Only the text is cut; every page carries the identity, the
+ * link and the metadata, but the summary, which is given on the first page only.
+ */
+export function buildGetDecisionAnswer(
+  result: LegifranceDecisionResult,
+  opts: GetDecisionAnswerOptions,
+): GetDecisionAnswer {
+  if (result.kind === 'not_found') {
+    return {
+      source: SOURCE,
+      outcome: 'not_found',
+      warnings: [
+        `No Légifrance decision with id "${result.id}".`,
+        'Find decisions with legifrance_search_case_law.',
+        ...(result.id.startsWith('JURITEXT') ? [LEGIFRANCE_CASE_LAW_COVERAGE_NOTE] : []),
+      ],
+      id: result.id,
+      request: opts.request,
+      cached: [],
+    };
+  }
   const d = result.decision;
-  if (offset > d.text.length) {
+  const { offset } = opts;
+  const end = d.text.length;
+  if (offset > end) {
     throw new VigueurError(
       'invalid_input',
-      `"offset" ${offset} is past the end of the text (${d.text.length} characters).`,
+      `"offset" ${offset} is past the end of the text (${end} characters).`,
     );
   }
-  const pointer =
-    d.collection === 'judicial' && d.ecli
-      ? `Same decision on Judilibre (usually earlier, with zones): judilibre_search_decisions with "query": "${d.ecli}".`
-      : null;
-  const buildHead = (level: number): string => {
-    const head: string[] = [
-      identityLine(d),
-      `Source: Légifrance · ${decisionUrl(d.id)} (official page, constructed link)`,
-    ];
-    if (offset === 0) {
-      // CNIL and Conseil constitutionnel decisions have no court-style identity: their title says what they are.
-      const subject = d.collection === 'cnil' || d.collection === 'constitutional';
-      const labels = [d.nature, d.publication, d.solution].filter((p): p is string => Boolean(p));
-      head.push(
-        ...(subject ? [`Title: ${cut(d.title, TITLE_MAX)}`] : []),
-        ...(labels.length > 0 ? [labels.join(' · ')] : []),
-        ...(d.attacked
-          ? [
-              `Attacked decision: ${d.attacked.court}${d.attacked.date ? `, decision of ${d.attacked.date}` : ''}`,
-            ]
-          : []),
-        ...(d.constitutionalCouncilUrl
-          ? [`Conseil constitutionnel page: ${d.constitutionalCouncilUrl}`]
-          : []),
-        ...(d.joUrl ? [`Published in the Journal officiel: ${d.joUrl}`] : []),
-        ...(d.labelledStatus
-          ? [
-              `Status as labelled by Légifrance: ${d.labelledStatus}${d.publishedOn ? ` · published ${d.publishedOn}` : ''}`,
-            ]
-          : []),
-        ...(d.summary
-          ? [`Summary (sommaire): ${cut(d.summary, SUMMARY_MAX[level] as number)}`]
-          : []),
-      );
-    }
-    head.push('── Text ──');
-    return head.join('\n');
-  };
-  const roomLeft = (head: string): number =>
-    MAX_TOOL_TEXT -
-    (head.length + 1 + (pointer?.length ?? 0) + 2 + truncationNotice(d.text.length).length + 4);
-  const headText = fitHead(buildHead, SUMMARY_MAX.length, roomLeft);
-  const page = paginateText(d.text, offset, roomLeft(headText));
-  return [
-    headText,
-    page.text,
-    ...(page.nextOffset === null ? [] : [truncationNotice(page.nextOffset)]),
-    ...(pointer !== null && page.nextOffset === null ? [pointer] : []),
-  ].join('\n');
+  const judilibre = d.collection === 'judicial' && d.ecli !== null ? d.ecli : null;
+  const page = (
+    summary: string | null,
+    text: string,
+    part: FoundAnswer['part'],
+    next: FoundAnswer['next'],
+    request: Pointer,
+    last: boolean = next === null,
+  ): FoundAnswer => ({
+    source: SOURCE,
+    outcome: 'found',
+    // The Judilibre pointer ends the decision: it sits on the page where the text ends.
+    warnings: judilibre !== null && last ? [JUDILIBRE_FACT] : [],
+    id: d.id,
+    ecli: d.ecli,
+    link: decisionUrl(d.id),
+    title: cut(d.title, DECISION_TITLE_MAX),
+    court: d.court,
+    chamber: d.chamber,
+    nature: d.nature,
+    decided: d.decisionDate,
+    numbers: d.numbers,
+    publication: d.publication,
+    solution: d.solution,
+    legifrance_status: d.labelledStatus,
+    published: d.publishedOn,
+    attacked: d.attacked === null ? null : { court: d.attacked.court, decided: d.attacked.date },
+    constitutional_council_link: d.constitutionalCouncilUrl,
+    jo_link: d.joUrl,
+    summary,
+    part,
+    next,
+    text,
+    other_source:
+      judilibre !== null && last ? { tool: 'judilibre_search_decisions', query: judilibre } : null,
+    request,
+    cached: [],
+  });
+
+  // The frame is measured with the widest part, next and offset, and with the Judilibre pointer
+  // and its sentence present (the worst case), so the split does not depend on the page asked.
+  const summaryAt = (lvl: number): string | null =>
+    offset === 0 && d.summary !== null ? cut(d.summary, SUMMARY_MAX[lvl] as number) : null;
+  const frame = (lvl: number): string =>
+    JSON.stringify(
+      page(
+        summaryAt(lvl),
+        '',
+        { from: end, to: end, of: end },
+        { offset: end },
+        { ...opts.request, offset: end },
+        true,
+      ),
+    );
+  const roomLeft = (head: string): number => MAX_TOOL_TEXT - head.length - FRAME_SLACK;
+  const head = fitHead(frame, SUMMARY_MAX.length, roomLeft);
+  const level = Math.max(
+    0,
+    SUMMARY_MAX.findIndex((_, lvl) => frame(lvl) === head),
+  );
+  const summary = summaryAt(level);
+  const slice = sliceForJson(d.text, offset, roomLeft(head));
+  const whole = offset === 0 && slice.nextOffset === null;
+  return page(
+    summary,
+    slice.text,
+    whole ? null : { from: offset, to: slice.nextOffset ?? end, of: end },
+    slice.nextOffset === null ? null : { offset: slice.nextOffset },
+    opts.request,
+  );
 }
 
 export function registerGetDecisionTool(
   server: McpServer,
   getDecision: GetDecision,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'legifrance_get_decision',
+    TOOL,
     {
       title: 'Read a Légifrance decision',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: getDecisionOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -142,13 +263,21 @@ export function registerGetDecisionTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, { offset: 0 });
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const result = await getDecision({ id: args.id }, { signal });
-        return { content: [{ type: 'text', text: renderDecision(result, args.offset ?? 0) }] };
+        const body = buildGetDecisionAnswer(result, { request, offset: args.offset ?? 0 });
+        return toolAnswer(getDecisionOutput, body, ctx);
       } catch (err) {
-        return toToolError(err, signal, 'legifrance');
+        return toolError(err, {
+          source: 'legifrance',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );

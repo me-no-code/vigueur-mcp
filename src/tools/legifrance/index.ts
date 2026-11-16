@@ -64,8 +64,8 @@ export function createLegifranceSource(
       registerBrowseCodeTool(server, services.browseCode, ctx);
       registerLatestJoTool(server, services.latestJo, ctx);
       registerReferenceValuesTool(server, services.listReferenceValues, ctx);
-      registerSearchCaseLawTool(server, services.searchCaseLaw, ctx.deadlineMs);
-      registerGetDecisionTool(server, services.getDecision, ctx.deadlineMs);
+      registerSearchCaseLawTool(server, services.searchCaseLaw, ctx);
+      registerGetDecisionTool(server, services.getDecision, ctx);
     },
   };
 }

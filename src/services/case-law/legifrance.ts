@@ -14,7 +14,8 @@ import type {
   LegifranceDecision,
 } from './ports.js';
 
-const DEFAULT_PAGE_SIZE = 10;
+/** The page and page size a search uses when the call gives none. */
+export const CASE_LAW_DEFAULTS = { page: 1, page_size: 10 } as const;
 const MAX_PAGE_SIZE = 20;
 const DECISION_ID = /^(JURI|CETA|CONS|CNIL|JUFI)TEXT\d{12}$/;
 
@@ -56,6 +57,16 @@ export interface CaseLawSearchView {
   pageCount: number;
 }
 
+/** The order a search uses when the call gives none: by relevance with a criterion, else newest first. */
+export function defaultCaseLawSort(input: {
+  query?: string | null;
+  number?: string | null;
+  ecli?: string | null;
+}): 'relevance' | 'newest' {
+  const given = (v: string | null | undefined) => blankToNull(v ?? undefined) !== null;
+  return given(input.query) || given(input.number) || given(input.ecli) ? 'relevance' : 'newest';
+}
+
 export function createSearchCaseLaw(repo: CaseLawRepository) {
   return async (input: SearchCaseLawInput, ctx?: CallContext): Promise<CaseLawSearchView> => {
     const { collection } = input;
@@ -87,8 +98,8 @@ export function createSearchCaseLaw(repo: CaseLawRepository) {
         `"publication" is not available for the ${CASE_LAW_COLLECTION_LABELS[collection]} collection.`,
       );
     }
-    const page = input.page ?? 1;
-    const pageSize = input.pageSize ?? DEFAULT_PAGE_SIZE;
+    const page = input.page ?? CASE_LAW_DEFAULTS.page;
+    const pageSize = input.pageSize ?? CASE_LAW_DEFAULTS.page_size;
     if (!Number.isInteger(page) || page < 1) {
       throw invalid('"page" must be a whole number, 1 or more.');
     }
@@ -102,8 +113,7 @@ export function createSearchCaseLaw(repo: CaseLawRepository) {
     if (dateFrom !== undefined && dateTo !== undefined && dateFrom > dateTo) {
       throw invalid('"date_from" must not be after "date_to".');
     }
-    const hasCriteria = text !== undefined || rawNumber !== null || ecli !== undefined;
-    const sort = input.sort ?? (hasCriteria ? 'relevance' : 'newest');
+    const sort = input.sort ?? defaultCaseLawSort({ query: text, number: rawNumber, ecli });
 
     const query: CaseLawQuery = {
       collection,

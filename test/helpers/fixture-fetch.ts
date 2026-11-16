@@ -81,6 +81,49 @@ function jorfFilterOnlySearch(body: unknown): boolean {
   return b.fond === 'JORF' && champ.typeChamp === 'ALL' && critere.valeur === '*';
 }
 
+const fondIs = (fond: string) => (body: unknown) => bodyField('fond', fond)(body);
+
+/** Case-law search and consult answers recorded from production (fixtures 121-141, 42-46, 65). */
+export const CASE_LAW_FIXTURE_ROUTES: readonly FixtureRoute[] = [
+  { path: '/search', when: fondIs('CNIL'), fixture: '128-search-cnil-all-date-decision-desc' },
+  { path: '/search', when: fondIs('CONSTIT'), fixture: '138-search-constit-num-dec-2026-1217' },
+  { path: '/search', when: fondIs('JURI'), fixture: '134-search-juri-champ-ecli' },
+  { path: '/search', when: fondIs('CETAT'), fixture: '125-search-cetat-all-date-desc' },
+  { path: '/search', when: fondIs('JUFI'), fixture: '129-search-jufi-all-date-desc' },
+  {
+    path: '/consult/juri',
+    when: bodyField('textId', 'JURITEXT000053197030'),
+    fixture: '42-consult-juri-cass',
+  },
+  {
+    path: '/consult/juri',
+    when: bodyField('textId', 'CETATEXT000054960489'),
+    fixture: '43-consult-juri-cetat',
+  },
+  {
+    path: '/consult/juri',
+    when: bodyField('textId', 'CONSTEXT000054952962'),
+    fixture: '44-consult-juri-constit',
+  },
+  {
+    path: '/consult/juri',
+    when: bodyField('textId', 'JUFITEXT000055005642'),
+    fixture: '46-consult-juri-jufi',
+  },
+  {
+    path: '/consult/cnil',
+    when: bodyField('textId', 'CNILTEXT000053716494'),
+    fixture: '45-consult-cnil',
+  },
+  // An unknown id: Légifrance answers HTTP 400 "L'expression à valider est fausse."
+  {
+    path: '/consult/juri',
+    when: bodyField('textId', 'JURITEXT000099999999'),
+    fixture: '65-err-lawDecree-unknown',
+    status: 400,
+  },
+];
+
 const DECRET_2005_1309 = ['LEGITEXT000006052580', 'LEGITEXT000006052581'];
 
 /** `getArticleWithIdAndNum` returns the same payload as `getArticle`. */
@@ -296,6 +339,7 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     when: (b) => DECRET_2005_1309.includes(String(asJson(b).textId)),
     fixture: '116-lawDecree-decret-2005-1309-580-today',
   },
+  ...CASE_LAW_FIXTURE_ROUTES,
 ];
 
 /**

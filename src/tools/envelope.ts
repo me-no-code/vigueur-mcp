@@ -85,6 +85,44 @@ export const publishedSchema = dateSchema
   .nullable()
   .describe('Publication date; null when not given.');
 
+/** Case-law fields shared by the Légifrance case-law tools (and the Judilibre ones). */
+/** Longest title a case-law answer gives; a longer one is cut. */
+export const DECISION_TITLE_MAX = 300;
+
+export const decisionTitleSchema = z
+  .string()
+  .describe('Title of the decision as the source states it; cut to 300 characters.');
+
+export const decisionIdSchema = z.string().describe('Légifrance id of the decision.');
+
+export const decidedSchema = dateSchema
+  .nullable()
+  .describe('Date of the decision; null when not given.');
+
+export const numbersSchema = z
+  .array(z.string())
+  .describe('Decision numbers as the source writes them (several for joined decisions).');
+
+export const courtSchema = z
+  .string()
+  .nullable()
+  .describe('The court or authority, as the source names it; null when not given.');
+
+export const chamberSchema = z
+  .string()
+  .nullable()
+  .describe('Chamber or formation, as the source labels it; null when not given.');
+
+export const solutionSchema = z
+  .string()
+  .nullable()
+  .describe('Outcome of the decision as the source records it; null when not given.');
+
+export const decisionPublicationSchema = z
+  .string()
+  .nullable()
+  .describe('How the source records the decision as published; null when not given.');
+
 export const changeActionSchema = z
   .enum(['created', 'amended', 'repealed', 'codified', 'transferred', 'linked'])
   .describe('What the change did to the article.');

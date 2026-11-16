@@ -21,6 +21,8 @@ const CONVERTED = new Set<string>([
   'legifrance_browse_code',
   'legifrance_latest_jo',
   'legifrance_list_reference_values',
+  'legifrance_search_case_law',
+  'legifrance_get_decision',
 ]);
 
 interface Case {
@@ -81,6 +83,18 @@ const CASES: Case[] = [
   { tool: 'legifrance_latest_jo', args: {}, outcome: 'results' },
   { tool: 'legifrance_latest_jo', args: { page: 99 }, outcome: 'no_results' },
   { tool: 'legifrance_list_reference_values', args: { kind: 'codes' }, outcome: 'results' },
+  {
+    tool: 'legifrance_search_case_law',
+    args: { collection: 'judicial', number: '24-16.924' },
+    outcome: 'results',
+  },
+  {
+    tool: 'legifrance_search_case_law',
+    args: { collection: 'judicial', number: '24-16.924', page: 99 },
+    outcome: 'no_results',
+  },
+  { tool: 'legifrance_get_decision', args: { id: 'JURITEXT000053197030' }, outcome: 'found' },
+  { tool: 'legifrance_get_decision', args: { id: 'JURITEXT000099999999' }, outcome: 'not_found' },
 ];
 
 const ROUTES: Record<NonNullable<Case['fetch']>, readonly FixtureRoute[]> = {

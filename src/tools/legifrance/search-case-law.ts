@@ -4,20 +4,50 @@ import { CASS_CHAMBER_LABELS } from '../../domain/decisions.js';
 import { decisionUrl } from '../../domain/links.js';
 import {
   CASE_LAW_COLLECTION_LABELS,
+  CASE_LAW_DEFAULTS,
   type CaseLawSearchView,
+  defaultCaseLawSort,
   LEGIFRANCE_CASE_LAW_COVERAGE_NOTE,
   type SearchCaseLawInput,
 } from '../../services/case-law/legifrance.js';
 import type { CallContext, CaseLawHit } from '../../services/case-law/ports.js';
 import {
+  type AnswerBody,
+  answerSchema,
+  chamberSchema,
+  courtSchema,
+  DECISION_TITLE_MAX,
+  decidedSchema,
+  decisionIdSchema,
+  decisionPublicationSchema,
+  decisionTitleSchema,
+  legifranceLinkSchema,
+  natureSchema,
+  nextSchema,
+  numbersSchema,
+  orderSchema,
+  type Pointer,
+  pageSchema,
+  pointerSchema,
+  requestEcho,
+  solutionSchema,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import {
   callSignal,
   cut,
+  FRAME_SLACK,
+  jsonCost,
   MAX_TOOL_TEXT,
-  nextPageHint,
   optionalIsoDateSchema,
   presentOrUndefined,
+  WIDE_PAGE,
 } from '../format.js';
-import { toToolError } from '../tool-error.js';
+import { toolError } from '../tool-error.js';
+
+const TOOL = 'legifrance_search_case_law';
+const SOURCE = 'Légifrance';
 
 export type SearchCaseLaw = (
   input: SearchCaseLawInput,
@@ -81,15 +111,60 @@ const inputSchema = z.object({
     .describe('Results per page, 1 to 20 (default 10).'),
 });
 
-const SORT_WORDS = { relevance: 'most relevant first', newest: 'newest first' } as const;
 const COURT_WORDS = {
   cassation: 'Cour de cassation',
   appeal: 'courts of appeal',
   first_instance: 'first-instance courts',
 } as const;
 
-const TITLE_MAX = 300;
-const EXCERPT_MAX = 700;
+// ---------------------------------------------------------------------------------------------
+// Output schema
+
+const hitSchema = z.object({
+  title: decisionTitleSchema,
+  id: decisionIdSchema,
+  court: courtSchema,
+  chamber: chamberSchema,
+  nature: natureSchema.describe(
+    'Nature of the act (a CNIL title opens with it); null when not given.',
+  ),
+  decided: decidedSchema,
+  numbers: numbersSchema,
+  publication: decisionPublicationSchema,
+  solution: solutionSchema,
+  excerpt: z
+    .string()
+    .nullable()
+    .describe('The matching passage, at most 300 characters; null when none.'),
+  link: legifranceLinkSchema,
+  read_with: pointerSchema.describe('The tool call that returns the full decision.'),
+});
+
+const searchShape = {
+  collection: z
+    .enum(['judicial', 'administrative', 'constitutional', 'cnil', 'financial'])
+    .describe('The collection searched.'),
+  results: z.number().int().describe('Number of decisions over all pages.'),
+  page: pageSchema,
+  order: orderSchema,
+  next: nextSchema,
+  items: z.array(hitSchema).describe('The decisions of this page.'),
+};
+
+const resultsBranch = answerSchema(SOURCE, 'results', searchShape);
+const noResultsBranch = answerSchema(SOURCE, 'no_results', searchShape);
+
+export const searchCaseLawOutput = z.discriminatedUnion('outcome', [
+  resultsBranch,
+  noResultsBranch,
+]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type SearchCaseLawAnswer = AnswerBody<z.input<typeof searchCaseLawOutput>>;
+type SearchAnswer = AnswerBody<z.input<typeof resultsBranch | typeof noResultsBranch>>;
+type SearchItem = SearchAnswer['items'][number];
 
 /** The criteria of a search, as short phrases. */
 function criteriaOf(view: CaseLawSearchView): string[] {
@@ -114,88 +189,119 @@ function criteriaOf(view: CaseLawSearchView): string[] {
   ];
 }
 
-/** `{court}{, chamber} — decision of {date} — n° {numbers} — {publication} — {solution}`, or the raw title. */
-function identityOf(hit: CaseLawHit): string {
-  // A title that did not parse is shown as the source wrote it, whatever the date says.
-  if (hit.court === null) return hit.title;
-  // A CNIL title opens with the kind of act ("Délibération", "Décision"): the parsed title's nature.
-  const kind = hit.collection === 'cnil' ? (hit.nature ?? undefined) : undefined;
-  const court = [kind, hit.court, hit.chamber].filter(Boolean).join(', ');
-  return [
-    court,
-    ...(hit.decisionDate ? [`decision of ${hit.decisionDate}`] : []),
-    ...(hit.numbers.length > 0 ? [`n° ${hit.numbers.join(', ')}`] : []),
-    ...(hit.publication ? [hit.publication] : []),
-    ...(hit.solution ? [hit.solution] : []),
-  ]
-    .filter((p) => p !== '')
-    .join(' — ');
+function searchItem(hit: CaseLawHit): SearchItem {
+  return {
+    title: cut(hit.title, DECISION_TITLE_MAX),
+    id: hit.id,
+    court: hit.court,
+    chamber: hit.chamber,
+    nature: hit.nature,
+    decided: hit.decisionDate,
+    numbers: hit.numbers,
+    publication: hit.publication,
+    solution: hit.solution,
+    excerpt: hit.snippet,
+    link: decisionUrl(hit.id),
+    read_with: { tool: 'legifrance_get_decision', id: hit.id },
+  };
 }
 
-function renderHit(hit: CaseLawHit, n: number): string {
-  const subject = hit.collection === 'cnil' || hit.collection === 'constitutional';
-  return [
-    `${n}. ${identityOf(hit)}`,
-    ...(subject ? [`Title: ${cut(hit.title, TITLE_MAX)}`] : []),
-    ...(hit.snippet ? [`Excerpt: ${cut(hit.snippet, EXCERPT_MAX)}`] : []),
-    `Source: Légifrance · ${decisionUrl(hit.id)}`,
-    `Full text: legifrance_get_decision id "${hit.id}"`,
-  ].join('\n');
+const ORDERS = { relevance: 'most_relevant_first', newest: 'newest_first' } as const;
+
+const onlyFirst = (shown: number, total: number) =>
+  `(Only the first ${shown} of ${total} hits of this page fit — use a smaller "page_size".)`;
+
+export interface SearchCaseLawAnswerOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
 }
 
-/** A page of hits with its header; every hit carries its source and a pointer to its full text. */
-export function renderSearch(view: CaseLawSearchView): string {
+/**
+ * One page of decisions. Hits that would take the answer past `MAX_TOOL_TEXT` are left out, with a
+ * warning. A page without hits (none found, or past the last page) is `no_results`.
+ */
+export function buildSearchCaseLawAnswer(
+  view: CaseLawSearchView,
+  opts: SearchCaseLawAnswerOptions,
+): SearchCaseLawAnswer {
   const { input, result } = view;
-  const label = CASE_LAW_COLLECTION_LABELS[input.collection];
-  const judicialNote = input.collection === 'judicial' ? [LEGIFRANCE_CASE_LAW_COVERAGE_NOTE] : [];
-  const criteria = criteriaOf(view);
-  if (result.total === 0) {
-    return [
-      `No ${label} decision on Légifrance matches these criteria: ${criteria.length > 0 ? criteria.join(', ') : 'none'}.`,
-      ...judicialNote,
-      ...(input.collection === 'constitutional' && input.number && !input.number.includes('/')
-        ? [
-            'Joined decisions carry a combined number such as "2026-1217/1218"; give the full number, or search by words with "query".',
-          ]
-        : []),
-    ].join('\n');
-  }
+  const pageCount = Math.max(1, view.pageCount);
   const page = view.query.page;
-  const sort = view.query.sort;
-  const header = `Légifrance — ${label}: ${result.total} ${result.total === 1 ? 'decision' : 'decisions'}${criteria.length > 0 ? `${criteria[0]?.startsWith('matching') ? ' ' : ', '}${criteria.join(', ')}` : ''}. Page ${page} of ${view.pageCount}, ${SORT_WORDS[sort]}.`;
-  if (result.hits.length === 0) {
-    return `${header}\nPage ${page} is past the last page (${view.pageCount}).`;
-  }
-  const first = (page - 1) * view.query.pageSize;
-  const tail = page < view.pageCount ? [nextPageHint(page)] : [];
-  let used = [header, ...judicialNote, ...tail].join('\n').length + 300;
-  const blocks: string[] = [];
-  for (const [i, hit] of result.hits.entries()) {
-    const block = renderHit(hit, first + i + 1);
-    if (blocks.length > 0 && used + block.length + 2 > MAX_TOOL_TEXT) break;
-    blocks.push(block);
-    used += block.length + 2;
-  }
-  const shown =
-    blocks.length < result.hits.length
+  const pastEnd = result.total > 0 && page > view.pageCount;
+  const { request } = opts;
+  const judicialNote = input.collection === 'judicial' ? [LEGIFRANCE_CASE_LAW_COVERAGE_NOTE] : [];
+  const none =
+    result.total === 0
       ? [
-          `(Only the first ${blocks.length} of ${result.hits.length} hits of this page fit — use a smaller "page_size".)`,
+          `No ${CASE_LAW_COLLECTION_LABELS[input.collection]} decision on Légifrance matches these criteria: ${criteriaOf(view).join(', ') || 'none'}.`,
+          ...judicialNote,
+          ...(input.collection === 'constitutional' && input.number && !input.number.includes('/')
+            ? [
+                'Joined decisions carry a combined number such as "2026-1217/1218"; give the full number, or search by words with "query".',
+              ]
+            : []),
         ]
-      : [];
-  return [[header, ...judicialNote].join('\n'), ...blocks, ...shown, ...tail].join('\n\n');
+      : judicialNote;
+  const answer = (
+    outcome: 'results' | 'no_results',
+    items: SearchItem[],
+    extra: string[],
+    pageNumber: number,
+    pages: number,
+    echo: Pointer,
+  ): SearchAnswer => ({
+    source: SOURCE,
+    outcome,
+    warnings: [...none, ...extra],
+    collection: input.collection,
+    results: result.total,
+    page: { number: pageNumber, of: pages },
+    order: ORDERS[view.query.sort],
+    next: pageNumber < pages ? { page: pageNumber + 1 } : null,
+    items,
+    request: echo,
+    cached: [],
+  });
+
+  const hits = pastEnd ? [] : result.hits.map(searchItem);
+  // The frame is measured with the widest page numbers, so the split does not depend on the page.
+  const frame = JSON.stringify(
+    answer('results', [], [onlyFirst(hits.length, hits.length)], WIDE_PAGE, WIDE_PAGE + 1, {
+      ...request,
+      page: WIDE_PAGE,
+    }),
+  ).length;
+  let used = frame + FRAME_SLACK;
+  let shown = 0;
+  for (const item of hits) {
+    const cost = jsonCost(item);
+    if (shown > 0 && used + cost > MAX_TOOL_TEXT) break;
+    used += cost;
+    shown += 1;
+  }
+  const extra = shown < hits.length ? [onlyFirst(shown, hits.length)] : [];
+  return answer(
+    shown === 0 ? 'no_results' : 'results',
+    hits.slice(0, shown),
+    extra,
+    page,
+    pageCount,
+    request,
+  );
 }
 
 export function registerSearchCaseLawTool(
   server: McpServer,
   searchCaseLaw: SearchCaseLaw,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'legifrance_search_case_law',
+    TOOL,
     {
       title: 'Search Légifrance case law',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: searchCaseLawOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -203,8 +309,12 @@ export function registerSearchCaseLawTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, {
+        sort: defaultCaseLawSort(args),
+        ...CASE_LAW_DEFAULTS,
+      });
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const view = await searchCaseLaw(
           {
@@ -223,9 +333,15 @@ export function registerSearchCaseLawTool(
           },
           { signal },
         );
-        return { content: [{ type: 'text', text: renderSearch(view) }] };
+        return toolAnswer(searchCaseLawOutput, buildSearchCaseLawAnswer(view, { request }), ctx);
       } catch (err) {
-        return toToolError(err, signal, 'legifrance');
+        return toolError(err, {
+          source: 'legifrance',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );
