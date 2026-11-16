@@ -51,10 +51,13 @@ const livre2 = node('LEGISCTA000000000007', 'Livre II', {
   status: 'repealed',
   validTo: '2020-01-01',
 });
+const FETCHED_AT = new Date('2026-11-10T08:00:00Z');
+
 const TOC: CodeToc = {
   codeId: CODE_ID,
   codeTitle: 'Code civil',
   asOf: TODAY,
+  fetchedAt: FETCHED_AT,
   // The root carries the consolidated version's bounds, never in-force dates.
   root: node(CODE_ID, 'Code civil', {
     validFrom: '2026-11-01',
@@ -80,6 +83,7 @@ describe('browse a code', () => {
     expect(view.codeId).toBe(CODE_ID);
     expect(view.asOf).toBe(TODAY);
     expect(view.asOfIsToday).toBe(true);
+    expect(view.fetchedAt).toEqual(FETCHED_AT);
   });
 
   it('shows a section with its breadcrumb from the root, children and articles', async () => {
@@ -156,6 +160,7 @@ describe('browse a code', () => {
       codeId: TRAVAIL,
       codeTitle: 'Code du travail',
       asOf: TODAY,
+      fetchedAt: FETCHED_AT,
       root: node(TRAVAIL, 'Code du travail', { children: [ancienne, nouvelle] }),
     };
     const run = createBrowseCode(fakeLegislation({ tocs: { [TRAVAIL]: travail } }).repo, {

@@ -18,6 +18,9 @@ const CONVERTED = new Set<string>([
   'legifrance_search_legislation',
   'legifrance_list_changes',
   'legifrance_get_text',
+  'legifrance_browse_code',
+  'legifrance_latest_jo',
+  'legifrance_list_reference_values',
 ]);
 
 interface Case {
@@ -69,6 +72,15 @@ const CASES: Case[] = [
   },
   { tool: 'legifrance_get_text', args: { nature: 'loi', number: '78-17' }, outcome: 'found' },
   { tool: 'legifrance_get_text', args: { id: 'LEGITEXT999999999999' }, outcome: 'not_found' },
+  { tool: 'legifrance_browse_code', args: { code: 'Code du travail' }, outcome: 'results' },
+  {
+    tool: 'legifrance_browse_code',
+    args: { code: 'Code du travail', page: 99 },
+    outcome: 'no_results',
+  },
+  { tool: 'legifrance_latest_jo', args: {}, outcome: 'results' },
+  { tool: 'legifrance_latest_jo', args: { page: 99 }, outcome: 'no_results' },
+  { tool: 'legifrance_list_reference_values', args: { kind: 'codes' }, outcome: 'results' },
 ];
 
 const ROUTES: Record<NonNullable<Case['fetch']>, readonly FixtureRoute[]> = {

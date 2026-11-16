@@ -30,6 +30,7 @@ import {
   pointerSchema,
   publishedSchema,
   requestEcho,
+  sectionSchema,
   statusSchema,
   statusValue,
   type ToolContext,
@@ -209,11 +210,7 @@ const textShape = {
     'The date the consolidated version and the article statuses are read for; for a text as published, the day of the call.',
   ),
   link: legifranceLinkSchema,
-  section: z
-    .object({
-      path: z.array(z.string()).describe('Titles from the outermost section down to this one.'),
-      section_id: z.string().describe('Légifrance id of the section.'),
-    })
+  section: sectionSchema
     .nullable()
     .describe('The one section the answer covers; null for the whole text.'),
   part: z

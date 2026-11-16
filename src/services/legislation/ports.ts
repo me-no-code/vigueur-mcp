@@ -13,6 +13,12 @@ export interface CodeInfo {
   status: LegalStatus;
 }
 
+/** The list of codes, with when the cached list was fetched (the same on every hit). */
+export interface CodeList {
+  codes: CodeInfo[];
+  fetchedAt: Date;
+}
+
 /** One entry of an article's version stack. Still-born versions keep their (inverted) dates. */
 export interface VersionSummary {
   id: string;
@@ -244,6 +250,8 @@ export interface CodeToc {
   codeTitle: string;
   asOf: IsoDate;
   root: TocNode;
+  /** When this table was fetched: the cache entry's time, the same on every hit. */
+  fetchedAt: Date;
 }
 
 export interface SectionLinks {
@@ -258,7 +266,7 @@ export interface SectionLinks {
 }
 
 export interface LegislationRepository {
-  listCodes(ctx?: CallContext): Promise<CodeInfo[]>;
+  listCodes(ctx?: CallContext): Promise<CodeList>;
   /** Versions in force on `date` numbered `num`, in one code or (codeTitle null) in every code. */
   findArticleAt(
     codeTitle: string | null,

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createLatestJo, createListReferenceValues } from '../../../src/services/legislation/jo.js';
+import {
+  createLatestJo,
+  createListReferenceValues,
+  referenceSince,
+} from '../../../src/services/legislation/jo.js';
 import type { JoIssue, JoText } from '../../../src/services/legislation/ports.js';
-import { fakeLegislation } from '../../helpers/fake-legislation.js';
+import { FAKE_FETCHED_AT, fakeLegislation } from '../../helpers/fake-legislation.js';
 
 const today = () => '2026-11-12';
 
@@ -121,12 +125,19 @@ describe('createLatestJo', () => {
   });
 });
 
+describe('referenceSince', () => {
+  it('is a year before today', () => {
+    expect(referenceSince('2026-11-12')).toBe('2025-11-12');
+  });
+});
+
 describe('createListReferenceValues', () => {
   it('codes come from listCodes with id and status, sorted by title', async () => {
     const { repo, calls } = fakeLegislation();
     const view = await createListReferenceValues(repo, { today })({ kind: 'codes' });
     expect(calls.jorfFacets).toHaveLength(0);
     expect(view.since).toBeNull();
+    expect(view.fetchedAt).toEqual(FAKE_FETCHED_AT);
     expect(view.values[0]).toEqual({
       value: 'Code civil',
       count: null,
@@ -154,6 +165,7 @@ describe('createListReferenceValues', () => {
     expect(natures).toEqual({
       kind: 'jorf_natures',
       since: '2025-11-12',
+      fetchedAt: null,
       values: [{ value: 'ARRETE', count: 90, id: null, status: null }],
     });
     const emitters = await run({ kind: 'jorf_emitters', since: '2026-01-01' });

@@ -9,13 +9,14 @@ import type {
 import type { CallContext, TocArticle, TocNode } from '../../../src/services/legislation/ports.js';
 import { VigueurError } from '../../../src/shared/errors.js';
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
-import { renderBrowseCode } from '../../../src/tools/legifrance/browse-code.js';
+import { buildBrowseCodeAnswer } from '../../../src/tools/legifrance/browse-code.js';
 import {
   createLegifranceSource,
   type LegifranceServices,
 } from '../../../src/tools/legifrance/index.js';
+import { expectAnswer, expectToolError } from '../../helpers/answer.js';
 import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
-import { connectClient, firstText } from '../../helpers/mcp-client.js';
+import { connectClient } from '../../helpers/mcp-client.js';
 
 const TOOL = 'legifrance_browse_code';
 
@@ -40,106 +41,218 @@ async function connect(deps: Parameters<typeof connectClient>[0]): Promise<Clien
 }
 
 /** A client over the composed server, answering PISTE from the Légifrance fixtures. */
-async function composedClient(): Promise<Client> {
+async function composedClient(opts: { now?: () => Date } = {}): Promise<Client> {
   const fixtures = fixtureFetch();
   unmatchedRoutes.push(fixtures.unmatched);
-  return connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
+  return connect(compose(sandboxConfig(), { fetch: fixtures.fetch, ...opts }));
 }
 
 async function browse(client: Client, args: Record<string, unknown>) {
-  const result = await client.callTool({ name: TOOL, arguments: args });
-  return { result, text: firstText(result) };
+  return client.callTool({ name: TOOL, arguments: args });
 }
 
 const CODE_URL = 'https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006072050';
+const HINT =
+  'Pass a section_id to list what it contains; read an article with legifrance_get_article and its id.';
 
 describe('legifrance_browse_code over the composed server (fixtures)', () => {
   it('Code du travail: the top level, then a section_id taken from the answer', async () => {
     const client = await composedClient();
-    const root = await browse(client, { code: 'Code du travail' });
-    expect(root.result.isError).toBeFalsy();
-    expect(root.result.structuredContent).toBeUndefined();
-    expect(root.text).toMatch(/^### Code du travail — table of contents on \d{4}-\d{2}-\d{2}$/m);
-    expect(root.text).toContain('- Partie législative · section_id LEGISCTA000006112874');
-    expect(root.text).toContain(`Source: ${CODE_URL}`);
-    expect(root.text).not.toContain('Première partie');
+    const root = expectAnswer(await browse(client, { code: 'Code du travail' }), {
+      source: 'Légifrance',
+      outcome: 'results',
+    });
+    expect(root.code).toBe('Code du travail');
+    expect(root.code_id).toBe('LEGITEXT000006072050');
+    expect(root.on).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(root.link).toBe(CODE_URL);
+    expect(root.section).toBeNull();
+    expect(root.items).toHaveLength(1);
+    expect(root.items[0]).toEqual({
+      type: 'section',
+      title: 'Partie législative',
+      section_id: 'LEGISCTA000006112874',
+      status: expect.objectContaining({ state: 'in_force', on: root.on }),
+    });
+    expect(root.section_count).toBe(1);
+    expect(root.article_count).toBe(0);
+    expect(root.results).toBe(1);
+    expect(root.hidden_not_in_force).toBe(0);
+    expect(root.page).toEqual({ number: 1, of: 1 });
+    expect(root.next).toBeNull();
+    expect(root.warnings).toEqual([HINT]);
+    expect(JSON.stringify(root)).not.toContain('Première partie');
+    expect(root.request).toEqual({
+      tool: TOOL,
+      code: 'Code du travail',
+      at_date: root.on,
+      include_repealed: false,
+      page: 1,
+    });
 
-    const sectionId = /section_id (LEGISCTA\d{12})/.exec(root.text)?.[1];
-    expect(sectionId).toBe('LEGISCTA000006112874');
-    const part = await browse(client, { code: 'Code du travail', section_id: sectionId });
-    expect(part.result.isError).toBeFalsy();
-    expect(part.text).toContain(
-      'Code du travail › Partie législative · section_id LEGISCTA000006112874',
+    const sectionId = root.items[0].section_id;
+    const part = expectAnswer(
+      await browse(client, { code: 'Code du travail', section_id: sectionId }),
+      { source: 'Légifrance', outcome: 'results' },
     );
-    expect(part.text).toContain(
-      '- Première partie : Les relations individuelles de travail · section_id LEGISCTA000006132321',
+    expect(part.section).toEqual({
+      path: ['Partie législative'],
+      section_id: 'LEGISCTA000006112874',
+    });
+    expect(part.items.map((i: { title: string }) => i.title)).toContain(
+      'Première partie : Les relations individuelles de travail',
     );
-    expect(part.text).not.toContain('Livre III');
-    expect(part.text).toContain(
-      'Source: https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006072050/LEGISCTA000006112874',
+    expect(part.items).toContainEqual(
+      expect.objectContaining({
+        type: 'section',
+        title: 'Première partie : Les relations individuelles de travail',
+        section_id: 'LEGISCTA000006132321',
+      }),
     );
+    expect(JSON.stringify(part.items)).not.toContain('Livre III');
+    expect(part.link).toBe(
+      'https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006072050/LEGISCTA000006112874',
+    );
+    expect(part.request.section_id).toBe('LEGISCTA000006112874');
   });
 
   it('a chapter lists its articles with their status and id, below the breadcrumb', async () => {
     const client = await composedClient();
-    const { result, text } = await browse(client, {
-      code: 'Code du travail',
-      section_id: 'LEGISCTA000006177885',
-    });
-    expect(result.isError).toBeFalsy();
-    expect(text).toContain(
-      'Code du travail › Partie législative › Première partie : Les relations individuelles de travail › Livre III : Le règlement intérieur et le droit disciplinaire › Titre II : Règlement intérieur › Chapitre Ier : Contenu et conditions de validité. · section_id LEGISCTA000006177885',
+    const a = expectAnswer(
+      await browse(client, { code: 'Code du travail', section_id: 'LEGISCTA000006177885' }),
+      { source: 'Légifrance', outcome: 'results' },
     );
-    expect(text).toContain('- art. L1321-1 · VIGUEUR · id LEGIARTI000006901432');
-    expect(text).toContain('- art. L1321-6 · VIGUEUR · id LEGIARTI000006901439');
-    expect(text).toContain('legifrance_get_article');
-    expect(text).not.toContain('hidden');
+    expect(a.section.section_id).toBe('LEGISCTA000006177885');
+    expect(a.section.path).toEqual([
+      'Partie législative',
+      'Première partie : Les relations individuelles de travail',
+      'Livre III : Le règlement intérieur et le droit disciplinaire',
+      'Titre II : Règlement intérieur',
+      'Chapitre Ier : Contenu et conditions de validité.',
+    ]);
+    expect(a.items).toContainEqual({
+      type: 'article',
+      number: 'L1321-1',
+      id: 'LEGIARTI000006901432',
+      legifrance_status_today: 'VIGUEUR',
+    });
+    expect(a.items).toContainEqual({
+      type: 'article',
+      number: 'L1321-6',
+      id: 'LEGIARTI000006901439',
+      legifrance_status_today: 'VIGUEUR',
+    });
+    expect(a.article_count).toBeGreaterThan(0);
+    expect(a.hidden_not_in_force).toBe(0);
+    expect(a.warnings).toEqual([HINT]);
   });
 
   it('a past date: sections judged by their dates, articles with their label of today', async () => {
     const client = await composedClient();
-    const root = await browse(client, { code: 'Code du travail', at_date: '2005-01-01' });
-    expect(root.result.isError).toBeFalsy();
-    expect(root.text).toContain('Nothing in force here on 2005-01-01.');
-    expect(root.text).toContain(
+    const root = expectAnswer(
+      await browse(client, { code: 'Code du travail', at_date: '2005-01-01' }),
+      { source: 'Légifrance', outcome: 'no_results' },
+    );
+    expect(root.on).toBe('2005-01-01');
+    expect(root.items).toEqual([]);
+    expect(root.results).toBe(0);
+    expect(root.hidden_not_in_force).toBe(1);
+    expect(root.warnings).toEqual([
       '(1 item not in force on 2005-01-01 hidden — include_repealed: true to show them)',
-    );
+      'Nothing in force here on 2005-01-01.',
+      HINT,
+    ]);
 
-    const all = await browse(client, {
-      code: 'Code du travail',
-      at_date: '2005-01-01',
-      include_repealed: true,
-    });
-    expect(all.text).toContain(
-      '- Partie législative · not yet in force — from 2008-05-01 · section_id LEGISCTA000006112874',
+    const all = expectAnswer(
+      await browse(client, {
+        code: 'Code du travail',
+        at_date: '2005-01-01',
+        include_repealed: true,
+      }),
+      { source: 'Légifrance', outcome: 'results' },
     );
-    expect(all.text).not.toContain('Nothing in force here');
-
-    const chapter = await browse(client, {
-      code: 'Code du travail',
-      section_id: 'LEGISCTA000006177885',
-      at_date: '2005-01-01',
+    expect(all.items).toContainEqual({
+      type: 'section',
+      title: 'Partie législative',
+      section_id: 'LEGISCTA000006112874',
+      status: {
+        state: 'not_yet_in_force',
+        on: '2005-01-01',
+        from: '2008-05-01',
+        until: null,
+        until_undetermined: false,
+      },
     });
-    expect(chapter.text).toContain(
+    expect(all.warnings).toEqual([HINT]);
+
+    const chapter = expectAnswer(
+      await browse(client, {
+        code: 'Code du travail',
+        section_id: 'LEGISCTA000006177885',
+        at_date: '2005-01-01',
+      }),
+      { source: 'Légifrance', outcome: 'results' },
+    );
+    expect(chapter.warnings).toContain(
       "Article labels are Légifrance's current ones; open an article with legifrance_get_article and at_date to check it on 2005-01-01.",
     );
-    expect(chapter.text).toContain(
-      '- art. L1321-1 (Légifrance label today: VIGUEUR) · id LEGIARTI000006901432',
-    );
-    expect(chapter.text).not.toContain('hidden');
+    expect(chapter.items).toContainEqual({
+      type: 'article',
+      number: 'L1321-1',
+      id: 'LEGIARTI000006901432',
+      legifrance_status_today: 'VIGUEUR',
+    });
+    expect(chapter.hidden_not_in_force).toBe(0);
+  });
+
+  it('a page past the last is no_results with the same fields, not an error', async () => {
+    const client = await composedClient();
+    const a = expectAnswer(await browse(client, { code: 'Code du travail', page: 99 }), {
+      source: 'Légifrance',
+      outcome: 'no_results',
+    });
+    expect(a.items).toEqual([]);
+    expect(a.results).toBe(1);
+    expect(a.page).toEqual({ number: 99, of: 1 });
+    expect(a.next).toBeNull();
+    expect(a.request.page).toBe(99);
   });
 
   it('an unknown section_id is an error', async () => {
     const client = await composedClient();
-    const { result, text } = await browse(client, {
-      code: 'Code du travail',
-      section_id: 'LEGISCTA000000000000',
-    });
-    expect(result.isError).toBe(true);
-    expect(text).toContain('is not a section of Code du travail');
+    const e = expectToolError(
+      await browse(client, { code: 'Code du travail', section_id: 'LEGISCTA000000000000' }),
+      'invalid_input',
+    );
+    expect(e.error.message).toContain('is not a section of Code du travail');
+    expect(e.request.tool).toBe(TOOL);
   });
 
-  it('is listed with its description, annotations and no output schema', async () => {
+  it('lists the table of contents with the time it was fetched; a second call keeps that time', async () => {
+    // The clock advances one minute per reading.
+    let t = Date.UTC(2026, 10, 16, 8, 0, 0);
+    const client = await composedClient({
+      now: () => {
+        t += 60_000;
+        return new Date(t);
+      },
+    });
+    const first = expectAnswer(await browse(client, { code: 'Code du travail' }), {
+      source: 'Légifrance',
+      outcome: 'results',
+    });
+    const second = expectAnswer(await browse(client, { code: 'Code du travail' }), {
+      source: 'Légifrance',
+      outcome: 'results',
+    });
+    expect(first.cached).toHaveLength(1);
+    expect(first.cached[0].what).toBe(`Code du travail table of contents on ${first.on}`);
+    expect(first.cached[0].retrieved).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+    expect(second.cached[0].retrieved).toBe(first.cached[0].retrieved);
+    expect(second.cached[0].retrieved < second.retrieved).toBe(true);
+  });
+
+  it('is listed with its description, annotations and an output schema', async () => {
     const client = await composedClient();
     const { tools } = await client.listTools();
     const tool = tools.find((t) => t.name === TOOL);
@@ -152,7 +265,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
       idempotentHint: true,
       openWorldHint: true,
     });
-    expect(tool?.outputSchema).toBeUndefined();
+    expect(tool?.outputSchema).toBeDefined();
   });
 });
 
@@ -160,6 +273,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
 
 const TODAY = '2026-11-12';
 const CODE_ID = 'LEGITEXT000006070721';
+const FETCHED_AT = new Date('2026-11-10T08:00:00Z');
 
 const art = (n: number, rawStatus = 'VIGUEUR'): TocArticle => ({
   id: `LEGIARTI${String(n).padStart(12, '0')}`,
@@ -202,6 +316,7 @@ function view(over: Partial<BrowseView> = {}): BrowseView {
     children: [],
     articles: [],
     hiddenNotInForce: 0,
+    fetchedAt: FETCHED_AT,
     ...over,
   };
 }
@@ -267,13 +382,34 @@ describe('legifrance_browse_code handler', () => {
     expect(seen[0]?.ctx?.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('service errors are tool errors; the deadline has its own message', async () => {
+  it('a blank at_date or section_id echoes as absent, the defaults applied', async () => {
+    const client = await clientOver(async () => view());
+    const a = expectAnswer(
+      await browse(client, { code: ' Code civil ', section_id: '', at_date: '' }),
+      { source: 'Légifrance', outcome: 'no_results' },
+    );
+    expect(a.request).toEqual({
+      tool: TOOL,
+      code: 'Code civil',
+      at_date: TODAY,
+      include_repealed: false,
+      page: 1,
+    });
+  });
+
+  it('service errors are tool errors carrying the request; the deadline has its own kind', async () => {
     const failing = await clientOver(() =>
       Promise.reject(new VigueurError('invalid_input', 'No code is titled "Code civi".')),
     );
-    const failed = await browse(failing, { code: 'Code civi' });
-    expect(failed.result.isError).toBe(true);
-    expect(failed.text).toContain('No code is titled "Code civi".');
+    const failed = expectToolError(await browse(failing, { code: 'Code civi' }), 'invalid_input');
+    expect(failed.error.message).toContain('No code is titled "Code civi".');
+    expect(failed.request).toEqual({
+      tool: TOOL,
+      code: 'Code civi',
+      at_date: TODAY,
+      include_repealed: false,
+      page: 1,
+    });
 
     const slow = await clientOver(
       (_input, ctx) =>
@@ -284,39 +420,66 @@ describe('legifrance_browse_code handler', () => {
         }),
       20,
     );
-    const late = await browse(slow, { code: 'Code civil' });
-    expect(late.result.isError).toBe(true);
-    expect(late.text).toContain('did not answer within');
+    expectToolError(await browse(slow, { code: 'Code civil' }), 'deadline');
   });
 
   it('the items it hid are counted as not in force on the date, with how to show them', async () => {
     const client = await clientOver(async () =>
       view({ children: [sec(1, 'Livre Ier')], hiddenNotInForce: 3 }),
     );
-    const { result, text } = await browse(client, { code: 'Code civil' });
-    expect(result.isError).toBeFalsy();
-    expect(text).toContain(
+    const a = expectAnswer(await browse(client, { code: 'Code civil' }), {
+      source: 'Légifrance',
+      outcome: 'results',
+    });
+    expect(a.hidden_not_in_force).toBe(3);
+    expect(a.warnings).toEqual([
       '(3 items not in force on 2026-11-12 hidden — include_repealed: true to show them)',
-    );
+      HINT,
+    ]);
   });
 });
 
-describe('renderBrowseCode', () => {
-  const render = (v: BrowseView, page = 1) => renderBrowseCode(v, { page });
-
-  it('top level: heading with the date, one line per part, the way on, the code link', () => {
-    expect(render(view({ children: [sec(1, 'Titre préliminaire'), sec(2, 'Livre Ier')] }))).toBe(
-      [
-        '### Code civil — table of contents on 2026-11-12',
-        '- Titre préliminaire · section_id LEGISCTA000000000001\n- Livre Ier · section_id LEGISCTA000000000002',
-        'Pass a section_id to list what it contains; read an article with legifrance_get_article and its id.',
-        'Source: https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070721',
-      ].join('\n\n'),
-    );
+describe('buildBrowseCodeAnswer', () => {
+  const request = { tool: TOOL, code: 'Code civil' };
+  const build = (v: BrowseView, page = 1) => buildBrowseCodeAnswer(v, { request, page });
+  const sectionStatus = (state: string, from: string | null, until: string | null) => ({
+    state,
+    on: TODAY,
+    from,
+    until,
+    until_undetermined: false,
   });
 
-  it('a section: breadcrumb with its id, articles with status and id, hidden count, section link', () => {
-    const text = render(
+  it('top level: one section item per part, the code link, no section, the way on', () => {
+    const a = build(view({ children: [sec(1, 'Titre préliminaire'), sec(2, 'Livre Ier')] }));
+    expect(a.outcome).toBe('results');
+    expect(a.code).toBe('Code civil');
+    expect(a.code_id).toBe(CODE_ID);
+    expect(a.on).toBe(TODAY);
+    expect(a.link).toBe('https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070721');
+    expect(a.section).toBeNull();
+    expect(a.items.map((i) => (i.type === 'section' ? i.title : null))).toEqual([
+      'Titre préliminaire',
+      'Livre Ier',
+    ]);
+    expect(a.items[0]).toEqual({
+      type: 'section',
+      title: 'Titre préliminaire',
+      section_id: 'LEGISCTA000000000001',
+      status: sectionStatus('in_force', '2000-01-01', null),
+    });
+    expect(a.section_count).toBe(2);
+    expect(a.article_count).toBe(0);
+    expect(a.results).toBe(2);
+    expect(a.warnings).toEqual([HINT]);
+    expect(a.cached).toEqual([
+      { what: `Code civil table of contents on ${TODAY}`, retrieved: '2026-11-10T08:00:00Z' },
+    ]);
+    expect(a.request).toBe(request);
+  });
+
+  it('a section: path with its id, articles with number, id and label, hidden count, section link', () => {
+    const a = build(
       view({
         breadcrumb: [
           { cid: 'LEGISCTA000000000002', title: 'Livre III' },
@@ -327,49 +490,70 @@ describe('renderBrowseCode', () => {
         hiddenNotInForce: 1,
       }),
     );
-    expect(text).toBe(
-      [
-        '### Code civil — table of contents on 2026-11-12\nCode civil › Livre III › Chapitre Ier · section_id LEGISCTA000000000003',
-        '- art. 1240 · VIGUEUR · id LEGIARTI000000001240\n- art. 1241 · VIGUEUR · id LEGIARTI000000001241',
-        '(1 item not in force on 2026-11-12 hidden — include_repealed: true to show them)',
-        'Pass a section_id to list what it contains; read an article with legifrance_get_article and its id.',
-        'Source: https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006070721/LEGISCTA000000000003',
-      ].join('\n\n'),
+    expect(a.section).toEqual({
+      path: ['Livre III', 'Chapitre Ier'],
+      section_id: 'LEGISCTA000000000003',
+    });
+    expect(a.items).toEqual([
+      {
+        type: 'article',
+        number: '1240',
+        id: 'LEGIARTI000000001240',
+        legifrance_status_today: 'VIGUEUR',
+      },
+      {
+        type: 'article',
+        number: '1241',
+        id: 'LEGIARTI000000001241',
+        legifrance_status_today: 'VIGUEUR',
+      },
+    ]);
+    expect(a.hidden_not_in_force).toBe(1);
+    expect(a.warnings).toEqual([
+      '(1 item not in force on 2026-11-12 hidden — include_repealed: true to show them)',
+      HINT,
+    ]);
+    expect(a.link).toBe(
+      'https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006070721/LEGISCTA000000000003',
     );
   });
 
+  it('an article without a number has a null number', () => {
+    const a = build(view({ articles: [{ ...art(1), num: null }] }));
+    expect(a.items[0]).toMatchObject({ type: 'article', number: null });
+  });
+
   it('with include_repealed today: sections by their dates, articles by their label', () => {
-    const text = render(
+    const a = build(
       view({
         children: [
           sec(1, 'Section 1'),
           sec(2, 'Section 2', { status: 'repealed', validTo: '2020-01-01' }),
           sec(3, 'Section 3', { validFrom: '2030-01-01' }),
-          // A label its dates contradict: listed unlabelled, the dates decide.
+          // A label its dates contradict: the dates decide.
           sec(4, 'Section 4', { status: 'repealed' }),
         ],
         articles: [art(1), art(2, 'ABROGE')],
       }),
     );
-    expect(text).toContain(
-      '- Section 2 · no longer in force — ended 2020-01-01 · section_id LEGISCTA000000000002',
+    const status = (id: string) =>
+      (a.items.find((i) => i.type === 'section' && i.section_id === id) as { status: unknown })
+        .status;
+    expect(status('LEGISCTA000000000001')).toEqual(sectionStatus('in_force', '2000-01-01', null));
+    expect(status('LEGISCTA000000000002')).toEqual(
+      sectionStatus('not_in_force', '2000-01-01', '2020-01-01'),
     );
-    expect(text).toContain(
-      '- Section 3 · not yet in force — from 2030-01-01 · section_id LEGISCTA000000000003',
+    expect(status('LEGISCTA000000000003')).toEqual(
+      sectionStatus('not_yet_in_force', '2030-01-01', null),
     );
-    expect(text).toContain('- Section 1 · section_id LEGISCTA000000000001');
-    expect(text).toContain('- Section 4 · section_id LEGISCTA000000000004');
-    expect(text).not.toContain('repealed');
-    expect(text).toContain('- art. 2 · ABROGE · id LEGIARTI000000000002');
-    expect(text).not.toContain('Légifrance label today');
-    expect(text).not.toContain('Nothing in force here');
+    expect(status('LEGISCTA000000000004')).toEqual(sectionStatus('in_force', '2000-01-01', null));
+    expect(a.items.at(-1)).toMatchObject({ type: 'article', legifrance_status_today: 'ABROGE' });
+    expect(a.warnings).toEqual([HINT]);
   });
 
-  it('a still-born section shown with include_repealed says it never applied', () => {
-    const text = render(view({ children: [sec(1, 'Section 1', { status: 'stillborn' })] }));
-    expect(text).toContain(
-      '- Section 1 · never in force (still-born) · section_id LEGISCTA000000000001',
-    );
+  it('a still-born section shown with include_repealed never applied', () => {
+    const a = build(view({ children: [sec(1, 'Section 1', { status: 'stillborn' })] }));
+    expect(a.items[0]).toMatchObject({ status: { state: 'never_applied' } });
   });
 
   describe('on a past date (Code du travail, recodified on 2008-05-01)', () => {
@@ -384,60 +568,64 @@ describe('renderBrowseCode', () => {
     const past = (over: Partial<BrowseView>) =>
       view({ codeTitle: 'Code du travail', asOf: PAST, asOfIsToday: false, ...over });
 
-    it('a part labelled ABROGE today but in force then is listed unlabelled; the hidden one is counted', () => {
-      const text = render(past({ children: [ancienne], hiddenNotInForce: 1 }));
-      expect(text).toBe(
-        [
-          '### Code du travail — table of contents on 2005-01-01',
-          '- Partie législative ancienne · section_id LEGISCTA000000000001',
-          '(1 item not in force on 2005-01-01 hidden — include_repealed: true to show them)',
-          'Pass a section_id to list what it contains; read an article with legifrance_get_article and its id.',
-          'Source: https://www.legifrance.gouv.fr/codes/texte_lc/LEGITEXT000006070721',
-        ].join('\n\n'),
-      );
+    it('a part labelled ABROGE today but in force then is in force on the date; the hidden one is counted', () => {
+      const a = build(past({ children: [ancienne], hiddenNotInForce: 1 }));
+      expect(a.items).toEqual([
+        {
+          type: 'section',
+          title: 'Partie législative ancienne',
+          section_id: 'LEGISCTA000000000001',
+          status: {
+            state: 'in_force',
+            on: PAST,
+            from: '1973-11-02',
+            until: '2008-05-01',
+            until_undetermined: false,
+          },
+        },
+      ]);
+      expect(a.warnings).toEqual([
+        '(1 item not in force on 2005-01-01 hidden — include_repealed: true to show them)',
+        HINT,
+      ]);
     });
 
-    it('with include_repealed the later part is listed with its start date', () => {
-      const text = render(past({ children: [ancienne, nouvelle] }));
-      expect(text).toContain('- Partie législative ancienne · section_id LEGISCTA000000000001');
-      expect(text).toContain(
-        '- Partie législative · not yet in force — from 2008-05-01 · section_id LEGISCTA000000000002',
-      );
+    it('with include_repealed the later part has its start date', () => {
+      const a = build(past({ children: [ancienne, nouvelle] }));
+      expect(a.items[1]).toMatchObject({
+        title: 'Partie législative',
+        status: { state: 'not_yet_in_force', from: '2008-05-01' },
+      });
     });
 
-    it("articles: every one listed with Légifrance's label of today, said once in the header", () => {
-      const text = render(
+    it("articles: every one with Légifrance's label of today, the caveat said once", () => {
+      const a = build(
         past({
           breadcrumb: [{ cid: 'LEGISCTA000000000001', title: 'Partie législative ancienne' }],
           node: { cid: 'LEGISCTA000000000001', title: 'Partie législative ancienne' },
           articles: [art(1, 'ABROGE'), art(2)],
         }),
       );
-      expect(text).toBe(
-        [
-          [
-            '### Code du travail — table of contents on 2005-01-01',
-            'Code du travail › Partie législative ancienne · section_id LEGISCTA000000000001',
-            "Article labels are Légifrance's current ones; open an article with legifrance_get_article and at_date to check it on 2005-01-01.",
-          ].join('\n'),
-          [
-            '- art. 1 (Légifrance label today: ABROGE) · id LEGIARTI000000000001',
-            '- art. 2 (Légifrance label today: VIGUEUR) · id LEGIARTI000000000002',
-          ].join('\n'),
-          'Pass a section_id to list what it contains; read an article with legifrance_get_article and its id.',
-          'Source: https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006070721/LEGISCTA000000000001',
-        ].join('\n\n'),
+      expect(a.items.map((i) => (i.type === 'article' ? i.legifrance_status_today : null))).toEqual(
+        ['ABROGE', 'VIGUEUR'],
       );
-      expect(text.match(/Article labels are Légifrance's current ones/g)).toHaveLength(1);
+      expect(a.warnings).toEqual([
+        "Article labels are Légifrance's current ones; open an article with legifrance_get_article and at_date to check it on 2005-01-01.",
+        HINT,
+      ]);
     });
 
-    it('no article: no label note', () => {
-      expect(render(past({ children: [ancienne] }))).not.toContain('Article labels');
+    it('no article: no label caveat', () => {
+      expect(build(past({ children: [ancienne] })).warnings).toEqual([HINT]);
     });
   });
 
-  it('nothing to list says so', () => {
-    expect(render(view())).toContain('Nothing in force here on 2026-11-12.');
+  it('nothing to list is no_results and says so', () => {
+    const a = build(view());
+    expect(a.outcome).toBe('no_results');
+    expect(a.items).toEqual([]);
+    expect(a.results).toBe(0);
+    expect(a.warnings).toEqual(['Nothing in force here on 2026-11-12.', HINT]);
   });
 
   it('one level only, and the shared (cached) subtrees are never modified', () => {
@@ -446,15 +634,17 @@ describe('renderBrowseCode', () => {
       sec(1, 'Livre I', { children: [node(11, 'Titre caché aussi')] }),
     ]);
     const before = JSON.stringify(children);
-    const text = render(view({ children }));
-    expect(text).not.toContain('caché');
-    expect(text).not.toContain('art. 9');
-    expect(text.indexOf('Livre II')).toBeLessThan(text.indexOf('Livre I ·'));
+    const a = build(view({ children }));
+    expect(JSON.stringify(a)).not.toContain('caché');
+    expect(a.items.map((i) => (i.type === 'section' ? i.title : null))).toEqual([
+      'Livre II',
+      'Livre I',
+    ]);
     expect(JSON.stringify(children)).toBe(before);
   });
 
-  it('a long list is paged: bounded pages, frame on each, every item once', () => {
-    const children = Array.from({ length: 1500 }, (_, i) =>
+  describe('a long list is paged', () => {
+    const children = Array.from({ length: 4000 }, (_, i) =>
       sec(i + 1, `Section ${i + 1} : ${'intitulé très long de la section '.repeat(3)}`),
     );
     const v = view({
@@ -464,24 +654,45 @@ describe('renderBrowseCode', () => {
       articles: [art(1), art(2)],
       hiddenNotInForce: 2,
     });
-    const first = render(v);
-    const pageCount = Number(/page 1 of (\d+)/.exec(first)?.[1]);
-    expect(pageCount).toBeGreaterThan(2);
-    const pages = Array.from({ length: pageCount }, (_, i) => render(v, i + 1));
-    for (const [i, page] of pages.entries()) {
-      expect(page.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-      expect(page.startsWith('### Code civil — table of contents on 2026-11-12')).toBe(true);
-      expect(page).toContain('Code civil › Livre Ier · section_id LEGISCTA000000009999');
-      expect(page).toContain(`page ${i + 1} of ${pageCount}`);
-      expect(page).toContain('(2 items not in force on 2026-11-12 hidden');
-      expect(page.includes(`Next page: "page": ${i + 2}`)).toBe(i + 1 < pageCount);
-      expect(page).toContain(
-        'Source: https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006070721/LEGISCTA000000009999',
+    // One build per requested page, as the tool does: the split must not depend on the page asked.
+    const pageCount = build(v).page.of;
+    const pages = Array.from({ length: pageCount }, (_, i) =>
+      buildBrowseCodeAnswer(v, { request: { ...request, page: i + 1 }, page: i + 1 }),
+    );
+
+    it('needs many pages, each bounded, with the frame on each', () => {
+      expect(pageCount).toBeGreaterThanOrEqual(10);
+      for (const [i, a] of pages.entries()) {
+        expect(JSON.stringify(a).length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
+        expect(a.page).toEqual({ number: i + 1, of: pageCount });
+        expect(a.next).toEqual(i + 1 < pageCount ? { page: i + 2 } : null);
+        expect(a.section?.section_id).toBe('LEGISCTA000000009999');
+        expect(a.results).toBe(4002);
+        expect(a.section_count).toBe(4000);
+        expect(a.article_count).toBe(2);
+        expect(a.hidden_not_in_force).toBe(2);
+      }
+    });
+
+    it('reading pages 1..N gives every section and article exactly once, in order', () => {
+      const keys = pages.flatMap((a) =>
+        a.items.map((i) => (i.type === 'section' ? i.section_id : i.id)),
       );
-    }
-    const all = pages.join('\n');
-    expect(all.match(/^- Section \d+ /gm)).toHaveLength(1500);
-    expect(all.match(/^- art\. /gm)).toHaveLength(2);
-    expect(() => render(v, pageCount + 1)).toThrow('past the last page');
+      const expected = [
+        ...children.map((c) => c.section.cid),
+        'LEGIARTI000000000001',
+        'LEGIARTI000000000002',
+      ];
+      expect(keys).toEqual(expected);
+    });
+
+    it('past the last page is no_results with the same fields', () => {
+      const a = build(v, pageCount + 1);
+      expect(a.outcome).toBe('no_results');
+      expect(a.items).toEqual([]);
+      expect(a.results).toBe(4002);
+      expect(a.page).toEqual({ number: pageCount + 1, of: pageCount });
+      expect(a.next).toBeNull();
+    });
   });
 });

@@ -1,10 +1,33 @@
 import type { McpServer } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
-import { LEGIFRANCE_BASE_URL } from '../../domain/links.js';
-import type { ReferenceKind, ReferenceView } from '../../services/legislation/jo.js';
+import {
+  type ReferenceKind,
+  type ReferenceView,
+  referenceSince,
+} from '../../services/legislation/jo.js';
 import type { CallContext } from '../../services/legislation/ports.js';
-import { callSignal, MAX_TOOL_TEXT, optionalIsoDateSchema, presentOrUndefined } from '../format.js';
-import { toToolError } from '../tool-error.js';
+import {
+  type AnswerBody,
+  answerSchema,
+  dateSchema,
+  isoSecond,
+  type Pointer,
+  requestEcho,
+  type ToolContext,
+  toolAnswer,
+} from '../envelope.js';
+import {
+  callSignal,
+  FRAME_SLACK,
+  jsonCost,
+  MAX_TOOL_TEXT,
+  optionalIsoDateSchema,
+  presentOrUndefined,
+} from '../format.js';
+import { toolError } from '../tool-error.js';
+
+const TOOL = 'legifrance_list_reference_values';
+const SOURCE = 'Légifrance';
 
 export type ListReferenceValues = (
   input: { kind: ReferenceKind; since?: string },
@@ -23,49 +46,97 @@ const inputSchema = z.object({
   ),
 });
 
-const KIND_LABELS: Record<ReferenceKind, string> = {
-  codes: 'French codes',
-  jorf_natures: 'Journal officiel text natures',
-  jorf_emitters: 'Journal officiel emitters',
+// ---------------------------------------------------------------------------------------------
+// Output schema
+
+const valueSchema = z.object({
+  value: z.string().describe('The value, as Légifrance spells it.'),
+  id: z.string().nullable().describe('Légifrance id of the code; null for a JORF value.'),
+  status: z
+    .string()
+    .nullable()
+    .describe('Status of the code (in_force, repealed…); null for a JORF value.'),
+  count: z
+    .number()
+    .int()
+    .nullable()
+    .describe('Texts published with this value in the window; null for a code.'),
+});
+
+const referenceShape = {
+  kind: z.enum(['codes', 'jorf_natures', 'jorf_emitters']).describe('Which list.'),
+  since: dateSchema
+    .nullable()
+    .describe('Start of the publication window of the counts; null for codes.'),
+  results: z.number().int().describe('Values in the list.'),
+  omitted: z.number().int().describe('Values of the list left out by the answer size limit.'),
+  items: z.array(valueSchema).describe('The values, the codes by title, the JORF values by count.'),
 };
 
-const line = (v: ReferenceView['values'][number]): string =>
-  v.id !== null
-    ? `- ${v.value} · ${v.status ?? 'status n/a'} · id ${v.id}`
-    : `- ${v.value} · ${v.count ?? 0} texts`;
+const resultsBranch = answerSchema(SOURCE, 'results', referenceShape);
 
-/** A reference list, one value per line; cut with a notice should it pass the cap. */
-export function renderReferenceValues(view: ReferenceView): string {
-  const head =
-    view.kind === 'codes'
-      ? `### ${KIND_LABELS.codes} — ${view.values.length} codes`
-      : `### ${KIND_LABELS[view.kind]} — ${view.values.length} values, texts published since ${view.since} (publication dates)`;
-  const lines: string[] = [];
-  let used = head.length + 400;
-  for (const v of view.values) {
-    const l = line(v);
-    if (used + l.length + 1 > MAX_TOOL_TEXT) break;
-    lines.push(l);
-    used += l.length + 1;
+export const referenceValuesOutput = z.discriminatedUnion('outcome', [resultsBranch]);
+
+// ---------------------------------------------------------------------------------------------
+// Answer builder
+
+export type ReferenceValuesAnswer = AnswerBody<z.input<typeof referenceValuesOutput>>;
+type Value = ReferenceValuesAnswer['items'][number];
+
+export interface ReferenceAnswerOptions {
+  /** The call's `request` (`requestEcho`). */
+  request: Pointer;
+}
+
+/** A reference list; values past the answer size limit are left out and counted in `omitted`. */
+export function buildReferenceValuesAnswer(
+  view: ReferenceView,
+  opts: ReferenceAnswerOptions,
+): ReferenceValuesAnswer {
+  const all: Value[] = view.values.map((v) => ({
+    value: v.value,
+    id: v.id,
+    status: v.status,
+    count: v.count,
+  }));
+  const answer = (items: Value[]): ReferenceValuesAnswer => ({
+    source: SOURCE,
+    outcome: 'results',
+    warnings: [],
+    kind: view.kind,
+    since: view.since,
+    results: all.length,
+    omitted: all.length - items.length,
+    items,
+    request: opts.request,
+    cached:
+      view.fetchedAt === null
+        ? []
+        : [{ what: 'Légifrance code list', retrieved: isoSecond(view.fetchedAt) }],
+  });
+
+  let room = MAX_TOOL_TEXT - JSON.stringify(answer([])).length - FRAME_SLACK;
+  const items: Value[] = [];
+  for (const v of all) {
+    room -= jsonCost(v);
+    if (room < 0) break;
+    items.push(v);
   }
-  const cut =
-    lines.length < view.values.length
-      ? [`${view.values.length - lines.length} more values not shown (answer size limit).`]
-      : [];
-  return [head, lines.join('\n'), ...cut, `Source: ${LEGIFRANCE_BASE_URL}`].join('\n\n');
+  return answer(items);
 }
 
 export function registerReferenceValuesTool(
   server: McpServer,
   listReferenceValues: ListReferenceValues,
-  deadlineMs?: number,
+  ctx: ToolContext,
 ): void {
   server.registerTool(
-    'legifrance_list_reference_values',
+    TOOL,
     {
       title: 'List Légifrance reference values',
       description: DESCRIPTION,
       inputSchema,
+      outputSchema: referenceValuesOutput,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -73,16 +144,29 @@ export function registerReferenceValuesTool(
         openWorldHint: true,
       },
     },
-    async (args, ctx) => {
-      const signal = callSignal(ctx.mcpReq.signal, deadlineMs);
+    async (args, extra) => {
+      const request = requestEcho(TOOL, inputSchema, args, {
+        ...(args.kind !== 'codes' && { since: referenceSince(ctx.today()) }),
+      });
+      const signal = callSignal(extra.mcpReq.signal, ctx.deadlineMs);
       try {
         const view = await listReferenceValues(
           { kind: args.kind, since: presentOrUndefined(args.since) },
           { signal },
         );
-        return { content: [{ type: 'text', text: renderReferenceValues(view) }] };
+        return toolAnswer(
+          referenceValuesOutput,
+          buildReferenceValuesAnswer(view, { request }),
+          ctx,
+        );
       } catch (err) {
-        return toToolError(err, signal, 'legifrance');
+        return toolError(err, {
+          source: 'legifrance',
+          request,
+          signal,
+          deadlineMs: ctx.deadlineMs,
+          now: ctx.now,
+        });
       }
     },
   );

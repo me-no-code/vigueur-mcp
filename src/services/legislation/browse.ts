@@ -37,6 +37,8 @@ export interface BrowseView {
   articles: TocArticle[];
   /** Child sections and articles of the node left out as not in force on `asOf`. */
   hiddenNotInForce: number;
+  /** When the cached table of contents was fetched. */
+  fetchedAt: Date;
 }
 
 /** Article statuses of content that no longer applies today; hidden unless asked for. */
@@ -116,6 +118,7 @@ export function createBrowseCode(
       children,
       articles,
       hiddenNotInForce: dated.length - children.length + (node.articles.length - articles.length),
+      fetchedAt: toc.fetchedAt,
     };
   };
 }

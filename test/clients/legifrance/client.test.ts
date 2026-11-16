@@ -47,7 +47,7 @@ function article(over: Record<string, unknown> = {}) {
 describe('listCodes', () => {
   it('maps /list/code (fixture 68)', async () => {
     const { repo, calls } = client([serve('/list/code', '68-list-code-pagesize200')]);
-    const codes = await repo.listCodes();
+    const { codes } = await repo.listCodes();
     expect(codes).toHaveLength(108);
     expect(codes).toContainEqual({
       id: 'LEGITEXT000006070721',
@@ -70,13 +70,17 @@ describe('listCodes', () => {
       now: () => new Date(t),
       codesTtlMs: 60_000,
     });
-    await repo.listCodes();
+    const first = await repo.listCodes();
+    expect(first.fetchedAt).toEqual(new Date(1_000_000));
     t += 59_999;
-    await repo.listCodes();
+    const hit = await repo.listCodes();
     expect(calls).toHaveLength(1);
+    // A hit carries the fetch time of the cached list, not the time of the call.
+    expect(hit.fetchedAt).toEqual(new Date(1_000_000));
     t += 1;
-    await repo.listCodes();
+    const refetched = await repo.listCodes();
     expect(calls).toHaveLength(2);
+    expect(refetched.fetchedAt).toEqual(new Date(1_060_000));
   });
 
   it('defaults the cache lifetime to 24 h', async () => {
@@ -105,7 +109,7 @@ describe('listCodes', () => {
     ]);
     await rejection(repo.listCodes());
     fail = false;
-    expect(await repo.listCodes()).toHaveLength(108);
+    expect((await repo.listCodes()).codes).toHaveLength(108);
     expect(calls).toHaveLength(2);
   });
 });

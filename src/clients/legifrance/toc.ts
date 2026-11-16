@@ -50,10 +50,16 @@ function mapSection(s: Obj): TocNode {
   return mapNode(s, cleanTitle(optStr(s, 'title') ?? ''), optStr(s, 'cid') || id);
 }
 
-function mapToc(raw: unknown, codeId: string, asOf: IsoDate): CodeToc {
+function mapToc(raw: unknown, codeId: string, asOf: IsoDate, fetchedAt: Date): CodeToc {
   const o = asObj(raw, 'body');
   const codeTitle = cleanTitle(str(o, 'title'));
-  return { codeId, codeTitle, asOf, root: mapNode(o, codeTitle, optStr(o, 'cid') || codeId) };
+  return {
+    codeId,
+    codeTitle,
+    asOf,
+    root: mapNode(o, codeTitle, optStr(o, 'cid') || codeId),
+    fetchedAt,
+  };
 }
 
 function mapLinks(raw: unknown, today: IsoDate): SectionLinks | null {
@@ -94,23 +100,23 @@ export interface TocClient {
 export function createTocClient(http: PisteHttp, now: () => Date): TocClient {
   // Least recently used last; a Map keeps insertion order. Failed fetches are never stored and
   // concurrent first calls may each fetch (as for `listCodes`).
-  const cache = new Map<string, { fetchedAt: number; toc: CodeToc }>();
+  const cache = new Map<string, CodeToc>();
 
   return {
     async getCodeToc(codeId, asOf, ctx) {
       const key = `${codeId}|${asOf}`;
       const hit = cache.get(key);
-      if (hit !== undefined && now().getTime() - hit.fetchedAt < TOC_MAX_AGE_MS) {
+      if (hit !== undefined && now().getTime() - hit.fetchedAt.getTime() < TOC_MAX_AGE_MS) {
         cache.delete(key);
         cache.set(key, hit);
-        return hit.toc;
+        return hit;
       }
       cache.delete(key);
       const body = { textId: codeId, date: asOf, nature: 'CODE' };
       const toc = await postJson(http, '/consult/legi/tableMatieres', body, ctx, (raw) =>
-        mapToc(raw, codeId, asOf),
+        mapToc(raw, codeId, asOf, now()),
       );
-      cache.set(key, { fetchedAt: now().getTime(), toc });
+      cache.set(key, toc);
       while (cache.size > TOC_CACHE_SIZE) {
         const oldest = cache.keys().next().value;
         if (oldest === undefined) break;

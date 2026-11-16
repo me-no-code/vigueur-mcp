@@ -66,7 +66,7 @@ export async function resolveCode(
   ctx: CallContext | undefined,
 ): Promise<CodeResolution> {
   const wanted = foldKey(resolveCodeName(raw) ?? raw);
-  const codes = await repo.listCodes(ctx);
+  const { codes } = await repo.listCodes(ctx);
   const code = codes.find((c) => foldKey(c.title) === wanted);
   if (code) return { code };
 

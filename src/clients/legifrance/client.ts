@@ -8,6 +8,7 @@ import type {
   ArticleRecord,
   CallContext,
   CodeInfo,
+  CodeList,
   Concordance,
   HistoryEntry,
   LegislationRepository,
@@ -347,7 +348,7 @@ export function createLegifranceClient(
   const now = opts.now ?? (() => new Date());
   const codesTtlMs = opts.codesTtlMs ?? DEFAULT_CODES_TTL_MS;
   const toc = createTocClient(http, now);
-  let codes: { fetchedAt: number; list: CodeInfo[] } | null = null;
+  let codes: CodeList | null = null;
 
   const post = <T>(
     path: string,
@@ -358,11 +359,11 @@ export function createLegifranceClient(
 
   return {
     async listCodes(ctx) {
-      if (codes === null || now().getTime() - codes.fetchedAt >= codesTtlMs) {
+      if (codes === null || now().getTime() - codes.fetchedAt.getTime() >= codesTtlMs) {
         const fetched = await post('/list/code', { pageNumber: 1, pageSize: 200 }, ctx, mapCodes);
-        codes = { fetchedAt: now().getTime(), list: fetched };
+        codes = { codes: fetched, fetchedAt: now() };
       }
-      return [...codes.list];
+      return { codes: [...codes.codes], fetchedAt: codes.fetchedAt };
     },
 
     findArticleAt(codeTitle, num, date, ctx) {

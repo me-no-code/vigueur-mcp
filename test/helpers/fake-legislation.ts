@@ -17,6 +17,9 @@ import type {
   VersionSummary,
 } from '../../src/services/legislation/ports.js';
 
+/** When the fake's cached lists (codes, tables of contents) were fetched. */
+export const FAKE_FETCHED_AT = new Date('2026-11-10T08:00:00Z');
+
 /** A sample of `/list/code` (real ids and titles), deliberately not sorted by title. */
 export const DEFAULT_CODES: readonly CodeInfo[] = [
   { id: 'LEGITEXT000006072050', title: 'Code du travail', status: 'in_force' },
@@ -192,7 +195,7 @@ export interface FakeLegislationSeed {
   /** Whole texts: `getText` / `getJorfText` serve them by id, `getJorfTextByNor` by NOR (`null` otherwise). */
   texts?: readonly TextRecord[];
   /** `getCodeToc` result by code id (default: an empty root). */
-  tocs?: Readonly<Record<string, CodeToc>>;
+  tocs?: Readonly<Record<string, Omit<CodeToc, 'fetchedAt'> & { fetchedAt?: Date }>>;
   /** `getSectionLinks` result by section cid (default `null`). */
   sectionLinks?: Readonly<Record<string, SectionLinks>>;
   /** `searchLegislation` returns these hits (one page; default none). */
@@ -219,7 +222,7 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
 
   const seeded: LegislationRepository = {
     async listCodes() {
-      return codes.map((c) => ({ ...c }));
+      return { codes: codes.map((c) => ({ ...c })), fetchedAt: FAKE_FETCHED_AT };
     },
     async findArticleAt(codeTitle, num, date) {
       const hits = byNumber(codeTitle, num)
@@ -273,7 +276,7 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     },
     async getCodeToc(codeId, asOf) {
       const seededToc = seed.tocs?.[codeId];
-      if (seededToc) return seededToc;
+      if (seededToc) return { fetchedAt: FAKE_FETCHED_AT, ...seededToc };
       const root = {
         cid: codeId,
         title: '',
@@ -283,7 +286,7 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
         children: [],
         articles: [],
       };
-      return { codeId, codeTitle: '', asOf, root };
+      return { codeId, codeTitle: '', asOf, root, fetchedAt: FAKE_FETCHED_AT };
     },
     async getSectionLinks(sectionCid) {
       return seed.sectionLinks?.[sectionCid] ?? null;

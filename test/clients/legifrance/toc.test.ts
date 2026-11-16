@@ -167,6 +167,19 @@ describe('getCodeToc', () => {
       expect(b).toEqual(a);
     });
 
+    it('stamps the fetch time, the same on every hit until the entry is refetched', async () => {
+      const { repo, clock } = client([tocRoute]);
+      const fetchedAt = new Date(clock.t);
+      const first = await repo.getCodeToc(TRAVAIL, '2026-11-12');
+      clock.t += HOUR;
+      const hit = await repo.getCodeToc(TRAVAIL, '2026-11-12');
+      expect(first.fetchedAt).toEqual(fetchedAt);
+      expect(hit.fetchedAt).toEqual(fetchedAt);
+      clock.t += 24 * HOUR;
+      const refetched = await repo.getCodeToc(TRAVAIL, '2026-11-12');
+      expect(refetched.fetchedAt).toEqual(new Date(clock.t));
+    });
+
     it('keys by date as well as by code', async () => {
       const { repo, calls } = client([tocRoute]);
       await repo.getCodeToc(TRAVAIL, '2026-11-12');

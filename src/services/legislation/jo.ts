@@ -7,6 +7,9 @@ import { invalid, requireIsoDate, todayInParis } from './resolve.js';
 
 const MAX_ISSUES_PER_DATE = 3;
 
+/** How many of the latest issues are read when neither `count` nor `date` is given. */
+export const DEFAULT_ISSUE_COUNT = 1;
+
 export interface LatestJoInput {
   count?: number;
   date?: IsoDate;
@@ -62,7 +65,7 @@ export function createLatestJo(
       }
       selected = read;
     } else {
-      const count = input.count ?? 1;
+      const count = input.count ?? DEFAULT_ISSUE_COUNT;
       if (!Number.isInteger(count) || count < 1 || count > 10) {
         throw invalid(`"count" must be a whole number from 1 to 10 (got ${count}).`);
       }
@@ -123,6 +126,13 @@ export interface ReferenceView {
     id: string | null;
     status: LegalStatus | null;
   }>;
+  /** When the cached code list was fetched; null for the JORF lists, which are not cached. */
+  fetchedAt: Date | null;
+}
+
+/** Start of the publication window of the JORF lists when `since` is not given: a year before `today`. */
+export function referenceSince(today: IsoDate): IsoDate {
+  return minusDays(today, 365);
 }
 
 /** Values the other tools accept: code titles, or the natures / emitters seen in recent JORF texts. */
@@ -133,10 +143,11 @@ export function createListReferenceValues(
   const todayOf = opts.today ?? todayInParis;
   return async (input, ctx) => {
     if (input.kind === 'codes') {
-      const codes = await repo.listCodes(ctx);
+      const { codes, fetchedAt } = await repo.listCodes(ctx);
       return {
         kind: 'codes',
         since: null,
+        fetchedAt,
         values: codes
           .map((c) => ({ value: c.title, count: null, id: c.id, status: c.status }))
           .sort((a, b) => a.value.localeCompare(b.value, 'fr')),
@@ -144,13 +155,14 @@ export function createListReferenceValues(
     }
     const today = todayOf();
     const since =
-      input.since === undefined ? minusDays(today, 365) : requireIsoDate(input.since, '"since"');
+      input.since === undefined ? referenceSince(today) : requireIsoDate(input.since, '"since"');
     if (since > today) throw invalid(`"since" (${since}) is after today (${today}).`);
     const facets = await repo.jorfFacets(since, today, ctx);
     const list = input.kind === 'jorf_natures' ? facets.natures : facets.emitters;
     return {
       kind: input.kind,
       since,
+      fetchedAt: null,
       values: list.map((f) => ({ value: f.value, count: f.count, id: null, status: null })),
     };
   };

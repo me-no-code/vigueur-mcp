@@ -104,6 +104,12 @@ export function changeActionOf(action: HistoryEntry['action']): z.infer<typeof c
   return CHANGE_ACTIONS[action];
 }
 
+/** One section of a text or code: the titles down to it, and its Légifrance id. */
+export const sectionSchema = z.object({
+  path: z.array(z.string()).describe('Titles from the outermost section down to this one.'),
+  section_id: z.string().describe('Légifrance id of the section.'),
+});
+
 export const pageSchema = z
   .object({ number: z.number().int(), of: z.number().int() })
   .describe('This page and the number of pages.');
