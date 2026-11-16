@@ -85,10 +85,10 @@ export const publishedSchema = dateSchema
   .nullable()
   .describe('Publication date; null when not given.');
 
-/** Case-law fields shared by the Légifrance case-law tools (and the Judilibre ones). */
 /** Longest title a case-law answer gives; a longer one is cut. */
 export const DECISION_TITLE_MAX = 300;
 
+/** Case-law fields shared by the Légifrance case-law tools (and the Judilibre ones). */
 export const decisionTitleSchema = z
   .string()
   .describe('Title of the decision as the source states it; cut to 300 characters.');
