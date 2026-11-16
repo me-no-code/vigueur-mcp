@@ -32,7 +32,9 @@ export interface SearchLegislationInput {
   pageSize?: number;
 }
 
-const DEFAULT_PAGE_SIZE = 10;
+/** The page and the page size a search uses when the call gives none. */
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 
 /** Collections searched without a date: what to do instead of giving `at_date`. */
@@ -62,7 +64,7 @@ export function createSearchLegislation(
 ): (input: SearchLegislationInput, ctx?: CallContext) => Promise<LegislationSearchPage> {
   const today = opts.today ?? todayInParis;
   return async (input, ctx) => {
-    const page = positiveInt(input.page, '"page"', 1);
+    const page = positiveInt(input.page, '"page"', DEFAULT_PAGE);
     const pageSize = positiveInt(input.pageSize, '"page_size"', DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
     const noAtDate = NO_AT_DATE[input.collection];
     if (input.atDate !== undefined && noAtDate !== undefined) {

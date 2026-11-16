@@ -92,6 +92,20 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     when: numberSearch('CODE_DATE', '1240'),
     fixture: '02-search-code-date-1240-today',
   },
+  // No sample covers a search without a hit: the shape of 02 with an empty result list.
+  {
+    path: '/search',
+    when: numberSearch('CODE_DATE', '99999'),
+    body: () => ({
+      executionTime: 1,
+      results: [],
+      facets: [],
+      totalResultNumber: 0,
+      totalArticleResultNumber: 0,
+      typePagination: 'ARTICLE',
+      descriptionFusionHtml: null,
+    }),
+  },
   {
     path: '/search',
     when: numberSearch('CODE_DATE', '1382'),

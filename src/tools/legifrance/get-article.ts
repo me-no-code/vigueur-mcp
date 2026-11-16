@@ -17,6 +17,8 @@ import {
   type AnswerBody,
   answerSchema,
   dateSchema,
+  fromSchema,
+  legifranceStatusSchema,
   nextSchema,
   type Pointer,
   partSchema,
@@ -26,6 +28,8 @@ import {
   statusValue,
   type ToolContext,
   toolAnswer,
+  untilSchema,
+  untilUndeterminedSchema,
 } from '../envelope.js';
 import {
   callSignal,
@@ -88,22 +92,12 @@ const inputSchema = z.object({
 // ---------------------------------------------------------------------------------------------
 // Output schema
 
-const labelSchema = z
-  .string()
-  .nullable()
-  .describe("Légifrance's own status label (VIGUEUR, ABROGE_DIFF…); null when it gives none.");
-const fromSchema = dateSchema.nullable().describe('Start of validity; null when unknown.');
-const untilSchema = dateSchema.nullable().describe('End of validity; null when none is dated.');
-const untilUndeterminedSchema = z
-  .boolean()
-  .describe('Légifrance records an end whose date it has not set.');
-
 const candidateSchema = z.object({
   id: z.string().describe('Légifrance id of the article version.'),
   code: z.string().describe('Title of the code the version belongs to.'),
   code_id: z.string().describe('Légifrance id of that code.'),
   from: fromSchema,
-  legifrance_status: labelSchema,
+  legifrance_status: legifranceStatusSchema,
   read_with: pointerSchema.describe('The tool call that returns this version.'),
 });
 
@@ -159,7 +153,7 @@ const neighbourSchema = z
 const versionRowSchema = z.object({
   id: z.string().describe('Légifrance id of the version.'),
   version: z.string().describe("Légifrance's version number."),
-  legifrance_status: labelSchema,
+  legifrance_status: legifranceStatusSchema,
   from: fromSchema,
   until: untilSchema,
   until_undetermined: untilUndeterminedSchema,
@@ -186,7 +180,7 @@ const foundBranch = answerSchema(SOURCE, 'found', {
   id: z.string().describe('Légifrance id of the article version.'),
   link: z.string().describe('Official page of the version on legifrance.gouv.fr.'),
   status: statusSchema,
-  legifrance_status: labelSchema,
+  legifrance_status: legifranceStatusSchema,
   code: z.string().nullable().describe('Title of the code; null when Légifrance gives none.'),
   code_id: z.string().nullable().describe('Légifrance id of the code; null when not given.'),
   number: z.string().describe('Article number.'),
@@ -242,7 +236,7 @@ const notInForceBranch = answerSchema(SOURCE, 'not_in_force', {
       z.object({
         id: z.string().describe('Légifrance id of the version.'),
         code: z.string().describe('Title of the code the version belongs to.'),
-        legifrance_status: labelSchema,
+        legifrance_status: legifranceStatusSchema,
         from: fromSchema,
         until: untilSchema,
         until_undetermined: untilUndeterminedSchema,

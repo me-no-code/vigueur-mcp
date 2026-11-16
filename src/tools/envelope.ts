@@ -2,6 +2,7 @@ import type { CallToolResult } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import type { IsoDate } from '../domain/dates.js';
 import type { StatusAt } from '../domain/status-at.js';
+import type { HistoryEntry } from '../services/legislation/ports.js';
 import { todayInParis } from '../services/legislation/resolve.js';
 import { VERSION } from '../version.js';
 import { DEFAULT_DEADLINE_MS, presentOrUndefined } from './format.js';
@@ -53,6 +54,42 @@ export const statusSchema = z
       .describe('Légifrance records an end whose date it has not set.'),
   })
   .describe('Whether the version applies on `on`, computed from its validity dates.');
+
+export const fromSchema = dateSchema.nullable().describe('Start of validity; null when unknown.');
+
+export const untilSchema = dateSchema
+  .nullable()
+  .describe('End of validity; null when none is dated.');
+
+export const untilUndeterminedSchema = z
+  .boolean()
+  .describe('Légifrance records an end whose date it has not set.');
+
+export const legifranceStatusSchema = z
+  .string()
+  .nullable()
+  .describe(
+    "Légifrance's own status label (VIGUEUR, MODIFIE, ABROGE_DIFF…); null when it gives none.",
+  );
+
+export const changeActionSchema = z
+  .enum(['created', 'amended', 'repealed', 'codified', 'transferred', 'linked'])
+  .describe('What the change did to the article.');
+
+const CHANGE_ACTIONS: Readonly<Record<HistoryEntry['action'], z.infer<typeof changeActionSchema>>> =
+  {
+    creation: 'created',
+    modification: 'amended',
+    abrogation: 'repealed',
+    codification: 'codified',
+    transfer: 'transferred',
+    other: 'linked',
+  };
+
+/** The answer's word for what a history or change-log entry did. */
+export function changeActionOf(action: HistoryEntry['action']): z.infer<typeof changeActionSchema> {
+  return CHANGE_ACTIONS[action];
+}
 
 export const pageSchema = z
   .object({ number: z.number().int(), of: z.number().int() })

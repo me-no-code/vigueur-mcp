@@ -12,13 +12,19 @@ import type { CallContext, HistoryEntry } from '../../services/legislation/ports
 import {
   type AnswerBody,
   answerSchema,
+  changeActionOf,
+  changeActionSchema,
   dateSchema,
+  fromSchema,
+  legifranceStatusSchema,
   nextSchema,
   type Pointer,
   pageSchema,
   requestEcho,
   type ToolContext,
   toolAnswer,
+  untilSchema,
+  untilUndeterminedSchema,
 } from '../envelope.js';
 import {
   callSignal,
@@ -73,12 +79,6 @@ const EVENTS_PER_PAGE = 100;
 // ---------------------------------------------------------------------------------------------
 // Output schema
 
-const fromSchema = dateSchema.nullable().describe('Start of validity; null when unknown.');
-const untilSchema = dateSchema.nullable().describe('End of validity; null when none is dated.');
-const untilUndeterminedSchema = z
-  .boolean()
-  .describe('Légifrance records an end whose date it has not set.');
-
 const currentSchema = z
   .object({
     id: z.string().describe('Légifrance id of the version.'),
@@ -93,35 +93,18 @@ const currentSchema = z
 const versionSchema = z.object({
   id: z.string().describe('Légifrance id of the version.'),
   version: z.string().describe("Légifrance's version number."),
-  legifrance_status: z
-    .string()
-    .nullable()
-    .describe("Légifrance's own status label (VIGUEUR, MODIFIE…); null when it gives none."),
+  legifrance_status: legifranceStatusSchema,
   from: fromSchema,
   until: untilSchema,
   until_undetermined: untilUndeterminedSchema,
 });
-
-const ACTIONS: Readonly<
-  Record<
-    HistoryEntry['action'],
-    'created' | 'amended' | 'repealed' | 'codified' | 'transferred' | 'linked'
-  >
-> = {
-  creation: 'created',
-  modification: 'amended',
-  abrogation: 'repealed',
-  codification: 'codified',
-  transfer: 'transferred',
-  other: 'linked',
-};
 
 const eventSchema = z.object({
   date: dateSchema
     .nullable()
     .describe('Entry-into-force date of the change; null when Légifrance has not determined it.'),
   date_undetermined: z.boolean().describe('Légifrance records the date as not determined.'),
-  action: z.enum(['created', 'amended', 'repealed', 'codified', 'transferred', 'linked']),
+  action: changeActionSchema,
   by: z.string().describe('Title of the amending text.'),
   by_article_id: z
     .string()
@@ -206,7 +189,7 @@ function eventItem(e: HistoryEntry, opts: HistoryAnswerOptions): HistoryItem {
   return {
     date: e.date,
     date_undetermined: e.undetermined,
-    action: ACTIONS[e.action],
+    action: changeActionOf(e.action),
     by: e.amendingTitle,
     by_article_id: opts.detailed ? e.amendingArticleId : null,
     scheduled: e.date !== null && e.date > opts.today,

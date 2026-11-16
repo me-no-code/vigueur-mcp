@@ -12,7 +12,12 @@ import {
 import { connectClient, firstText } from '../helpers/mcp-client.js';
 
 /** Tools answering through the envelope. */
-const CONVERTED = new Set<string>(['legifrance_get_article', 'legifrance_get_article_history']);
+const CONVERTED = new Set<string>([
+  'legifrance_get_article',
+  'legifrance_get_article_history',
+  'legifrance_search_legislation',
+  'legifrance_list_changes',
+]);
 
 interface Case {
   tool: string;
@@ -40,6 +45,26 @@ const CASES: Case[] = [
     tool: 'legifrance_get_article_history',
     args: { number: 'L1234-1' },
     outcome: 'several_matches',
+  },
+  {
+    tool: 'legifrance_search_legislation',
+    args: { collection: 'codes', code: 'Code civil', article_number: '1240' },
+    outcome: 'results',
+  },
+  {
+    tool: 'legifrance_search_legislation',
+    args: { collection: 'codes', code: 'Code civil', article_number: '99999' },
+    outcome: 'no_results',
+  },
+  {
+    tool: 'legifrance_list_changes',
+    args: { code: 'Code civil', since: '2025-01-01', until: '2026-12-31' },
+    outcome: 'results',
+  },
+  {
+    tool: 'legifrance_list_changes',
+    args: { code: 'Code civil', since: '2025-01-01', until: '2026-12-31', page: 99 },
+    outcome: 'no_results',
   },
 ];
 
