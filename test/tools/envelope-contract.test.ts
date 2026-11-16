@@ -17,6 +17,7 @@ const CONVERTED = new Set<string>([
   'legifrance_get_article_history',
   'legifrance_search_legislation',
   'legifrance_list_changes',
+  'legifrance_get_text',
 ]);
 
 interface Case {
@@ -66,6 +67,8 @@ const CASES: Case[] = [
     args: { code: 'Code civil', since: '2025-01-01', until: '2026-12-31', page: 99 },
     outcome: 'no_results',
   },
+  { tool: 'legifrance_get_text', args: { nature: 'loi', number: '78-17' }, outcome: 'found' },
+  { tool: 'legifrance_get_text', args: { id: 'LEGITEXT999999999999' }, outcome: 'not_found' },
 ];
 
 const ROUTES: Record<NonNullable<Case['fetch']>, readonly FixtureRoute[]> = {

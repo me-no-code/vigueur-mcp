@@ -34,6 +34,7 @@ import {
   MAX_TOOL_TEXT,
   presentOrUndefined,
   responseFormatSchema,
+  WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
 import { buildLookupMiss, lookupMissBranches } from './get-article.js';
@@ -209,6 +210,7 @@ function historyAnswer(view: ArticleHistoryView, opts: HistoryAnswerOptions): Hi
     pageItems: HistoryItem[],
     pageCount: number,
     hasMore: boolean,
+    shown: number = opts.page,
   ): HistoryAnswer => ({
     source: SOURCE,
     outcome,
@@ -236,8 +238,8 @@ function historyAnswer(view: ArticleHistoryView, opts: HistoryAnswerOptions): Hi
       until_undetermined: v.validToUndetermined,
     })),
     results: items.length,
-    page: { number: opts.page, of: pageCount },
-    next: hasMore ? { page: opts.page + 1 } : null,
+    page: { number: shown, of: pageCount },
+    next: hasMore ? { page: shown + 1 } : null,
     items: pageItems,
     concordance: {
       moved: view.concordance.moved.map(({ version: v, to }) => ({
@@ -252,7 +254,12 @@ function historyAnswer(view: ArticleHistoryView, opts: HistoryAnswerOptions): Hi
     cached: [],
   });
 
-  const frame = JSON.stringify(page('found', [], opts.page, true)).length + FRAME_SLACK;
+  // The frame is measured with the widest page numbers, whatever page is asked, so pages split alike.
+  const frame =
+    JSON.stringify({
+      ...page('found', [], WIDE_PAGE, true, WIDE_PAGE),
+      request: { ...opts.request, page: WIDE_PAGE },
+    }).length + FRAME_SLACK;
   const paged = listPage(items, opts.page, (item) => jsonCost(item), {
     maxItems: EVENTS_PER_PAGE,
     budget: MAX_TOOL_TEXT - frame,

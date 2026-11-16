@@ -12,6 +12,13 @@ export const MAX_TOOL_TEXT = 40_000;
  */
 export const FRAME_SLACK = 200;
 
+/**
+ * A page number or count wider than any real one. A paged answer measures its frame with this in
+ * every page field (`page`, `next`, the request's `page`), so the budget, and with it every page
+ * split, is the same whichever page is asked.
+ */
+export const WIDE_PAGE = 99_999;
+
 /** How long a tool call may take before it gives up, in milliseconds. */
 export const DEFAULT_DEADLINE_MS = 45_000;
 

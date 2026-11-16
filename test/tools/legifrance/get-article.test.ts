@@ -120,7 +120,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
       outcome: 'several_matches',
     });
     expect(a.warnings).toContain(
-      'Article L1234-1 exists in several codes — call again with "code":',
+      'Article L1234-1 exists in several codes — call again with "code".',
     );
     expect(a.number).toBe('L1234-1');
     expect(a.code).toBeNull();
@@ -160,7 +160,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
       outcome: 'not_in_force',
     });
     expect(a.warnings[0]).toMatch(
-      /^Art\. R4217-2 of Code du travail exists but was not in force on \d{4}-/,
+      /^Art\. R4217-2 of Code du travail exists but was not in force on \d{4}-\d\d-\d\d\.$/,
     );
     expect(a.number).toBe('R4217-2');
     expect(a.code).toBe('Code du travail');
@@ -951,7 +951,7 @@ describe('buildGetArticleAnswer', () => {
     );
     expect(a).toMatchObject({
       warnings: [
-        'Article 1 exists in several codes — call again with "code":',
+        'Article 1 exists in several codes — call again with "code".',
         '(Only the first matches are listed — give the code to narrow it down.)',
       ],
       number: '1',
@@ -1000,7 +1000,7 @@ describe('buildGetArticleAnswer', () => {
       'several_matches',
     );
     expect(a.warnings).toEqual([
-      'Article 1 has several versions in force in Code A — call again with "id":',
+      'Article 1 has several versions in force in Code A — call again with "id".',
     ]);
     expect(a.code).toBe('Code A');
     expect(a.incomplete).toBe(false);
@@ -1048,7 +1048,7 @@ describe('buildGetArticleAnswer', () => {
       'several_matches',
     );
     expect(a.warnings).toEqual([
-      'Article 1 exists in several codes — call again with "code":',
+      'Article 1 exists in several codes — call again with "code".',
       'Some codes have several versions in force: for those, give the "id".',
     ]);
     expect(a.code).toBeNull();
@@ -1156,7 +1156,7 @@ describe('buildGetArticleAnswer', () => {
     );
     expect(a).toMatchObject({
       warnings: [
-        'Art. 5 exists but was not in force on 1990-01-01:',
+        'Art. 5 exists but was not in force on 1990-01-01.',
         'Call again with an "at_date" inside one of these periods to read that version.',
       ],
       number: '5',
@@ -1275,7 +1275,7 @@ describe('buildGetArticleAnswer', () => {
         'Content moved — per Légifrance concordance, the text of art. R4217-2 (version 2008-05-01 → 2026-10-01) is now at Code du travail - art. R4217-9 (V) (since 2026-10-01).',
       );
       expect(a.warnings[0]).toBe(
-        'Art. R4217-2 of Code du travail exists but was not in force on 2026-11-12:',
+        'Art. R4217-2 of Code du travail exists but was not in force on 2026-11-12.',
       );
     });
 
@@ -1297,7 +1297,7 @@ describe('buildGetArticleAnswer', () => {
       const a = notInForce({ asOf: '2015-01-01', warnings: [warning] });
       expect(JSON.stringify(a)).not.toContain('was not in force');
       expect(a.warnings).toEqual([
-        "Art. R4217-2 of Code du travail: Légifrance's dated search found no version in force on 2015-01-01. Versions on record:",
+        "Art. R4217-2 of Code du travail: Légifrance's dated search found no version in force on 2015-01-01. Versions on record.",
         warning,
         'Call again with an "at_date" inside one of these periods to read that version.',
       ]);
@@ -1307,7 +1307,7 @@ describe('buildGetArticleAnswer', () => {
       const warning = 'Could not check where this content moved (Légifrance: service unavailable).';
       const a = notInForce({ warnings: [warning] });
       expect(a.warnings[0]).toBe(
-        'Art. R4217-2 of Code du travail exists but was not in force on 2026-11-12:',
+        'Art. R4217-2 of Code du travail exists but was not in force on 2026-11-12.',
       );
       expect(a.warnings).toContain(warning);
     });

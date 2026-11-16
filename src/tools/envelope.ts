@@ -72,6 +72,19 @@ export const legifranceStatusSchema = z
     "Légifrance's own status label (VIGUEUR, MODIFIE, ABROGE_DIFF…); null when it gives none.",
   );
 
+export const legifranceLinkSchema = z.string().describe('Official page on legifrance.gouv.fr.');
+
+export const natureSchema = z
+  .string()
+  .nullable()
+  .describe('Nature of the text (LOI, DECRET…); null when not given.');
+
+export const norSchema = z.string().nullable().describe('NOR identifier; null when not given.');
+
+export const publishedSchema = dateSchema
+  .nullable()
+  .describe('Publication date; null when not given.');
+
 export const changeActionSchema = z
   .enum(['created', 'amended', 'repealed', 'codified', 'transferred', 'linked'])
   .describe('What the change did to the article.');

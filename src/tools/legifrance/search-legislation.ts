@@ -15,13 +15,16 @@ import {
 import {
   type AnswerBody,
   answerSchema,
-  dateSchema,
   fromSchema,
+  legifranceLinkSchema,
   legifranceStatusSchema,
+  natureSchema,
   nextSchema,
+  norSchema,
   type Pointer,
   pageSchema,
   pointerSchema,
+  publishedSchema,
   requestEcho,
   type ToolContext,
   toolAnswer,
@@ -112,13 +115,13 @@ const hitSchema = z.object({
   number: z.string().nullable().describe('Article number; null for a text.'),
   id: z.string().describe('Légifrance id of the article version or of the text.'),
   text_id: z.string().describe('Légifrance id of the text the hit belongs to.'),
-  nature: z.string().nullable().describe('Nature of the text (LOI, DECRET…); null when not given.'),
-  nor: z.string().nullable().describe('NOR identifier; null when not given.'),
-  published: dateSchema.nullable().describe('Publication date; null when not given.'),
+  nature: natureSchema,
+  nor: norSchema,
+  published: publishedSchema,
   legifrance_status: legifranceStatusSchema,
   from: fromSchema,
   until: untilSchema,
-  link: z.string().describe('Official page on legifrance.gouv.fr.'),
+  link: legifranceLinkSchema,
   excerpt: z
     .string()
     .nullable()
@@ -163,18 +166,30 @@ function hitUrl(hit: LegislationHit): string {
   return lodaUrl(hit.id);
 }
 
-/** The tool call that reads a hit: a code or collective agreement article, a LODA or JORF text. */
-function readWith(hit: LegislationHit): Pointer | null {
+/**
+ * The tool call that reads a hit: a code or collective agreement article, a LODA or JORF text.
+ * A LEGITEXT text is read at `atDate`: the date the search was run at, or for an every-version
+ * search the start of the version the hit lists.
+ */
+function readWith(hit: LegislationHit, atDate: string | undefined): Pointer | null {
   if (/^(?:LEGIARTI|KALIARTI)/.test(hit.id)) {
     return { tool: 'legifrance_get_article', id: hit.id };
   }
   if (hit.kind === 'text' && /^(?:LEGITEXT|JORFTEXT)/.test(hit.id)) {
-    return { tool: 'legifrance_get_text', id: hit.textId };
+    // A LEGITEXT is read as of today unless dated; a JORFTEXT is read as published, with no date.
+    return hit.id.startsWith('LEGITEXT') && atDate !== undefined
+      ? { tool: 'legifrance_get_text', id: hit.textId, at_date: atDate }
+      : { tool: 'legifrance_get_text', id: hit.textId };
   }
   return null;
 }
 
-function searchItem(hit: LegislationHit, detailed: boolean): SearchItem {
+function searchItem(
+  hit: LegislationHit,
+  detailed: boolean,
+  atDate: string | undefined,
+  scope: SearchAnswer['scope'],
+): SearchItem {
   return {
     kind: hit.kind,
     title: hit.title,
@@ -189,7 +204,8 @@ function searchItem(hit: LegislationHit, detailed: boolean): SearchItem {
     until: hit.validTo,
     link: hitUrl(hit),
     excerpt: hit.snippet === null || detailed ? hit.snippet : cut(hit.snippet, EXCERPT_CONCISE),
-    read_with: readWith(hit),
+    // An every-version search ignores at_date: its hit is read at the start of its own version.
+    read_with: readWith(hit, scope === 'all_versions' ? (hit.validFrom ?? undefined) : atDate),
   };
 }
 
@@ -245,7 +261,8 @@ export function buildSearchLegislationAnswer(
     cached: [],
   });
 
-  const hits = result.hits.map((h) => searchItem(h, opts.detailed));
+  const atDate = typeof opts.request.at_date === 'string' ? opts.request.at_date : undefined;
+  const hits = result.hits.map((h) => searchItem(h, opts.detailed, atDate, opts.scope));
   const frame = JSON.stringify(answer('results', [], [onlyFirst(hits.length, hits.length)])).length;
   let used = frame + FRAME_SLACK;
   let shown = 0;

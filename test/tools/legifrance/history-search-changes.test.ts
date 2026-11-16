@@ -142,7 +142,7 @@ describe('legifrance_get_article_history (fixtures)', () => {
     const { result } = await call(HISTORY, { number: 'L1234-1' });
     const a = expectAnswer(result, { source: LEGIFRANCE, outcome: 'several_matches' });
     expect(a.warnings).toContain(
-      'Article L1234-1 exists in several codes — call again with "code":',
+      'Article L1234-1 exists in several codes — call again with "code".',
     );
     expect(a.candidates.length).toBeGreaterThan(1);
     for (const c of a.candidates) {
@@ -279,7 +279,12 @@ describe('legifrance_search_legislation (fixtures)', () => {
     expect(item).toBeDefined();
     expect(item.nature).toBe('LOI');
     expect(item.id).toMatch(/^LEGITEXT/);
-    expect(item.read_with).toEqual({ tool: 'legifrance_get_text', id: item.text_id });
+    // The search ran at today's date (echoed in the request): the pointer keeps it.
+    expect(item.read_with).toEqual({
+      tool: 'legifrance_get_text',
+      id: item.text_id,
+      at_date: a.request.at_date,
+    });
     expect(item.link).toMatch(/^https:\/\/www\.legifrance\.gouv\.fr\/loda\/id\/LEGITEXT/);
     expect(a.warnings).toEqual([]);
   });
@@ -461,6 +466,80 @@ describe('search answers (constructed pages)', () => {
     expect(item.link).toBe('https://www.legifrance.gouv.fr/jorf/article_jo/JORFARTI000033934948');
     expect(item.read_with).toBeNull();
     expect(item.legifrance_status).toBe('INITIALE');
+  });
+
+  it('a dated search reads a LEGITEXT text at that date; a JORFTEXT text carries none', () => {
+    const text = (id: string): LegislationHit => ({
+      ...hit(1),
+      kind: 'text',
+      id,
+      textId: id,
+      articleNumber: null,
+    });
+    const dated = (hits: LegislationHit[]) =>
+      expectAnswer(
+        toolAnswer(
+          searchLegislationOutput,
+          buildSearchLegislationAnswer(onePage(hits), {
+            request: { ...SEARCH_REQUEST, at_date: '2024-05-01' },
+            scope: 'in_force_on',
+            collection: 'loda',
+            detailed: false,
+            filteredByArticleNumber: false,
+          }),
+          { now: () => new Date() },
+        ),
+        { source: LEGIFRANCE, outcome: 'results' },
+      );
+    const items = dated([text('LEGITEXT000006068624'), text('JORFTEXT000033934937')]).items;
+    expect(items[0].read_with).toEqual({
+      tool: 'legifrance_get_text',
+      id: 'LEGITEXT000006068624',
+      at_date: '2024-05-01',
+    });
+    expect(items[1].read_with).toEqual({ tool: 'legifrance_get_text', id: 'JORFTEXT000033934937' });
+  });
+
+  it('an every-version search reads a LEGITEXT text at the start of the version listed, whatever at_date', () => {
+    const text = (id: string, validFrom: string | null): LegislationHit => ({
+      ...hit(1),
+      kind: 'text',
+      id,
+      textId: id,
+      articleNumber: null,
+      validFrom,
+    });
+    const hits = [
+      text('LEGITEXT000006068624', '2019-06-01'),
+      text('LEGITEXT000006068625', null),
+      text('JORFTEXT000033934937', '2017-01-01'),
+    ];
+    const { at_date: _omitted, ...undated } = SEARCH_REQUEST;
+    const requests = [
+      { ...undated, include_historical: true },
+      { ...SEARCH_REQUEST, at_date: '2024-05-01', include_historical: true },
+    ];
+    for (const request of requests) {
+      const { items } = expectAnswer(
+        toolAnswer(
+          searchLegislationOutput,
+          buildSearchLegislationAnswer(onePage(hits), {
+            request,
+            scope: 'all_versions',
+            collection: 'loda',
+            detailed: false,
+            filteredByArticleNumber: false,
+          }),
+          { now: () => new Date() },
+        ),
+        { source: LEGIFRANCE, outcome: 'results' },
+      );
+      expect(items.map((i: { read_with: unknown }) => i.read_with)).toEqual([
+        { tool: 'legifrance_get_text', id: 'LEGITEXT000006068624', at_date: '2019-06-01' },
+        { tool: 'legifrance_get_text', id: 'LEGITEXT000006068625' },
+        { tool: 'legifrance_get_text', id: 'JORFTEXT000033934937' },
+      ]);
+    }
   });
 
   it('a collective agreement article is read with get_article', () => {
@@ -784,6 +863,41 @@ describe('list changes paging', () => {
   });
 });
 
+/** Entries whose sections have uneven lengths, so page edges fall at many different offsets. */
+function unevenChanges(n: number, base = 2_500): ChangesView {
+  const view = syntheticChanges(n, 7);
+  let i = 0;
+  for (const g of view.groups) {
+    for (const e of g.entries) {
+      e.sectionTitle = `S${i} ${'s'.repeat(base + ((i * 37) % 211))}`;
+      i += 1;
+    }
+  }
+  return view;
+}
+
+describe('list changes: page splits do not depend on the page asked', () => {
+  it('reading pages 1..N one call each gives every entry once, in order', () => {
+    // Entry sizes picked so a page edge falls where the page number's width would move it
+    // (they fail when the frame is measured with the requested page number).
+    for (const base of [2_508, 2_522, 2_529]) {
+      const view = unevenChanges(400, base);
+      const expected = view.groups.flatMap((g) => g.entries.map((e) => e.articleId));
+      const readPage = (page: number) =>
+        buildListChangesAnswer(view, { request: { ...CHANGES_REQUEST, page }, today: TODAY, page });
+      const pages = readPage(1).page.of;
+      expect(pages).toBeGreaterThanOrEqual(10);
+      const seen: Array<string | null> = [];
+      for (let page = 1; page <= pages; page++) {
+        for (const g of readPage(page).items) {
+          for (const e of g.entries) seen.push(e.article_id);
+        }
+      }
+      expect(seen, `entry size ${base}`).toEqual(expected);
+    }
+  });
+});
+
 function syntheticHistory(events: number): ArticleHistoryView {
   const list: HistoryEntry[] = Array.from({ length: events }, (_, i) => ({
     date: i === 0 ? null : '2020-01-01',
@@ -899,6 +1013,33 @@ describe('article history paging', () => {
     expect(p5.link).toBe('https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000000000001');
     expect(p5.versions).toHaveLength(1);
     expect(p5.concordance).toEqual(p1.concordance);
+  });
+
+  it('reading pages 1..N one call each gives every event once, in order', () => {
+    // Event sizes picked so a page edge falls where the page number's width would move it
+    // (they fail when the frame is measured with the requested page number).
+    for (const base of [2_560, 2_568, 2_581]) {
+      const view = syntheticHistory(400);
+      view.events.forEach((e, i) => {
+        e.amendingTitle = `E${i} ${'t'.repeat(base + ((i * 37) % 211))}`;
+      });
+      const expected = view.events.map((_, i) => `E${i}`);
+      const readPage = (page: number) =>
+        buildGetArticleHistoryAnswer(view, {
+          detailed: false,
+          today: TODAY,
+          requestedId: null,
+          page,
+          request: { ...HISTORY_REQUEST, page },
+        }) as ReturnType<typeof historyPage>;
+      const pages = readPage(1).page.of;
+      expect(pages).toBeGreaterThanOrEqual(10);
+      const seen: string[] = [];
+      for (let page = 1; page <= pages; page++) {
+        for (const item of readPage(page).items) seen.push(item.by.split(' ')[0] ?? '');
+      }
+      expect(seen, `event size ${base}`).toEqual(expected);
+    }
   });
 
   it('past the last page: no_results with the same fields and an empty list', () => {

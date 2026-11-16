@@ -10,6 +10,7 @@ import {
   changeActionOf,
   changeActionSchema,
   dateSchema,
+  legifranceLinkSchema,
   nextSchema,
   type Pointer,
   pageSchema,
@@ -26,6 +27,7 @@ import {
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
+  WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
 
@@ -92,7 +94,7 @@ const changesShape = {
   target: z.enum(['code', 'text']).describe('What changed: a code, or a law or decree.'),
   title: z.string().describe('Title of the code or text.'),
   id: z.string().describe('Légifrance id of the code or text.'),
-  link: z.string().describe('Official page on legifrance.gouv.fr.'),
+  link: legifranceLinkSchema,
   since: dateSchema.describe('Start of the range (entry-into-force date).'),
   until: dateSchema.describe('End of the range (entry-into-force date).'),
   results: z.number().int().describe('Number of entries over all pages.'),
@@ -187,6 +189,7 @@ export function buildListChangesAnswer(
     items: Group[],
     pageCount: number,
     hasMore: boolean,
+    shown: number = opts.page,
   ): ChangesAnswer => ({
     source: SOURCE,
     outcome,
@@ -201,14 +204,19 @@ export function buildListChangesAnswer(
     amending_texts: view.groups.length,
     scheduled: view.scheduledCount,
     undetermined_versions: view.undeterminedCount,
-    page: { number: opts.page, of: pageCount },
-    next: hasMore ? { page: opts.page + 1 } : null,
+    page: { number: shown, of: pageCount },
+    next: hasMore ? { page: shown + 1 } : null,
     items,
     request: opts.request,
     cached: [],
   });
 
-  const frame = JSON.stringify(answer('results', [], opts.page, true)).length + FRAME_SLACK;
+  // The frame is measured with the widest page numbers, whatever page is asked, so pages split alike.
+  const frame =
+    JSON.stringify({
+      ...answer('results', [], WIDE_PAGE, true, WIDE_PAGE),
+      request: { ...opts.request, page: WIDE_PAGE },
+    }).length + FRAME_SLACK;
   const paged = listPage(
     flat,
     opts.page,

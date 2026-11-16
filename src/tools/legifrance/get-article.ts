@@ -18,6 +18,7 @@ import {
   answerSchema,
   dateSchema,
   fromSchema,
+  legifranceLinkSchema,
   legifranceStatusSchema,
   nextSchema,
   type Pointer,
@@ -145,7 +146,7 @@ const neighbourSchema = z
     id: z.string().describe('Légifrance id of the article version.'),
     excerpt: z.string().describe('The start of its text.'),
     excerpt_cut: z.boolean().describe('Its text is longer than the excerpt.'),
-    link: z.string().describe('Official page on legifrance.gouv.fr.'),
+    link: legifranceLinkSchema,
   })
   .nullable()
   .describe('null when there is none, or when it could not be read (a warning then says why).');
@@ -417,8 +418,8 @@ function notInForceAnswer(
   // When a period's dates cover the date, the dated search and the dates disagree: say only
   // what the search found (a warning names the period), never "was not in force".
   const heading = r.periods.some((p) => coversDate(p, r.asOf))
-    ? `${article}: Légifrance's dated search found no version in force on ${r.asOf}. Versions on record:`
-    : `${article} exists but was not in force on ${r.asOf}:`;
+    ? `${article}: Légifrance's dated search found no version in force on ${r.asOf}. Versions on record.`
+    : `${article} exists but was not in force on ${r.asOf}.`;
   const moved = r.relocation;
   return {
     source: SOURCE,
@@ -470,10 +471,10 @@ function severalMatches(
   if (oneCode !== null) {
     // Several versions in force in one code: only the id can tell them apart.
     warnings.push(
-      `Article ${num} has several versions in force in ${oneCode} — call again with "id":`,
+      `Article ${num} has several versions in force in ${oneCode} — call again with "id".`,
     );
   } else {
-    warnings.push(`Article ${num} exists in several codes — call again with "code":`);
+    warnings.push(`Article ${num} exists in several codes — call again with "code".`);
     if (codes.size < candidates.length) {
       warnings.push('Some codes have several versions in force: for those, give the "id".');
     }
