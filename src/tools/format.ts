@@ -67,6 +67,36 @@ export function paginateText(
   return { text: text.slice(offset, end), nextOffset: end < text.length ? end : null };
 }
 
+/** What `value` adds to a JSON array: its serialized length and a separating comma. */
+export function jsonCost(value: unknown): number {
+  return JSON.stringify(value).length + 1;
+}
+
+/**
+ * The longest slice of `text` from `offset` that takes at most `room` characters once escaped in
+ * a JSON string (quotes excluded), at least one character when any is left; never splits a
+ * surrogate pair.
+ */
+export function sliceForJson(
+  text: string,
+  offset: number,
+  room: number,
+): { text: string; nextOffset: number | null } {
+  let end = offset;
+  let used = 0;
+  while (end < text.length) {
+    const width = (text.codePointAt(end) ?? 0) > 0xffff ? 2 : 1;
+    const cost = JSON.stringify(text.slice(end, end + width)).length - 2;
+    if (end > offset && used + cost > room) break;
+    used += cost;
+    end += width;
+  }
+  // `substring`, not `slice`: once this loop had run on short texts, Node 26.5 (V8 Maglev) cut
+  // `text.slice(offset, end)` short at a random point, so a page lost text that `nextOffset`
+  // skipped. `substring` is the same for 0 ≤ offset ≤ end and is unaffected.
+  return { text: text.substring(offset, end), nextOffset: end < text.length ? end : null };
+}
+
 /** `s` cut to `max` characters, the cut shown by a trailing "…". */
 export function cut(s: string, max: number): string {
   return s.length <= max ? s : `${s.slice(0, max - 1).trimEnd()}…`;
@@ -151,15 +181,15 @@ export interface ListPage<T> {
  * characters, at least one item. `cost(item, previous)` is what `item` adds to its page after
  * `previous`, the item before it on the same page: `undefined` when the item opens a page, so
  * what every page start repeats (a heading, say) is charged there only. The split depends on the
- * items only, so `page` numbers stay stable between calls. A page past the end is an
- * `invalid_input` error.
+ * items only, so `page` numbers stay stable between calls. A page past the end is empty, with
+ * `pastEnd` set.
  */
-export function pageByBudget<T>(
+export function listPage<T>(
   items: readonly T[],
   page: number,
   cost: (item: T, previous: T | undefined) => number,
   limits: { maxItems: number; budget: number },
-): ListPage<T> {
+): ListPage<T> & { pastEnd: boolean } {
   const pages: T[][] = [];
   let current: T[] = [];
   let used = 0;
@@ -175,18 +205,30 @@ export function pageByBudget<T>(
     used += c;
   }
   if (current.length > 0 || pages.length === 0) pages.push(current);
-  if (page > pages.length) {
-    throw new VigueurError(
-      'invalid_input',
-      `"page" ${page} is past the last page (${pages.length}). Use a page from 1 to ${pages.length}.`,
-    );
-  }
   return {
     items: pages[page - 1] ?? [],
     total: items.length,
     pageCount: pages.length,
     hasMore: page < pages.length,
+    pastEnd: page > pages.length,
   };
+}
+
+/** `listPage`, where a page past the end is an `invalid_input` error. */
+export function pageByBudget<T>(
+  items: readonly T[],
+  page: number,
+  cost: (item: T, previous: T | undefined) => number,
+  limits: { maxItems: number; budget: number },
+): ListPage<T> {
+  const { pastEnd, ...result } = listPage(items, page, cost, limits);
+  if (pastEnd) {
+    throw new VigueurError(
+      'invalid_input',
+      `"page" ${page} is past the last page (${result.pageCount}). Use a page from 1 to ${result.pageCount}.`,
+    );
+  }
+  return result;
 }
 
 /** Hint appended where a paged list continues. */

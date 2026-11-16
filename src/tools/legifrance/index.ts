@@ -10,9 +10,9 @@ import type {
   GetArticleHistoryInput,
 } from '../../services/legislation/history.js';
 import type { CallContext, LegislationSearchPage } from '../../services/legislation/ports.js';
-import { todayInParis } from '../../services/legislation/resolve.js';
 import type { SearchLegislationInput } from '../../services/legislation/search.js';
 import type { SourceModule } from '../../sources.js';
+import { type ToolContext, toolContext } from '../envelope.js';
 import { type BrowseCode, registerBrowseCodeTool } from './browse-code.js';
 import { type GetArticle, registerGetArticleTool } from './get-article.js';
 import { registerGetArticleHistoryTool } from './get-article-history.js';
@@ -47,26 +47,25 @@ export interface LegifranceServices {
   getDecision: (input: { id: string }, ctx?: CallContext) => Promise<LegifranceDecisionResult>;
 }
 
-/** The Légifrance tools; `today` (default: today in Paris) sets the tense of upcoming changes; `deadlineMs`
- * (default 45 000) bounds each call. */
+/** The Légifrance tools, with their clock, today's date and deadline from `toolContext(opts)`. */
 export function createLegifranceSource(
   services: LegifranceServices,
-  opts: { today?: () => IsoDate; deadlineMs?: number } = {},
+  opts: Partial<ToolContext> = {},
 ): SourceModule {
-  const today = opts.today ?? todayInParis;
+  const ctx = toolContext(opts);
   return {
     id: 'legifrance',
     register(server) {
-      registerGetArticleTool(server, services.getArticle, today, opts.deadlineMs);
-      registerGetArticleHistoryTool(server, services.getArticleHistory, today, opts.deadlineMs);
-      registerSearchLegislationTool(server, services.searchLegislation, today, opts.deadlineMs);
-      registerListChangesTool(server, services.listChanges, today, opts.deadlineMs);
-      registerGetTextTool(server, services.getText, opts.deadlineMs);
-      registerBrowseCodeTool(server, services.browseCode, opts.deadlineMs);
-      registerLatestJoTool(server, services.latestJo, opts.deadlineMs);
-      registerReferenceValuesTool(server, services.listReferenceValues, opts.deadlineMs);
-      registerSearchCaseLawTool(server, services.searchCaseLaw, opts.deadlineMs);
-      registerGetDecisionTool(server, services.getDecision, opts.deadlineMs);
+      registerGetArticleTool(server, services.getArticle, ctx.today, ctx.deadlineMs);
+      registerGetArticleHistoryTool(server, services.getArticleHistory, ctx.today, ctx.deadlineMs);
+      registerSearchLegislationTool(server, services.searchLegislation, ctx.today, ctx.deadlineMs);
+      registerListChangesTool(server, services.listChanges, ctx.today, ctx.deadlineMs);
+      registerGetTextTool(server, services.getText, ctx.deadlineMs);
+      registerBrowseCodeTool(server, services.browseCode, ctx.deadlineMs);
+      registerLatestJoTool(server, services.latestJo, ctx.deadlineMs);
+      registerReferenceValuesTool(server, services.listReferenceValues, ctx.deadlineMs);
+      registerSearchCaseLawTool(server, services.searchCaseLaw, ctx.deadlineMs);
+      registerGetDecisionTool(server, services.getDecision, ctx.deadlineMs);
     },
   };
 }

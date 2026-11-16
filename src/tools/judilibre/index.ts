@@ -4,6 +4,7 @@ import type {
   createSearchJudilibre,
 } from '../../services/case-law/judilibre.js';
 import type { SourceModule } from '../../sources.js';
+import { type ToolContext, toolContext } from '../envelope.js';
 import { registerGetDecisionTool } from './get-decision.js';
 import { registerListTaxonomyTool } from './list-taxonomy.js';
 import { registerSearchDecisionsTool } from './search-decisions.js';
@@ -15,17 +16,18 @@ export interface JudilibreServices {
   listTaxonomy: ReturnType<typeof createListJudilibreTaxonomy>;
 }
 
-/** The Judilibre tools; `deadlineMs` (default 45 000) bounds each call. */
+/** The Judilibre tools, with their clock and deadline from `toolContext(opts)`. */
 export function createJudilibreSource(
   services: JudilibreServices,
-  opts: { deadlineMs?: number } = {},
+  opts: Partial<ToolContext> = {},
 ): SourceModule {
+  const ctx = toolContext(opts);
   return {
     id: 'judilibre',
     register(server) {
-      registerSearchDecisionsTool(server, services.searchDecisions, opts.deadlineMs);
-      registerGetDecisionTool(server, services.getDecision, opts.deadlineMs);
-      registerListTaxonomyTool(server, services.listTaxonomy, opts.deadlineMs);
+      registerSearchDecisionsTool(server, services.searchDecisions, ctx.deadlineMs);
+      registerGetDecisionTool(server, services.getDecision, ctx.deadlineMs);
+      registerListTaxonomyTool(server, services.listTaxonomy, ctx.deadlineMs);
     },
   };
 }
