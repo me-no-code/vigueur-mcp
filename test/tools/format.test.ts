@@ -4,43 +4,16 @@ import {
   cut,
   deadlineHit,
   isoDateSchema,
+  listPage,
   MAX_TOOL_TEXT,
   optionalIsoDateSchema,
-  pageByBudget,
-  paginateText,
   presentOrUndefined,
-  renderStatusAt,
   responseFormatSchema,
-  truncationNotice,
 } from '../../src/tools/format.js';
 
-describe('paginateText', () => {
-  it('cuts at max and says where to continue', () => {
-    expect(paginateText('abcdefghij', 0, 4)).toEqual({ text: 'abcd', nextOffset: 4 });
-    expect(paginateText('abcdefghij', 4, 4)).toEqual({ text: 'efgh', nextOffset: 8 });
-  });
-
-  it('returns nextOffset null once the end is reached', () => {
-    expect(paginateText('abcdefghij', 8, 4)).toEqual({ text: 'ij', nextOffset: null });
-    expect(paginateText('abcd', 0, 4)).toEqual({ text: 'abcd', nextOffset: null });
-  });
-
-  it('defaults max to MAX_TOOL_TEXT (40 000)', () => {
+describe('MAX_TOOL_TEXT', () => {
+  it('is 40 000 characters', () => {
     expect(MAX_TOOL_TEXT).toBe(40_000);
-    const page = paginateText('x'.repeat(MAX_TOOL_TEXT + 5), 0);
-    expect(page.text).toHaveLength(MAX_TOOL_TEXT);
-    expect(page.nextOffset).toBe(MAX_TOOL_TEXT);
-  });
-
-  it('never splits a surrogate pair', () => {
-    expect(paginateText('ab😀cd', 0, 3)).toEqual({ text: 'ab', nextOffset: 2 });
-    expect(paginateText('ab😀cd', 2, 3)).toEqual({ text: '😀c', nextOffset: 5 });
-  });
-});
-
-describe('truncationNotice', () => {
-  it('says how to read the rest', () => {
-    expect(truncationNotice(39_900)).toBe('[Truncated — call again with "offset": 39900]');
   });
 });
 
@@ -85,76 +58,6 @@ describe('responseFormatSchema', () => {
   });
 });
 
-describe('renderStatusAt', () => {
-  it('in force until a known date: both bounds', () => {
-    const s = {
-      inForce: true,
-      reason: 'in_force',
-      from: '2016-10-01',
-      until: '2027-01-01',
-    } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe(
-      '✅ In force on 2026-11-12 (since 2016-10-01, until 2027-01-01)',
-    );
-  });
-
-  it('in force with no end date says so', () => {
-    const s = { inForce: true, reason: 'in_force', from: '2016-10-01', until: null } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe(
-      '✅ In force on 2026-11-12 (since 2016-10-01, no end date)',
-    );
-  });
-
-  it('in force with an end Légifrance has not dated yet', () => {
-    const s = { inForce: true, reason: 'in_force', from: '2016-10-01', until: null } as const;
-    expect(renderStatusAt(s, '2026-11-12', { validToUndetermined: true })).toBe(
-      '✅ In force on 2026-11-12 (since 2016-10-01, until a date not yet determined)',
-    );
-  });
-
-  it('ended: both bounds', () => {
-    const s = { inForce: false, reason: 'ended', from: '2008-05-01', until: '2026-10-01' } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe(
-      '⛔ Not in force on 2026-11-12: in force 2008-05-01 → 2026-10-01',
-    );
-  });
-
-  it('ended with an unknown start', () => {
-    const s = { inForce: false, reason: 'ended', from: null, until: '2026-10-01' } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe('⛔ Not in force on 2026-11-12: ended 2026-10-01');
-  });
-
-  it('not yet in force', () => {
-    const s = { inForce: false, reason: 'not_yet_in_force', from: '2027-01-01', until: null };
-    expect(renderStatusAt({ ...s, reason: 'not_yet_in_force' }, '2026-11-12')).toBe(
-      '⏳ Not yet in force on 2026-11-12: from 2027-01-01',
-    );
-    expect(
-      renderStatusAt({ ...s, reason: 'not_yet_in_force', until: '2028-01-01' }, '2026-11-12'),
-    ).toBe('⏳ Not yet in force on 2026-11-12: from 2027-01-01 until 2028-01-01');
-    expect(
-      renderStatusAt({ ...s, reason: 'not_yet_in_force' }, '2026-11-12', {
-        validToUndetermined: true,
-      }),
-    ).toBe('⏳ Not yet in force on 2026-11-12: from 2027-01-01 until a date not yet determined');
-  });
-
-  it('never applied', () => {
-    const s = { inForce: false, reason: 'never_applied', from: '2020-01-01', until: '2019-01-01' };
-    expect(renderStatusAt({ ...s, reason: 'never_applied' }, '2026-11-12')).toBe(
-      '⛔ Never applied (still-born version)',
-    );
-  });
-
-  it('in force with an unknown start omits "since"', () => {
-    const s = { inForce: true, reason: 'in_force', from: null, until: null } as const;
-    expect(renderStatusAt(s, '2026-11-12')).toBe('✅ In force on 2026-11-12 (no end date)');
-    expect(renderStatusAt({ ...s, until: '2030-01-01' }, '2026-11-12')).toBe(
-      '✅ In force on 2026-11-12 (until 2030-01-01)',
-    );
-  });
-});
-
 describe('callSignal', () => {
   it('aborts after the deadline with a TimeoutError reason', async () => {
     const signal = callSignal(undefined, 20);
@@ -173,24 +76,25 @@ describe('callSignal', () => {
   });
 });
 
-describe('pageByBudget', () => {
+describe('listPage', () => {
   it('cuts by budget and item count, at least one item a page, stable page numbers', () => {
     const items = ['aaaa', 'bbbb', 'cccc', 'dddddddddddd', 'e'];
     const page = (n: number) =>
-      pageByBudget(items, n, (s) => s.length, { maxItems: 2, budget: 8 }).items;
+      listPage(items, n, (s) => s.length, { maxItems: 2, budget: 8 }).items;
     expect([page(1), page(2), page(3), page(4)]).toEqual([
       ['aaaa', 'bbbb'],
       ['cccc'],
       ['dddddddddddd'],
       ['e'],
     ]);
-    expect(() => page(5)).toThrow('past the last page');
+    const past = listPage(items, 5, (s) => s.length, { maxItems: 2, budget: 8 });
+    expect(past).toMatchObject({ items: [], pastEnd: true, pageCount: 4, total: 5 });
   });
 
   it('costs an item with the item before it on the page, and again when it opens a page', () => {
     const seen: Array<[string, string | undefined]> = [];
     // An item costs 10 when it opens a page (a repeated header), 3 after another item.
-    const paged = pageByBudget(
+    const paged = listPage(
       ['a', 'b', 'c', 'd'],
       2,
       (item, previous) => {

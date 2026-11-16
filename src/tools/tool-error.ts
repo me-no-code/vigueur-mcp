@@ -26,7 +26,6 @@ function hintFor(err: VigueurError, label: string): string | undefined {
     case 'unexpected_response':
       return `${label} returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.`;
     case 'deadline':
-      return `${label} did not answer within 45 s; try again in a moment.`;
     case 'not_found':
     case 'invalid_input':
     case 'cancelled':
@@ -47,28 +46,6 @@ function unexpectedMessage(err: unknown): string {
   console.error(err instanceof Error ? (err.stack ?? err.message) : String(err));
   const message = err instanceof Error ? err.message : String(err);
   return `Unexpected error: ${message}. Call vigueur_status to check the setup.`;
-}
-
-/**
- * The error result for a failed tool call. Pass the call's `callSignal`: when its deadline (not
- * the MCP client) cut the call short and the error is an abort, the answer is the `deadline`
- * error. Any other error is rendered as it is, so a real failure is never masked.
- */
-export function toToolError(
-  err: unknown,
-  signal?: AbortSignal,
-  source: SourceId = 'legifrance',
-): CallToolResult {
-  if (signal !== undefined && deadlineHit(signal) && isAbortShaped(err)) {
-    return toToolError(
-      new VigueurError('deadline', `${SOURCE_LABELS[source]} did not answer in time.`, { source }),
-    );
-  }
-  if (err instanceof VigueurError) {
-    const hint = hintFor(err, SOURCE_LABELS[err.details?.source ?? source]);
-    return textResult(hint ? `${err.message}\n\n${hint}` : err.message);
-  }
-  return textResult(unexpectedMessage(err));
 }
 
 /** What `toolError` needs to know about the failed call. */

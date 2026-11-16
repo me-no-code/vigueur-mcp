@@ -7,7 +7,7 @@ import {
 } from '../../src/tools/legifrance/index.js';
 import { expectToolError } from '../helpers/answer.js';
 import { sandboxConfig } from '../helpers/fixture-fetch.js';
-import { connectClient, firstText } from '../helpers/mcp-client.js';
+import { connectClient } from '../helpers/mcp-client.js';
 
 /** Valid minimal arguments for every tool that reaches an upstream API (all but vigueur_status). */
 const MINIMAL_ARGS: Record<string, Record<string, unknown>> = {
@@ -25,6 +25,9 @@ const MINIMAL_ARGS: Record<string, Record<string, unknown>> = {
   judilibre_get_decision: { id: '6a0e9ff1cdc6046d47668703' },
   judilibre_list_taxonomy: { list: 'chamber' },
 };
+
+/** The deadline every source module of this test is given, in milliseconds. */
+const DEADLINE_MS = 20;
 
 /** A service that never answers: it rejects with the signal's abort reason once the call is aborted. */
 function never(): (...args: unknown[]) => Promise<never> {
@@ -64,8 +67,8 @@ const deps = (): ServerDeps => ({
   config: sandboxConfig(),
   getStatus: () => Promise.reject(new Error('not used')),
   sources: [
-    createLegifranceSource(neverServices, { deadlineMs: 20 }),
-    createJudilibreSource(neverJudilibre, { deadlineMs: 20 }),
+    createLegifranceSource(neverServices, { deadlineMs: DEADLINE_MS }),
+    createJudilibreSource(neverJudilibre, { deadlineMs: DEADLINE_MS }),
   ],
 });
 
@@ -92,17 +95,13 @@ describe('per-call deadline over every tool', () => {
       const { client, close } = await connectClient(deps());
       cleanup.push(close);
       const result = await client.callTool({ name, arguments: args });
-      expect(result.isError).toBe(true);
       const source = name.startsWith('judilibre_') ? 'Judilibre' : 'Légifrance';
-      const text = firstText(result);
-      if (text.startsWith('{')) {
-        // A tool answering in JSON states the deadline it was given: 20 ms here.
-        const e = expectToolError(result, 'deadline');
-        expect(e.error.message).toBe(`${source} did not answer within 0 s. Try again in a moment.`);
-        expect(e.request.tool).toBe(name);
-      } else {
-        expect(text).toContain(`${source} did not answer within 45 s`);
-      }
+      const e = expectToolError(result, 'deadline');
+      const seconds = Math.round(DEADLINE_MS / 1000);
+      expect(e.error.message).toBe(
+        `${source} did not answer within ${seconds} s. Try again in a moment.`,
+      );
+      expect(e.request.tool).toBe(name);
     });
   }
 });

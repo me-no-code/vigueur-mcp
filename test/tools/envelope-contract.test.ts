@@ -1,3 +1,5 @@
+import { type Dirent, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { compose } from '../../src/compose.js';
 import { loadConfig } from '../../src/config.js';
@@ -12,7 +14,7 @@ import {
 import { JUDILIBRE_ROUTES } from '../helpers/judilibre-routes.js';
 import { connectClient } from '../helpers/mcp-client.js';
 
-/** Tools answering through the envelope. */
+/** Every registered tool answers through the envelope. */
 const CONVERTED = new Set<string>([
   'legifrance_get_article',
   'legifrance_get_article_history',
@@ -170,13 +172,27 @@ async function connect(deps: ServerDeps) {
 }
 
 describe('envelope contract', () => {
-  it('converted tools declare an outputSchema; the others none', async () => {
+  it('every registered tool declares an outputSchema and has a case', async () => {
     const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name)).toEqual(expect.arrayContaining([...CONVERTED]));
+    expect(tools.map((t) => t.name).sort()).toEqual([...CONVERTED].sort());
+    expect(CONVERTED.size).toBe(14);
     for (const t of tools) {
-      if (CONVERTED.has(t.name)) expect(t.outputSchema, t.name).toBeDefined();
-      else expect(t.outputSchema, t.name).toBeUndefined();
+      expect(t.outputSchema, t.name).toBeDefined();
+      expect(
+        CASES.some((c) => c.tool === t.name),
+        `${t.name} has a case in CASES`,
+      ).toBe(true);
+    }
+  });
+
+  it('no source file under src/ contains a pictograph', () => {
+    const files = (readdirSync('src', { recursive: true, withFileTypes: true }) as Dirent[])
+      .filter((e) => e.isFile())
+      .map((e) => join(e.parentPath, e.name));
+    expect(files.length).toBeGreaterThan(10);
+    for (const f of files) {
+      expect(readFileSync(f, 'utf8'), f).not.toMatch(/\p{Extended_Pictographic}/u);
     }
   });
 

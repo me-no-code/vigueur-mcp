@@ -1,7 +1,5 @@
 import * as z from 'zod/v4';
 import { type IsoDate, isIsoDate } from '../domain/dates.js';
-import type { StatusAt } from '../domain/status-at.js';
-import { VigueurError } from '../shared/errors.js';
 
 /** Upper bound of a tool's text answer, in characters; longer answers continue via `offset`. */
 export const MAX_TOOL_TEXT = 40_000;
@@ -67,19 +65,6 @@ export function presentOrUndefined(s: string | undefined): string | undefined {
   return t === undefined || t === '' ? undefined : t;
 }
 
-const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
-
-/** The slice of `text` starting at `offset`, at most `max` characters; never splits a surrogate pair. */
-export function paginateText(
-  text: string,
-  offset: number,
-  max: number = MAX_TOOL_TEXT,
-): { text: string; nextOffset: number | null } {
-  let end = Math.min(offset + max, text.length);
-  if (end < text.length && end - 1 > offset && isHighSurrogate(text.charCodeAt(end - 1))) end -= 1;
-  return { text: text.slice(offset, end), nextOffset: end < text.length ? end : null };
-}
-
 /** What `value` adds to a JSON array: its serialized length and a separating comma. */
 export function jsonCost(value: unknown): number {
   return JSON.stringify(value).length + 1;
@@ -135,51 +120,6 @@ export function fitHead(
   return head;
 }
 
-/** Appended where a paginated text stops: how to read the rest. */
-export function truncationNotice(nextOffset: number): string {
-  return `[Truncated — call again with "offset": ${nextOffset}]`;
-}
-
-/** How a version's end reads: `until {date}`, a scheduled end with no date yet, or `null` (none). */
-export function untilPhrase(validTo: IsoDate | null, validToUndetermined = false): string | null {
-  if (validTo !== null) return `until ${validTo}`;
-  return validToUndetermined ? 'until a date not yet determined' : null;
-}
-
-/** The end of a version in a table cell or a period line. */
-export function endCell(
-  v: { validTo: IsoDate | null; validToUndetermined?: boolean },
-  undetermined = 'not yet determined',
-): string {
-  return v.validTo ?? (v.validToUndetermined === true ? undetermined : 'no end');
-}
-
-/**
- * One line saying whether a version applies on `asOf`, from its validity dates, with both
- * bounds: a scheduled end is never hidden behind "in force".
- */
-export function renderStatusAt(
-  s: StatusAt,
-  asOf: IsoDate,
-  opts: { validToUndetermined?: boolean } = {},
-): string {
-  const until = untilPhrase(s.until, opts.validToUndetermined);
-  switch (s.reason) {
-    case 'in_force': {
-      const bounds = [...(s.from === null ? [] : [`since ${s.from}`]), until ?? 'no end date'];
-      return `✅ In force on ${asOf} (${bounds.join(', ')})`;
-    }
-    case 'ended':
-      return s.from === null
-        ? `⛔ Not in force on ${asOf}: ended ${s.until ?? 'on an unknown date'}`
-        : `⛔ Not in force on ${asOf}: in force ${s.from} → ${s.until ?? 'an unknown date'}`;
-    case 'not_yet_in_force':
-      return `⏳ Not yet in force on ${asOf}: from ${s.from ?? 'an unknown date'}${until === null ? '' : ` ${until}`}`;
-    case 'never_applied':
-      return '⛔ Never applied (still-born version)';
-  }
-}
-
 /** One page of a list, cut by item count and by the characters its lines take. */
 export interface ListPage<T> {
   items: T[];
@@ -225,26 +165,4 @@ export function listPage<T>(
     hasMore: page < pages.length,
     pastEnd: page > pages.length,
   };
-}
-
-/** `listPage`, where a page past the end is an `invalid_input` error. */
-export function pageByBudget<T>(
-  items: readonly T[],
-  page: number,
-  cost: (item: T, previous: T | undefined) => number,
-  limits: { maxItems: number; budget: number },
-): ListPage<T> {
-  const { pastEnd, ...result } = listPage(items, page, cost, limits);
-  if (pastEnd) {
-    throw new VigueurError(
-      'invalid_input',
-      `"page" ${page} is past the last page (${result.pageCount}). Use a page from 1 to ${result.pageCount}.`,
-    );
-  }
-  return result;
-}
-
-/** Hint appended where a paged list continues. */
-export function nextPageHint(page: number): string {
-  return `Next page: "page": ${page + 1}`;
 }

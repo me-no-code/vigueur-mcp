@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { describe, expect, it } from 'vitest';
+import { expectAnswer } from '../helpers/answer.js';
 
 // Opt-in (`npm run test:live`): talks to PISTE with the credentials in `.env`.
 // Spawns the built entry point: run `npm run build` first.
@@ -26,13 +27,12 @@ describe.skipIf(!process.env.VIGUEUR_LIVE)('vigueur_status against PISTE (live)'
     await client.connect(transport);
     try {
       const result = await client.callTool({ name: 'vigueur_status' });
-      const [first] = result.content as Array<{ type: string; text?: string }>;
-      const statusText = first?.text ?? '';
-
-      expect(result.isError, statusText).toBeFalsy();
-      expect(statusText, statusText).toContain('Environment:');
-      expect(statusText, statusText).toContain('✅ Légifrance: ok');
-      expect(statusText, statusText).not.toContain('❌');
+      const a = expectAnswer(result, { source: 'PISTE', outcome: 'results' });
+      expect(a.environment, JSON.stringify(a)).toEqual(expect.any(String));
+      expect(a.checks, JSON.stringify(a)).toEqual([
+        expect.objectContaining({ source: 'Légifrance', state: 'ok' }),
+        expect.objectContaining({ source: 'Judilibre', state: 'ok' }),
+      ]);
     } finally {
       await client.close();
     }

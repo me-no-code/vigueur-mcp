@@ -1,10 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { type ErrorKind, VigueurError } from '../../src/shared/errors.js';
-import { callSignal } from '../../src/tools/format.js';
-import { toToolError } from '../../src/tools/tool-error.js';
+import { toolError } from '../../src/tools/tool-error.js';
+import { expectToolError } from '../helpers/answer.js';
 
 const hints: Record<
-  Exclude<ErrorKind, 'quota_exceeded' | 'not_found' | 'invalid_input' | 'cancelled'>,
+  Exclude<ErrorKind, 'quota_exceeded' | 'not_found' | 'invalid_input' | 'cancelled' | 'deadline'>,
   string
 > = {
   credentials_missing:
@@ -19,100 +19,53 @@ const hints: Record<
     'PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.',
   unexpected_response:
     'Légifrance returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.',
-  deadline: 'Légifrance did not answer within 45 s; try again in a moment.',
 };
 
-describe('toToolError', () => {
+const request = { tool: 'legifrance_get_article' };
+
+describe('toolError hints', () => {
   for (const [kind, hint] of Object.entries(hints)) {
     it(`appends the hint for ${kind}`, () => {
-      const result = toToolError(new VigueurError(kind as ErrorKind, 'msg'));
-      expect(result.isError).toBe(true);
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0]).toEqual({ type: 'text', text: `msg\n\n${hint}` });
+      const e = expectToolError(
+        toolError(new VigueurError(kind as ErrorKind, 'msg'), { source: 'legifrance', request }),
+        kind,
+      );
+      expect(e.error.message).toBe(`msg ${hint}`);
     });
   }
 
   it('names the source of an unexpected_response', () => {
-    const result = toToolError(
-      new VigueurError('unexpected_response', 'x', { source: 'judilibre' }),
+    const e = expectToolError(
+      toolError(new VigueurError('unexpected_response', 'x', { source: 'judilibre' }), {
+        source: 'legifrance',
+        request,
+      }),
+      'unexpected_response',
     );
-    expect((result.content[0] as { text: string }).text).toContain('Judilibre returned a response');
+    expect(e.source).toBe('Judilibre');
+    expect(e.error.message).toContain('Judilibre returned a response');
   });
 
-  it('includes retry delay for quota_exceeded when known', () => {
-    const result = toToolError(
-      new VigueurError('quota_exceeded', 'msg', { retryAfterSeconds: 30 }),
-    );
-    expect(result.isError).toBe(true);
-    expect(result.content).toHaveLength(1);
-    const text = (result.content[0] as { text: string }).text;
-    expect(text).toContain('msg');
-    expect(text).toContain('Retry in about 30 s');
+  it('includes the retry delay for quota_exceeded when known, a generic hint otherwise', () => {
+    const known = toolError(new VigueurError('quota_exceeded', 'msg', { retryAfterSeconds: 30 }), {
+      source: 'legifrance',
+      request,
+    });
+    expect(expectToolError(known, 'quota_exceeded').error.message).toContain('Retry in about 30 s');
+    const unknown = toolError(new VigueurError('quota_exceeded', 'msg'), {
+      source: 'legifrance',
+      request,
+    });
+    expect(expectToolError(unknown, 'quota_exceeded').error.message).toContain('Wait a moment');
   });
 
-  it('uses a generic hint for quota_exceeded otherwise', () => {
-    const result = toToolError(new VigueurError('quota_exceeded', 'msg'));
-    expect((result.content[0] as { text: string }).text).toContain('Wait a moment');
-  });
-
-  it('adds no hint for not_found and invalid_input', () => {
-    for (const kind of ['not_found', 'invalid_input'] as const) {
-      const result = toToolError(new VigueurError(kind, 'exact message'));
-      expect(result.isError).toBe(true);
-      expect(result.content).toEqual([{ type: 'text', text: 'exact message' }]);
+  it('adds no hint for not_found, invalid_input, cancelled and deadline', () => {
+    for (const kind of ['not_found', 'invalid_input', 'cancelled', 'deadline'] as const) {
+      const e = expectToolError(
+        toolError(new VigueurError(kind, 'exact message'), { source: 'legifrance', request }),
+        kind,
+      );
+      expect(e.error.message).toBe('exact message');
     }
-  });
-
-  it('passes cancelled through without a hint', () => {
-    const result = toToolError(new VigueurError('cancelled', 'Request cancelled.'));
-    expect(result.isError).toBe(true);
-    expect(result.content).toEqual([{ type: 'text', text: 'Request cancelled.' }]);
-  });
-
-  it('wraps unknown errors and logs the stack', () => {
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const result = toToolError(new Error('boom'));
-    expect(result.isError).toBe(true);
-    expect((result.content[0] as { text: string }).text).toMatch(/^Unexpected error: boom/);
-    expect(spy).toHaveBeenCalled();
-    spy.mockRestore();
-  });
-
-  describe('with a call signal', () => {
-    const fired = async (mcp?: AbortSignal) => {
-      const signal = callSignal(mcp, 10);
-      await new Promise((resolve) => signal.addEventListener('abort', resolve, { once: true }));
-      return signal;
-    };
-    const textOf = (r: ReturnType<typeof toToolError>) => (r.content[0] as { text: string }).text;
-
-    it('deadline fired + cancelled renders the deadline hint', async () => {
-      const result = toToolError(new VigueurError('cancelled', 'x'), await fired());
-      expect(textOf(result)).toContain('did not answer within 45 s');
-    });
-
-    it('deadline fired + an abort-named error renders the deadline hint', async () => {
-      const abort = new DOMException('aborted', 'AbortError');
-      expect(textOf(toToolError(abort, await fired()))).toContain('did not answer within 45 s');
-    });
-
-    it('deadline fired + a genuine failure is not masked', async () => {
-      const result = toToolError(new VigueurError('invalid_input', 'bad date'), await fired());
-      expect(textOf(result)).toBe('bad date');
-    });
-
-    it('deadline fired names the source it was given', async () => {
-      const result = toToolError(new VigueurError('cancelled', 'x'), await fired(), 'judilibre');
-      expect(textOf(result)).toContain('Judilibre did not answer in time.');
-      expect(textOf(result)).toContain('Judilibre did not answer within 45 s');
-    });
-
-    it('MCP cancel (deadline not fired) + cancelled renders the normal cancelled text', () => {
-      const mcp = new AbortController();
-      const signal = callSignal(mcp.signal, 60_000);
-      mcp.abort();
-      const result = toToolError(new VigueurError('cancelled', 'Request cancelled.'), signal);
-      expect(textOf(result)).toBe('Request cancelled.');
-    });
   });
 });
