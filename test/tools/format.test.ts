@@ -9,7 +9,51 @@ import {
   optionalIsoDateSchema,
   presentOrUndefined,
   responseFormatSchema,
+  sliceForJson,
 } from '../../src/tools/format.js';
+
+// First in this file: the engine fault below shows only while `sliceForJson` has been compiled
+// on short texts and not yet on long ones.
+describe('sliceForJson on a long text that fits, after short texts', () => {
+  it('gives the whole text and no next offset, on every call', () => {
+    // Node 26.5 (V8 Maglev) answered `nextOffset` = the text length here: the loop counter read
+    // after the loop was stale in `end < text.length` and current in `end`.
+    for (let i = 0; i < 10; i++) sliceForJson('Texte officiel.', 0, 39_000);
+    const text = 'Alinéa : texte "officiel" de l\'article.\n'.repeat(800);
+    expect(text.length).toBeGreaterThan(30_000);
+    for (let i = 0; i < 6; i++) {
+      const s = sliceForJson(text, 0, 39_000);
+      expect(s.nextOffset, `call ${i + 1}`).toBeNull();
+      expect(s.text === text, `call ${i + 1}: the whole text`).toBe(true);
+    }
+  });
+});
+
+describe('sliceForJson length check', () => {
+  it('a normal slice has the length it measured', () => {
+    expect(sliceForJson('abcdef', 0, 3)).toEqual({ text: 'abc', nextOffset: 3 });
+    expect(sliceForJson('abcdef', 3, 100)).toEqual({ text: 'def', nextOffset: null });
+  });
+
+  it('throws when the slice taken is shorter than measured, instead of losing text', () => {
+    // The engine fault that once cut pages short (Node 26.5, V8 Maglev) cannot be triggered on
+    // demand: it depends on when V8 compiles the function. A string whose `substring` drops its
+    // first character stands in for it, on both ways out of the loop (cut, and end of text).
+    const real = 'abcdef';
+    const lossy = {
+      length: real.length,
+      codePointAt: (i: number) => real.codePointAt(i),
+      slice: (start: number, end?: number) => real.slice(start, end),
+      substring: (start: number, end?: number) => real.substring(start, end).substring(1),
+    } as unknown as string;
+    expect(() => sliceForJson(lossy, 0, 3)).toThrow(
+      'Text slice 0 to 3 came out 2 characters long instead of 3.',
+    );
+    expect(() => sliceForJson(lossy, 2, 100)).toThrow(
+      'Text slice 2 to 6 came out 3 characters long instead of 4.',
+    );
+  });
+});
 
 describe('MAX_TOOL_TEXT', () => {
   it('is 40 000 characters', () => {

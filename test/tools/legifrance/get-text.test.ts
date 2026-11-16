@@ -15,7 +15,7 @@ import type {
 } from '../../../src/services/legislation/ports.js';
 import { VigueurError } from '../../../src/shared/errors.js';
 import { toolAnswer } from '../../../src/tools/envelope.js';
-import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
+import { MAX_TOOL_TEXT, sliceForJson } from '../../../src/tools/format.js';
 import {
   buildGetTextAnswer,
   type GetTextAnswerOptions,
@@ -100,6 +100,31 @@ const ORD_2016_131_LINK = 'https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000032
 
 const withheld = (on: string) =>
   `(Text not shown: not in force on ${on}. Read it with an "at_date" inside its validity, or with legifrance_get_article and its id.)`;
+
+// First in this file, like the get_article and get_decision guards: Node 26.5 (V8 Maglev) gave a
+// long last slice a next offset at the text's end while `sliceForJson` had been compiled on short
+// texts only. Slicing an article starts with a cut slice, so get_text did not show it; this pins
+// that its slices still rebuild the text.
+describe('an article split in slices, read after short texts', () => {
+  it('its slices rebuild the text, none empty, on every read', () => {
+    for (let i = 0; i < 10; i++) sliceForJson('Texte officiel.', 0, 39_000);
+    const long = 'Alinéa : texte "officiel" de l\'article.\n'.repeat(1_500);
+    expect(long.length).toBeGreaterThan(MAX_TOOL_TEXT);
+    const found = foundText(record({ articles: [article(1, { text: long })] }));
+    for (let n = 0; n < 6; n++) {
+      const pageCount = articlesOf(found).page.of;
+      const parts = Array.from({ length: pageCount }, (_, i) => articlesOf(found, i + 1)).flatMap(
+        (p) => p.items,
+      );
+      expect(parts.length, `read ${n + 1}`).toBeGreaterThan(1);
+      expect(parts.map((i: Answer) => i.slice)).toEqual(
+        parts.map((_: Answer, k: number) => ({ index: k + 1, of: parts.length })),
+      );
+      expect(parts.every((i: Answer) => i.text.length > 0)).toBe(true);
+      expect(parts.map((i: Answer) => i.text).join('') === long).toBe(true);
+    }
+  });
+});
 
 describe('legifrance_get_text over the composed server (fixtures)', () => {
   it('loi 78-17 by nature + number: outline with its sections, publication and link', async () => {

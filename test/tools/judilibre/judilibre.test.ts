@@ -90,6 +90,36 @@ const read = async (args: Record<string, unknown>, outcome = 'found') =>
 const list = async (args: Record<string, unknown>, outcome = 'results') =>
   expectAnswer(await call(TAXONOMY, args), { source: SOURCE, outcome });
 
+// First in this file: Node 26.5 (V8 Maglev) answered a whole text with `next` at its end only
+// while `sliceForJson` had been compiled on short texts and not yet on long ones.
+describe('a long decision that fits one page, read after short ones', () => {
+  it('the long text twice (24 052 characters): no part and no next, on every call', async () => {
+    const shortId = 'aaaaaaaaaaaaaaaaaaaaaaaa';
+    const longId = 'bbbbbbbbbbbbbbbbbbbbbbbb';
+    const client = await serverOver(
+      fakeJudilibre({
+        decisions: {
+          [shortId]: decisionOf({ id: shortId, text: 'texte' }),
+          [longId]: decisionOf({ id: longId, text: decision49.text.repeat(2) }),
+        },
+      }).repo,
+    );
+    const found = { source: SOURCE, outcome: 'found' };
+    for (let i = 0; i < 10; i++) {
+      expectAnswer(await client.callTool({ name: DECISION, arguments: { id: shortId } }), found);
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = expectAnswer(
+        await client.callTool({ name: DECISION, arguments: { id: longId } }),
+        found,
+      );
+      expect(a.part, `call ${i + 1}`).toBeNull();
+      expect(a.next, `call ${i + 1}`).toBeNull();
+      expect(a.text).toBe(decision49.text.repeat(2));
+    }
+  });
+});
+
 describe('judilibre_search_decisions', () => {
   it('forfait jours, exact phrase, chamber social, newest', async () => {
     const a = await search({

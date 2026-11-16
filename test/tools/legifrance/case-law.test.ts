@@ -49,6 +49,36 @@ async function call(name: string, args: Record<string, unknown>) {
   return client.callTool({ name, arguments: args });
 }
 
+// First in this file: Node 26.5 (V8 Maglev) answered a whole text with `next` at its end only
+// while `sliceForJson` had been compiled on short texts and not yet on long ones.
+describe('a long decision that fits one page, read after short ones', () => {
+  it('has no part and no next, on every call', async () => {
+    const short = decisionFixture();
+    const long = decisionFixture({
+      id: 'CETATEXT000054960489',
+      collection: 'administrative',
+      text: 'abcdefghij '.repeat(2_800),
+    });
+    const { client, close } = await legifranceOver(
+      fakeLegifrance({ decisions: { [short.id]: short, [long.id]: long } }).repo,
+    );
+    cleanup.push(close);
+    const found = { source: SOURCE, outcome: 'found' };
+    for (let i = 0; i < 10; i++) {
+      expectAnswer(await client.callTool({ name: DECISION, arguments: { id: short.id } }), found);
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = expectAnswer(
+        await client.callTool({ name: DECISION, arguments: { id: long.id } }),
+        found,
+      );
+      expect(a.part, `call ${i + 1}`).toBeNull();
+      expect(a.next, `call ${i + 1}`).toBeNull();
+      expect(a.text).toBe(long.text);
+    }
+  });
+});
+
 describe('legifrance_search_case_law', () => {
   it('finds a judicial decision by number, with its link, its full-text pointer and the coverage note', async () => {
     const a = expectAnswer(await call(SEARCH, { collection: 'judicial', number: '24-16.924' }), {

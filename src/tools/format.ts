@@ -80,19 +80,39 @@ export function sliceForJson(
   offset: number,
   room: number,
 ): { text: string; nextOffset: number | null } {
-  let end = offset;
+  // Both answers are returned from inside the loop: nothing reads `end` after it. Node 26.5
+  // (V8 14.6, Maglev loop peeling with untagged phis) compiled this loop, once it had run on
+  // short texts, so that reads of `end` after the loop could see a stale value: a page lost text
+  // (`text.slice(offset, end)` cut short), or a whole text got a `nextOffset` at its end
+  // (`end < text.length` true for `end` = the length).
   let used = 0;
-  while (end < text.length) {
+  for (let end = offset; ; ) {
+    if (end >= text.length) return checkedSlice(text, offset, end, null);
     const width = (text.codePointAt(end) ?? 0) > 0xffff ? 2 : 1;
     const cost = JSON.stringify(text.slice(end, end + width)).length - 2;
-    if (end > offset && used + cost > room) break;
+    if (end > offset && used + cost > room) return checkedSlice(text, offset, end, end);
     used += cost;
     end += width;
   }
-  // `substring`, not `slice`: once this loop had run on short texts, Node 26.5 (V8 Maglev) cut
-  // `text.slice(offset, end)` short at a random point, so a page lost text that `nextOffset`
-  // skipped. `substring` is the same for 0 ≤ offset ≤ end and is unaffected.
-  return { text: text.substring(offset, end), nextOffset: end < text.length ? end : null };
+}
+
+/**
+ * `text` from `offset` to `end`, with `nextOffset`. Throws when the slice is not `end - offset`
+ * characters long: an engine fault then shows as an error, not as official text silently lost.
+ */
+function checkedSlice(
+  text: string,
+  offset: number,
+  end: number,
+  nextOffset: number | null,
+): { text: string; nextOffset: number | null } {
+  const out = text.substring(offset, end);
+  if (out.length !== end - offset) {
+    throw new Error(
+      `Text slice ${offset} to ${end} came out ${out.length} characters long instead of ${end - offset}.`,
+    );
+  }
+  return { text: out, nextOffset };
 }
 
 /** `s` cut to `max` characters, the cut shown by a trailing "…". */

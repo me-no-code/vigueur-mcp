@@ -69,6 +69,34 @@ async function call(args: Record<string, unknown>) {
 
 const link = (id: string) => `https://www.legifrance.gouv.fr/codes/article_lc/${id}`;
 
+// First in this file: Node 26.5 (V8 Maglev) answered a whole text with `next` at its end only
+// while `sliceForJson` had been compiled on short texts and not yet on long ones.
+describe('a long article that fits one page, read after short ones', () => {
+  it('CGI art. 199 undecies B (fixture 59, default inputs): no part and no next, on every call', async () => {
+    const client = await composedClient();
+    for (let i = 0; i < 10; i++) {
+      const short = await client.callTool({
+        name: TOOL,
+        arguments: { code: 'Code civil', number: '1240' },
+      });
+      expectAnswer(short, FOUND);
+    }
+    const recorded = loadFixture('59-getArticleWithIdAndNum-cgi-long') as {
+      article: { texteHtml: string };
+    };
+    const full = htmlToText(recorded.article.texteHtml);
+    for (let i = 0; i < 6; i++) {
+      const a = expectAnswer(
+        await client.callTool({ name: TOOL, arguments: { id: 'LEGIARTI000046892900' } }),
+        FOUND,
+      );
+      expect(a.part, `call ${i + 1}`).toBeNull();
+      expect(a.next, `call ${i + 1}`).toBeNull();
+      expect(a.text).toBe(full);
+    }
+  });
+});
+
 describe('legifrance_get_article over the composed server (fixtures)', () => {
   it('Code civil 1240 today: official text, in force, link', async () => {
     const a = expectAnswer(await call({ code: 'Code civil', number: '1240' }), FOUND);
