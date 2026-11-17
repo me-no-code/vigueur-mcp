@@ -99,7 +99,7 @@ Le champ `outcome` indique le type de réponse obtenu : `found`, `not_in_force`,
 | `part`, `next` | `null` quand le texte est entier. Voir « Un long article, découpé en pages » plus bas. |
 | `text` | Le texte officiel de la version. Vide quand Légifrance n'en a pas. |
 
-`status` est calculé à partir des dates de validité de la version, non à partir du libellé de Légifrance :
+`status` est calculé à partir des dates de vigueur de la version, non à partir du libellé de Légifrance :
 
 | `status.state` | Signification |
 |---|---|
@@ -382,7 +382,7 @@ Les autres erreurs (identifiants manquants, quota, source indisponible, aucune r
 
 ## Limites
 
-> **Le verdict vient des dates.** « En vigueur » est calculé à partir des dates de validité que Légifrance donne pour la version. Vigueur le rapporte, ainsi que tout désaccord avec le libellé de Légifrance ; il ne dit pas ce que l'article signifie pour votre cas.
+> **Le verdict vient des dates.** « En vigueur » est calculé à partir des dates de vigueur que Légifrance donne pour la version. Vigueur le rapporte, ainsi que tout désaccord avec le libellé de Légifrance ; il ne dit pas ce que l'article signifie pour votre cas.
 
 - Une seule version d'article par réponse. Pour voir toutes les versions et les textes qui les ont modifiées, utilisez [`legifrance_get_article_history`](legifrance_get_article_history.md).
 - L'outil lit les articles de codes, et les articles de conventions collectives par leur identifiant. Il ne lit pas les lois ou décrets entiers : utilisez [`legifrance_get_text`](legifrance_get_text.md).

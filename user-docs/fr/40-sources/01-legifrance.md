@@ -2,7 +2,7 @@
 title: "Légifrance"
 level: reference
 tags: [sources, legifrance, codes, case-law, journal-officiel]
-summary: "Sachez ce que détient Légifrance, quel fonds répond à quel outil de Vigueur, comment fonctionnent les statuts et les dates de validité, et où la source a des lacunes ou des retards."
+summary: "Sachez ce que détient Légifrance, quel fonds répond à quel outil de Vigueur, comment fonctionnent les états juridiques et les dates de vigueur, et où la source a des lacunes ou des retards."
 updated: 2026-11-17
 ---
 
@@ -17,7 +17,7 @@ décrivent la source en novembre 2026 et peuvent changer.
 
 | Fonds | Ce qu'il détient | Outils de Vigueur |
 |---|---|---|
-| Codes | Les codes consolidés (Code civil, Code du travail…) : toutes les versions de tous les articles, avec leurs dates de validité | [`legifrance_get_article`](../30-tools/legifrance_get_article.md), [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md), [`legifrance_browse_code`](../30-tools/legifrance_browse_code.md), [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md), [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md) (`codes`) |
+| Codes | Les codes consolidés (Code civil, Code du travail…) : toutes les versions de tous les articles, avec leurs dates de vigueur | [`legifrance_get_article`](../30-tools/legifrance_get_article.md), [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md), [`legifrance_browse_code`](../30-tools/legifrance_browse_code.md), [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md), [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md) (`codes`) |
 | LODA | Lois, ordonnances, décrets et arrêtés consolidés | [`legifrance_get_text`](../30-tools/legifrance_get_text.md), [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md), [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md) (`loda`) |
 | JORF | Le [Journal officiel](../00-intro/03-glossary.md) dans sa version publiée : chaque texte sous sa forme initiale | [`legifrance_latest_jo`](../30-tools/legifrance_latest_jo.md), [`legifrance_get_text`](../30-tools/legifrance_get_text.md), [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md) (`jorf`) |
 | KALI | Conventions collectives nationales, recherchées par IDCC | [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md) (`kali`) |
@@ -37,11 +37,11 @@ abrogés ; le fonds judiciaire contenait environ 600 000 décisions, le fonds ad
 570 000, le fonds financier environ 3 500, la CNIL environ 27 000 et le Conseil constitutionnel environ
 7 400.
 
-## Codes : versions, statuts et dates de validité
+## Codes : versions, états juridiques et dates de vigueur
 
 **Chaque article a des versions.** Chaque version a une date de début et une date de fin. Vigueur détermine
 si une version s'applique à une date donnée à partir de ces deux dates seulement : elle s'applique de
-sa date de début jusqu'à sa date de fin, celle-ci non comprise. Le libellé de statut propre à
+sa date de début jusqu'à sa date de fin, celle-ci non comprise. L'état juridique indiqué par
 Légifrance est affiché à côté du résultat, tel que la source l'écrit (`VIGUEUR`, `MODIFIE`,
 `ABROGE`…), mais ce sont les dates qui tranchent.
 
@@ -86,12 +86,12 @@ qui commence plus tard) :
 Le `state` est `in_force`, `not_in_force`, `not_yet_in_force` ou `never_applied`. (Le libellé de `state`
 est celui de Vigueur ; le libellé propre à Légifrance est donné à côté, dans `legifrance_status`.)
 
-**Versions programmées.** Légifrance liste des versions qui entrent en vigueur plus tard,
-parfois dans plusieurs années (observé : des modifications programmées du Code civil et du Code du
-travail). Une version programmée est présentée comme pas encore en vigueur à la date du jour, et une
+**Versions à venir.** Légifrance liste des versions qui entrent en vigueur plus tard,
+parfois dans plusieurs années (observé : des modifications à venir du Code civil et du Code du
+travail). Une version à venir est présentée comme pas encore en vigueur à la date du jour, et une
 abrogation différée n'est jamais cachée derrière « en vigueur ».
 
-**Un statut peut contredire les liens d'abrogation.** Observé en novembre 2026 : certains articles de
+**Un état juridique peut contredire les liens d'abrogation.** Observé en novembre 2026 : certains articles de
 l'ancienne partie législative du Code du travail portent encore le libellé « en vigueur » sans date de
 fin alors que la source enregistre aussi leur abrogation. Quand Vigueur voit les deux, un avertissement
 le dit :
@@ -192,7 +192,7 @@ décision qui n'en a pas est montrée comme `Inédit` quand le titre le dit, et 
 **Textes.** Le texte d'une décision arrive avec les noms pseudonymisés par la source. Son sommaire
 n'existe que pour certaines décisions. Les décisions du Conseil constitutionnel donnent aussi la page
 du Conseil lui-même et le lien du Journal officiel (`constitutional_council_link` et `jo_link`). Une
-délibération de la CNIL montre son statut tel que Légifrance le libelle.
+délibération de la CNIL montre son état juridique tel que Légifrance le libelle.
 
 ## Liens
 

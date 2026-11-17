@@ -24,7 +24,7 @@ abréviation courante comme « C. trav. ». Le numéro d'article peut s'écrire 
 `199 undecies B`. Un identifiant Légifrance (`LEGIARTI` suivi de 12 chiffres) convient aussi.
 
 La réponse donne le `text` de l'article, indique s'il est en vigueur à la date demandée (`status`,
-calculé à partir de ses dates de validité), précise où il se trouve dans le code (`section`), donne sa
+calculé à partir de ses dates de vigueur), précise où il se trouve dans le code (`section`), donne sa
 note ([nota](../00-intro/03-glossary.md#nota)) s'il y en a une, et le `link` officiel. Demandez la
 forme détaillée pour obtenir en plus toutes les versions, les textes modificatifs et le nombre de
 textes qui le citent.
@@ -40,12 +40,12 @@ Ajoutez une date :
 
 > Que disait cet article au 1er juin 2019 ? / What did article L1234-1 say on 2019-06-01?
 
-La date peut être passée ou future (une version programmée), par exemple le jour de la signature d'un
+La date peut être passée ou future (une version à venir), par exemple le jour de la signature d'un
 contrat ou de la naissance d'un litige. Par défaut, c'est la date du jour.
 
 Quand aucune version n'est en vigueur à cette date, la réponse ne dit pas « introuvable ». Son
 `outcome` vaut `not_in_force` : l'article existe, mais il n'était pas en vigueur ce jour-là, et
-`periods` liste les versions que Légifrance enregistre, chacune avec son libellé de statut, ses dates,
+`periods` liste les versions que Légifrance enregistre, chacune avec son état juridique, ses dates,
 son identifiant et son lien. Reposez la question avec une date comprise dans l'une de ces périodes.
 
 ## Voir les articles voisins
@@ -63,8 +63,8 @@ et un avertissement le signale.
 Claude lance [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md). La
 réponse donne :
 
-- la version en vigueur aujourd'hui (`current`), calculée à partir des dates de validité ;
-- la liste des `versions`, avec libellé de statut, dates de début et de fin ;
+- la version en vigueur aujourd'hui (`current`), calculée à partir des dates de vigueur ;
+- la liste des `versions`, avec leur état juridique et leurs dates de début et de fin ;
 - les événements (`items`), par date d'entrée en vigueur : création, modification, abrogation,
   codification ou transfert, et par quel texte. Une date future porte `"scheduled": true` ;
 - la concordance (voir ci-dessous).
@@ -104,7 +104,7 @@ décret et arrêté.
 
 Il y a deux parties :
 
-- **outline** (le plan, par défaut) : titre, statut Légifrance, publication, et les sections avec leur
+- **outline** (le plan, par défaut) : titre, état juridique, publication, et les sections avec leur
   nombre d'articles et leur `section_id` ;
 - **articles** : les textes des articles, page par page. Demandez une seule section par son
   `section_id` pour éviter de lire le texte entier.
@@ -137,7 +137,7 @@ Les sections qui ne sont pas en vigueur à la date (et, aujourd'hui, les article
 masquées, avec un décompte : `(3 items not in force on … hidden — include_repealed: true to show them)`.
 Si vous demandez à les inclure, le `status` de chaque section indique quand elle a pris fin ou quand
 elle commence. À une date autre qu'aujourd'hui, les libellés des articles sont les libellés actuels de
-Légifrance, et non leur statut à cette date : lisez l'article avec cette date pour vérifier.
+Légifrance, et non leur état juridique à cette date : lisez l'article avec cette date pour vérifier.
 
 ## Rechercher
 
@@ -156,8 +156,8 @@ des quatre fonds :
 Donnez au moins l'un de ces critères : des mots, un numéro d'article, un numéro de texte, un NOR ou un
 IDCC. Un code, une nature ou des dates de publication ne font que restreindre une recherche ; ils ne
 peuvent pas être le seul critère. Vous pouvez demander toutes les versions plutôt que celles en vigueur
-à une date. Chaque résultat indique son titre, le libellé de statut de Légifrance, ses dates de
-validité, son identifiant et son lien officiel. Un résultat qui est un article de code ou de convention
+à une date. Chaque résultat indique son titre, l'état juridique indiqué par Légifrance, ses dates de
+vigueur, son identifiant et son lien officiel. Un résultat qui est un article de code ou de convention
 collective peut être lu en entier avec son identifiant.
 
 > **Rechercher n'est pas lire**

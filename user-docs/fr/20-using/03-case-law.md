@@ -83,7 +83,7 @@ une expression exacte. Quand Judilibre ne trouve aucune correspondance exacte, i
 recherche : la réponse contient alors `"relaxed": true` et un avertissement, `Judilibre found no exact match and loosened the search: these results match only some of the words.` Sur Légifrance,
 tous les mots doivent apparaître.
 
-Vous pouvez restreindre une recherche par dates de décision, niveau de juridiction, chambre de la Cour
+Vous pouvez restreindre une recherche par dates de décision, type de juridiction, chambre de la Cour
 de cassation et publication, sur les deux sources. Sur Judilibre, vous pouvez aussi filtrer par
 formation, solution et lieu de la juridiction, et chercher dans une seule partie de la décision : les
 moyens, la motivation, le sommaire, etc. Demandez à Claude les valeurs qu'accepte un filtre :
@@ -144,7 +144,7 @@ propre champ :
 | `titles`, `visa`, `rapprochements`, `files` | Judilibre seulement, quand la décision en a |
 | `zones`, `zone` | Judilibre seulement : les zones que porte la décision, et celle à laquelle le texte est limité |
 | `constitutional_council_link`, `jo_link` | Pour les décisions du Conseil constitutionnel sur Légifrance |
-| `legifrance_status` | Pour les délibérations de la CNIL, le statut tel que Légifrance le libelle |
+| `legifrance_status` | Pour les délibérations de la CNIL, l'état juridique tel que Légifrance le libelle |
 
 Un champ sans rien à montrer vaut `null` (ou une liste vide). Les longues décisions sont paginées :
 `part` indique quels caractères sont affichés et `next` donne l'`offset` à partir duquel continuer, et

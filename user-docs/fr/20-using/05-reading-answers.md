@@ -2,7 +2,7 @@
 title: "Lire les réponses de Vigueur"
 level: guide
 tags: [answers, envelope, status, links, pagination, errors]
-summary: "Comprenez les parties communes à toutes les réponses de Vigueur : les champs de l'enveloppe, le type de réponse, le statut de vigueur, les avertissements, la pagination, le contenu en cache et les erreurs."
+summary: "Comprenez les parties communes à toutes les réponses de Vigueur : les champs de l'enveloppe, le type de réponse, l'état de vigueur, les avertissements, la pagination, le contenu en cache et les erreurs."
 updated: 2026-11-17
 ---
 
@@ -75,7 +75,7 @@ source, accents compris. Les dates sont au format `YYYY-MM-DD`.
 
 Quand vous lisez un article, un texte ou une section d'un code, la réponse contient un `status` qui dit si
 l'élément s'appliquait à la date demandée (aujourd'hui par défaut). Vigueur le calcule à partir des
-dates de validité de la version, et non à partir du libellé de statut de Légifrance :
+dates de vigueur de la version, et non à partir de l'état juridique indiqué par Légifrance :
 
 ```
 "status": {
@@ -97,14 +97,14 @@ dates de validité de la version, et non à partir du libellé de statut de Lég
 
 | `state` | Signification |
 |---|---|
-| `in_force` | Les dates couvrent le jour `on`. `until` peut contenir une fin programmée, ou valoir `null`. |
+| `in_force` | Les dates couvrent le jour `on`. `until` peut contenir une fin déjà prévue, ou valoir `null`. |
 | `not_in_force` | La version a pris fin avant `on`. `from` et `until` donnent la période où elle s'appliquait. |
 | `not_yet_in_force` | La version commence après `on`. `from` est son début ; `until` sa fin, s'il y en a une. |
 | `never_applied` | Une version qui n'a jamais été appliquée (une version mort-née). |
 
 Une version s'applique de son premier jour jusqu'à sa date de fin, celle-ci non comprise. Le libellé
 propre à Légifrance est donné à côté du statut, dans `legifrance_status` (par exemple `VIGUEUR` ou
-`MODIFIE` ; voir le [glossaire](../00-intro/03-glossary.md#statut-le-mot-de-légifrance)). Un libellé et
+`MODIFIE` ; voir le [glossaire](../00-intro/03-glossary.md#état-juridique-le-mot-de-légifrance)). Un libellé et
 les dates peuvent se contredire : la réponse ajoute alors un avertissement plutôt que de choisir.
 Exemples :
 

@@ -130,7 +130,7 @@ Un résultat contient :
 | `title`, `number` | Le titre du texte auquel appartient le résultat (ou du texte lui-même), et le numéro de l'article (`null` pour un texte). |
 | `id`, `text_id` | L'identifiant Légifrance de la version de l'article ou du texte, et celui du texte auquel il appartient. |
 | `nature`, `nor`, `published` | La nature du texte, son NOR et sa date de publication, chacun `null` quand il n'est pas donné. |
-| `legifrance_status`, `from`, `until` | Le libellé propre à Légifrance et les dates de validité, chacun `null` quand il n'est pas donné. |
+| `legifrance_status`, `from`, `until` | Le libellé propre à Légifrance et les dates de vigueur, chacun `null` quand il n'est pas donné. |
 | `link` | La page officielle, construite par Vigueur à partir de l'identifiant. |
 | `excerpt` | Le passage qui correspond, coupé à 200 caractères dans une réponse `concise` (`detailed` le donne en entier) ; `null` quand il n'y en a pas. Les marqueurs `[...]` montrent où le passage est coupé. |
 | `read_with` | L'appel qui lit l'article ou le texte en entier, par exemple `{ "tool": "legifrance_get_article", "id": "…" }`. `null` quand aucun outil ne le lit : un article issu du Journal officiel n'est pas proposé à `legifrance_get_article`, il n'a que son `link`. Quand `include_historical` vaut `true` (`scope` vaut `all_versions`), le `read_with` d'un résultat de type texte porte un `at_date` égal à la date `from` de la version listée, de sorte que la lecture donne cette version (pas d'`at_date` quand Légifrance ne donne pas de date de début). |

@@ -29,7 +29,7 @@ Seul `collection` est obligatoire. Sans autre critère, l'outil liste les décis
 | `ecli` | Non | Un identifiant européen de jurisprudence (*European Case Law Identifier*). Fonds judiciaire et administratif seulement. | Par exemple `ECLI:FR:CCASS:2025:SO01200` | Aucun |
 | `date_from` | Non | Date de décision la plus ancienne. Une valeur vide compte comme non fournie. | `YYYY-MM-DD` | Aucun |
 | `date_to` | Non | Date de décision la plus récente. Ne doit pas être antérieure à `date_from`. | `YYYY-MM-DD` | Aucun |
-| `court` | Non | Degré de juridiction. Fonds judiciaire seulement. | `cassation`, `appeal`, `first_instance` | Aucun |
+| `court` | Non | Type de juridiction. Fonds judiciaire seulement. | `cassation`, `appeal`, `first_instance` | Aucun |
 | `chamber` | Non | La chambre de la Cour de cassation. Fonds judiciaire seulement, et seulement avec `court` à `cassation` ou sans `court`. | `plenary`, `mixed`, `civ1`, `civ2`, `civ3`, `commercial`, `social`, `criminal` | Aucun |
 | `publication` | Non | Publiée ou non, comme la source l'enregistre. Indisponible pour `constitutional` et `cnil`. | `published`, `unpublished` | Aucun |
 | `sort` | Non | L'ordre des résultats. | `relevance`, `newest` | `relevance` quand vous donnez `query`, `number` ou `ecli` ; `newest` sinon |

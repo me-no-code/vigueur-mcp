@@ -51,7 +51,7 @@ fournit :
 - le texte ou la décision, tels que la source les détient (dans les décisions, la source
   pseudonymise les noms des personnes concernées) ;
 - l'état juridique et, pour un article ou un texte, s'il est en vigueur à la date demandée,
-  calculé à partir de ses dates de validité ;
+  calculé à partir de ses dates de vigueur ;
 - les dates utiles : début d'une version, fin d'une version, date d'une décision ;
 - des identifiants comme l'identifiant Légifrance, le NOR, le numéro de pourvoi ou l'ECLI ;
 - un lien vers la page officielle, dans le champ `link` de la réponse ou, dans une liste, de chaque

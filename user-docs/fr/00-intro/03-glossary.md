@@ -14,7 +14,7 @@ explication du mot, pas un conseil juridique.
 
 ### Arrêt
 
-Une décision d'une juridiction supérieure, comme la Cour de cassation ou une cour d'appel.
+Une décision rendue par une cour, comme la Cour de cassation ou une cour d'appel.
 
 ### Avertissements
 
@@ -52,8 +52,8 @@ dans un fonds de jurisprudence appelé « cnil ». Voir [Fonds](#fonds).
 ### Code
 
 Un code consolidé comme le Code civil ou le Code du travail. Les articles sont cités par code et
-numéro d'article, par exemple « Code du travail, L1234-1 ». Donnez l'intitulé complet du code ;
-Vigueur connaît aussi les abréviations courantes des principaux codes, comme « C. trav. » ou
+numéro d'article, par exemple « article L. 1234-1 du Code du travail ». Donnez l'intitulé complet du
+code ; Vigueur connaît aussi les abréviations courantes des principaux codes, comme « C. trav. » ou
 « CGI ».
 
 ### Concordance
@@ -68,7 +68,7 @@ concordance ; il n'en déduit aucune.
 Le nom que Légifrance donne à son fonds de jurisprudence du Conseil constitutionnel. Demandez-le
 sous le nom de fonds « constitutional ». Voir [Fonds](#fonds).
 
-### Dates de validité
+### Dates de vigueur
 
 Pour chaque version d'un article ou d'un texte, la date où elle commence et la date où elle se
 termine. Pour une version sans date de fin, aucune n'est enregistrée (`until` vaut `null`) ; une
@@ -104,8 +104,8 @@ Les champs que toute réponse de Vigueur possède, autour des faits de l'outil :
 ### En vigueur
 
 Vigueur calcule si un article ou un texte s'applique à une date donnée à partir de ses dates de
-validité, et indique les deux bornes de la période dans le champ `status`. Voir
-[Dates de validité](#dates-de-validité) et [État du statut](#état-du-statut).
+vigueur, et indique les deux bornes de la période dans le champ `status`. Voir
+[Dates de vigueur](#dates-de-vigueur) et [État de vigueur à la date](#état-de-vigueur-à-la-date).
 
 ```
 "status": {
@@ -118,14 +118,38 @@ validité, et indique les deux bornes de la période dans le champ `status`. Voi
 ```
 
 Le libellé propre à Légifrance pour la version est donné à côté, dans `legifrance_status`. Voir
-[Statut (le mot de Légifrance)](#statut-le-mot-de-légifrance).
+[État juridique (le mot de Légifrance)](#état-juridique-le-mot-de-légifrance).
 
-### État du statut
+### État de vigueur à la date
 
 Le `state` à l'intérieur du champ `status` d'un article, d'un texte ou d'une section : si cette
-version s'applique à la date `on`, calculé par Vigueur à partir de ses dates de validité. L'une des
+version s'applique à la date `on`, calculé par Vigueur à partir de ses dates de vigueur. L'une des
 valeurs `in_force`, `not_in_force`, `not_yet_in_force` et `never_applied`. Voir
 [Lire les réponses de Vigueur](../20-using/05-reading-answers.md#-en-vigueur-à-une-date--se-calcule-à-partir-de-dates).
+
+### État juridique (le mot de Légifrance)
+
+Légifrance enregistre un état juridique pour chaque version d'un article ou d'un texte, sous la
+forme d'un mot français en majuscules. Une réponse le donne dans le champ `legifrance_status`, à côté
+du `status` qui dit si la version est en vigueur. Les plus courants :
+
+| Mot | Sens |
+|---|---|
+| `VIGUEUR` | En vigueur |
+| `VIGUEUR_ETEN`, `VIGUEUR_NON_ETEN` | En vigueur, étendu ou non étendu (conventions collectives) |
+| `VIGUEUR_DIFF` | Entrée en vigueur différée à une date ultérieure |
+| `MODIFIE` | Modifié : une version ultérieure a remplacé celle-ci |
+| `MODIFIE_MORT_NE` | Version mort-née : remplacée avant d'avoir jamais été appliquée |
+| `ABROGE` | Abrogé |
+| `ABROGE_DIFF` | Abrogation différée à une date ultérieure |
+| `ANNULE` | Annulé |
+| `PERIME` | Périmé |
+| `TRANSFERE`, `DEPLACE` | Déplacé ailleurs |
+| `SUBSTITUE`, `REMPLACE` | Remplacé |
+
+Vigueur détermine « en vigueur à cette date » à partir des dates de vigueur, pas à partir de ce
+mot. Quand Légifrance étiquette une version en vigueur mais enregistre aussi son abrogation, la
+réponse vous avertit.
 
 ### Fonds
 
@@ -213,9 +237,9 @@ Voir [Légifrance](../40-sources/01-legifrance.md).
 
 ### LODA
 
-Lois et décrets : le fonds de Légifrance des lois, ordonnances, décrets et arrêtés consolidés. Les
-recherches qui y sont faites renvoient les versions en vigueur à une date (aujourd'hui par défaut).
-À comparer avec [JORF](#jorf-journal-officiel).
+Le fonds de Légifrance des lois, ordonnances, décrets et arrêtés consolidés, appelé « Textes
+consolidés » sur le site. Les recherches qui y sont faites renvoient les versions en vigueur à une
+date (aujourd'hui par défaut). À comparer avec [JORF](#jorf-journal-officiel).
 
 ### Niveau de publication
 
@@ -278,9 +302,11 @@ paramètre avec la valeur utilisée, valeurs par défaut comprises. Voir
 
 ### RNSM/NA
 
-Rejet non spécialement motivé ou non-admission : une décision de la Cour de cassation qui rejette un
-pourvoi sans motifs détaillés. Judilibre étiquette « RNSM/NA » la formation restreinte qui statue
-ainsi. Légifrance ne détient pas ces décisions : utilisez Judilibre pour les trouver.
+Rejet non spécialement motivé ou non-admission : une décision de la Cour de cassation qui statue sur
+un pourvoi sans décision spécialement motivée, soit en le rejetant (article 1014 du Code de
+procédure civile), soit en le déclarant non admis (article 567-1-1 du Code de procédure pénale).
+Judilibre étiquette « RNSM/NA » la formation restreinte qui statue ainsi. Légifrance ne détient pas
+ces décisions : utilisez Judilibre pour les trouver.
 
 ### Solution
 
@@ -291,30 +317,6 @@ La solution d'une décision de la Cour de cassation telle que Judilibre l'étiqu
 
 Le résumé du point de droit d'une décision, rédigé par la juridiction pour certaines décisions. Les
 réponses le donnent dans le champ `summary` quand la source en a un.
-
-### Statut (le mot de Légifrance)
-
-Légifrance enregistre un état juridique pour chaque version d'un article ou d'un texte, sous la
-forme d'un mot français en majuscules. Une réponse le donne dans le champ `legifrance_status`, à côté
-du `status` qui dit si la version est en vigueur. Les plus courants :
-
-| Mot | Sens |
-|---|---|
-| `VIGUEUR` | En vigueur |
-| `VIGUEUR_ETEN`, `VIGUEUR_NON_ETEN` | En vigueur, étendu ou non étendu (conventions collectives) |
-| `VIGUEUR_DIFF` | Entrée en vigueur différée à une date ultérieure |
-| `MODIFIE` | Modifié : une version ultérieure a remplacé celle-ci |
-| `MODIFIE_MORT_NE` | Version mort-née : remplacée avant d'avoir jamais été appliquée |
-| `ABROGE` | Abrogé |
-| `ABROGE_DIFF` | Abrogation différée à une date ultérieure |
-| `ANNULE` | Annulé |
-| `PERIME` | Périmé |
-| `TRANSFERE`, `DEPLACE` | Déplacé ailleurs |
-| `SUBSTITUE`, `REMPLACE` | Remplacé |
-
-Vigueur détermine « en vigueur à cette date » à partir des dates de validité, pas à partir de ce
-mot. Quand Légifrance étiquette une version en vigueur mais enregistre aussi son abrogation, la
-réponse vous avertit.
 
 ### Suite et partie
 
@@ -339,12 +341,12 @@ Le champ `outcome` d'une réponse : le type de réponse dont il s'agit, comme `f
 ### Version
 
 Chaque fois qu'un article ou un texte est modifié, Légifrance enregistre une nouvelle version avec
-ses propres dates de validité. L'historique d'un article liste chaque version, et les textes qui
+ses propres dates de vigueur. L'historique d'un article liste chaque version, et les textes qui
 l'ont créé, modifié ou abrogé. Demandez une date passée pour lire la version qui s'appliquait alors.
 
 ### Visa
 
-Les références qui ouvrent une décision (les textes sur lesquels elle s'appuie). Judilibre affiche
+Les textes que la décision applique, que Judilibre appelle « Textes appliqués ». Judilibre affiche
 le visa d'une décision de la Cour de cassation quand elle en a un.
 
 ### Zone

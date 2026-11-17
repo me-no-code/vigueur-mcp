@@ -8,7 +8,7 @@ updated: 2026-11-17
 
 # legifrance_get_text
 
-Lit sur Légifrance une loi, une ordonnance, un décret ou un arrêté français. Vous obtenez soit son plan (titre, statut, publication, sections avec nombre d'articles), soit le texte de ses articles, page par page.
+Lit sur Légifrance une loi, une ordonnance, un décret ou un arrêté français. Vous obtenez soit son plan (titre, état juridique, publication, sections avec nombre d'articles), soit le texte de ses articles, page par page.
 
 ## Ce que vous pouvez demander
 
@@ -29,7 +29,7 @@ Donnez exactement une cible : un `id`, un `nor`, ou une `nature` avec un `number
 | `number` | Avec `nature` | Le numéro du texte. Un « n° » en tête n'en fait pas partie. | `78-17`, `2016-131`, `n° 78-17` | Aucun |
 | `at_date` | Non | Lit la version consolidée en vigueur à cette date. Pas pour un identifiant `JORFTEXT` ni pour un NOR. | Une date valide au format `YYYY-MM-DD` | Aujourd'hui (heure de Paris) |
 | `section_id` | Non | Limite la réponse à une section : son plan, ou ses articles. | Un `section_id` tiré d'un plan précédent | Texte entier |
-| `part` | Non | Ce qu'il faut afficher. | `outline` (titre, statut, publication, sections avec nombre d'articles) ou `articles` (les textes des articles, page par page) | `outline` |
+| `part` | Non | Ce qu'il faut afficher. | `outline` (titre, état juridique, publication, sections avec nombre d'articles) ou `articles` (les textes des articles, page par page) | `outline` |
 | `page` | Non | La page du plan ou des articles. | Un nombre entier, 1 ou plus | 1 |
 
 Deux façons de lire un texte :
@@ -203,7 +203,7 @@ Chaque page répète l'identité du texte et ses avertissements. `items` contien
 |---|---|
 | `section` | Les titres des sections qui le contiennent, de la plus large à la plus interne (vide s'il est hors de toute section). |
 | `number`, `id` | Le numéro de l'article et l'identifiant Légifrance de la version. |
-| `status`, `legifrance_status` | Le statut de vigueur à la date `on` (voir [`legifrance_get_article`](legifrance_get_article.md) pour les quatre valeurs de `state`) et le libellé propre à Légifrance. |
+| `status`, `legifrance_status` | L'état de vigueur à la date `on` (voir [`legifrance_get_article`](legifrance_get_article.md) pour les quatre valeurs de `state`) et le libellé propre à Légifrance. |
 | `slice` | `null` quand `text` est l'article entier ; `{ "index": 2, "of": 3 }` quand un article trop long pour une page est découpé et que cet élément contient la partie 2 sur 3. |
 | `text` | Le texte officiel de l'article. |
 
@@ -231,7 +231,7 @@ Le texte existe, mais ses dates le placent hors vigueur à la date `on`. Il est 
 | `undetermined` | Légifrance ne donne aucune date exploitable. |
 | `no_version` | Légifrance n'a aucune version de ce texte à la date `on`. |
 
-Pour en lire un, passez son `id` avec un `at_date` situé dans sa période de validité.
+Pour en lire un, passez son `id` avec un `at_date` situé dans sa période de vigueur.
 
 ### Introuvable (`not_found`)
 

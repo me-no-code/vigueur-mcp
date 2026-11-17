@@ -8,7 +8,7 @@ updated: 2026-11-17
 
 # legifrance_get_article_history
 
-Liste toutes les versions d'un article de code français sur Légifrance, avec leurs dates de validité et leur statut, les textes qui l'ont créé, modifié ou abrogé, et l'endroit où Légifrance enregistre que son contenu a été déplacé lors d'une renumérotation.
+Liste toutes les versions d'un article de code français sur Légifrance, avec leurs dates de vigueur et leur état juridique, les textes qui l'ont créé, modifié ou abrogé, et l'endroit où Légifrance enregistre que son contenu a été déplacé lors d'une renumérotation.
 
 ## Ce que vous pouvez demander
 
@@ -119,7 +119,7 @@ Le type de réponse (`outcome`) vaut `found`, `no_results` (une page au-delà de
 | `code`, `number` | Le titre du code et le numéro de l'article. |
 | `link` | La page officielle de la version en vigueur aujourd'hui, sinon de la dernière version ; `null` quand il n'y a aucune version. |
 | `on` | Aujourd'hui : la date pour laquelle `current` et `scheduled` sont calculés. |
-| `current` | La version dont les dates de validité couvrent `on`, calculée à partir des dates. `null` quand aucune version n'est en vigueur aujourd'hui. |
+| `current` | La version dont les dates de vigueur couvrent `on`, calculée à partir des dates. `null` quand aucune version n'est en vigueur aujourd'hui. |
 | `versions` | Toutes les versions de l'article, par date de début croissante (les versions sans début connu en dernier). Chacune a le numéro de version de Légifrance, son propre libellé, et `from`, `until` et `until_undetermined` comme dans [`legifrance_get_article`](legifrance_get_article.md). |
 | `results`, `page`, `next` | Le nombre d'événements sur toutes les pages, cette page et le nombre de pages, et la page suivante (`{ "page": 2 }`, ou `null`). |
 | `items` | Les événements de cette page, par ordre de date : les textes qui ont créé, modifié ou abrogé l'article. |

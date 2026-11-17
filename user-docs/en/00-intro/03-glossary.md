@@ -13,7 +13,7 @@ terms stay in French. Each entry is a short explanation of the word, not legal a
 
 ### Arrêt
 
-A decision of a higher court, such as the Cour de cassation or a *cour d'appel*.
+A decision given by a *cour*, such as the Cour de cassation or a *cour d'appel*.
 
 ### Attacked decision
 
@@ -181,9 +181,9 @@ Answers show these ids so that Claude can read the same document again, and so t
 
 ### LODA
 
-*Lois et décrets*: Légifrance's collection of consolidated laws, ordinances, decrees and orders.
-Searches in it return the versions in force on a date (today by default). Compare
-[JORF](#jorf-journal-officiel).
+Légifrance's collection of consolidated laws, ordinances, decrees and orders, called *Textes
+consolidés* on its website. Searches in it return the versions in force on a date (today by
+default). Compare [JORF](#jorf-journal-officiel).
 
 ### Next and part
 
@@ -256,9 +256,11 @@ returned, as a date and time in UTC (`2026-11-16T10:42:07Z`).
 
 ### RNSM/NA
 
-*Rejet non spécialement motivé* or *non-admission*: a decision of the Cour de cassation that rejects
-a *pourvoi* without detailed reasons. Judilibre labels the *formation restreinte* that decides these
-"RNSM/NA". Légifrance does not hold these decisions, so use Judilibre to find them.
+*Rejet non spécialement motivé* or *non-admission*: a decision of the Cour de cassation that
+disposes of a *pourvoi* without a specially reasoned decision, either by rejecting it (article 1014
+of the *Code de procédure civile*) or by declaring it not admitted (article 567-1-1 of the *Code de
+procédure pénale*). Judilibre labels the *formation restreinte* that decides these "RNSM/NA".
+Légifrance does not hold these decisions, so use Judilibre to find them.
 
 ### Sandbox
 
@@ -319,8 +321,8 @@ Ask for a past date to read the version that applied then.
 
 ### Visa
 
-The opening references of a decision (the texts it relies on). Judilibre shows the visa of a Cour de
-cassation decision when it has one.
+The texts the decision applies, which Judilibre calls *Textes appliqués*. Judilibre shows the visa
+of a Cour de cassation decision when it has one.
 
 ### Warnings
 

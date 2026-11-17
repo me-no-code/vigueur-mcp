@@ -14,7 +14,7 @@ Liste ce qui a changé dans un code français, ou dans une loi ou un décret, en
 
 - « Qu'est-ce qui a changé dans le Code du travail depuis le 1er janvier 2026 ? » / « What changed in the Code du travail since 2026-01-01? »
 - « Quelles modifications la loi 78-17 a-t-elle connues en 2025 ? » / « What changes did loi 78-17 go through in 2025? »
-- « Quels articles du Code civil vont changer prochainement ? » / « Which Code civil articles are due to change soon? » (les entrées postérieures à aujourd'hui sont marquées comme programmées)
+- « Quels articles du Code civil vont changer prochainement ? » / « Which Code civil articles are due to change soon? » (les entrées postérieures à aujourd'hui sont marquées comme à venir)
 
 ## Ce qu'il faut fournir
 

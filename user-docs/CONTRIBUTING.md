@@ -127,8 +127,8 @@ fix both.
   section has a twin on the other side. The glossary is the one exception: its terms follow French
   alphabetical order.
 - **Anchors:** a link to a section uses the French heading's anchor (lowercase, punctuation
-  dropped, accents kept, spaces as hyphens: `### Statut (le mot de Légifrance)` is
-  `#statut-le-mot-de-légifrance`).
+  dropped, accents kept, spaces as hyphens: `### État juridique (le mot de Légifrance)` is
+  `#état-juridique-le-mot-de-légifrance`).
 - **Voice:** *vous*, short sentences, active voice. "Ask Claude to…" is « Demandez à Claude de… ».
   French quotation marks (« ») for words; backticks for anything Vigueur writes. A space before
   `:`, `;`, `?` and `!`, none before `.` and `,`.

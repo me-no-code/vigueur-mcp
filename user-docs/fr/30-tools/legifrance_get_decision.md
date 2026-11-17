@@ -85,7 +85,7 @@ Le type de réponse (`outcome`) vaut `found` ou `not_found`.
 | `court`, `chamber`, `nature` | La juridiction, la chambre ou la formation et la nature de la décision, tels que la source les indique ; chacun vaut `null` s'il n'est pas donné. |
 | `decided`, `numbers` | La date de la décision et les numéros de la décision. |
 | `publication`, `solution` | Comment la source enregistre la publication et la solution ; `null` quand elle n'en donne aucune. |
-| `legifrance_status`, `published` | Pour une délibération de la CNIL, le libellé de statut de Légifrance et la date de publication ; `null` sinon. |
+| `legifrance_status`, `published` | Pour une délibération de la CNIL, l'état juridique indiqué par Légifrance et la date de publication ; `null` sinon. |
 | `attacked` | La décision attaquée (`court` et date `decided`), quand la source l'indique ; `null` sinon. |
 | `constitutional_council_link`, `jo_link` | Pour une décision du Conseil constitutionnel, sa page sur conseil-constitutionnel.fr et son lien vers le Journal officiel ; `null` sinon. |
 | `summary` | Le [sommaire](../00-intro/03-glossary.md), coupé s'il est long ; `null` quand il n'y en a pas et sur chaque page après la première. |
