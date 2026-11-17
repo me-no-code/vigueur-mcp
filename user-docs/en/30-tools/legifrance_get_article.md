@@ -108,7 +108,7 @@ The `outcome` says which kind of answer you got: `found`, `not_in_force`, `sever
 | `not_yet_in_force` | The version starts after `on`. |
 | `never_applied` | The version was never in force. |
 
-`from` and `until` are the version's first and last day, each `null` when Légifrance gives none. `until_undetermined` is `true` when Légifrance records an end (a repeal) whose date it has not set. `on` is the date you asked for, today by default.
+`from` is the version's first day and `until` the day it ends, not included (the first day it no longer applies), each `null` when Légifrance gives none. `until_undetermined` is `true` when Légifrance records an end (a repeal) whose date it has not set. `on` is the date you asked for, today by default.
 
 When a later version of the article exists, or the version shown has ended, `relocation` says whether its content was amended or moved. When Légifrance records a move, the answer reports it:
 

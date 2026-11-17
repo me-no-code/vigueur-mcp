@@ -108,7 +108,7 @@ Le champ `outcome` indique le type de réponse obtenu : `found`, `not_in_force`,
 | `not_yet_in_force` | La version commence après `on`. |
 | `never_applied` | La version n'a jamais été en vigueur. |
 
-`from` et `until` sont le premier et le dernier jour de la version, chacun `null` quand Légifrance n'en donne pas. `until_undetermined` vaut `true` quand Légifrance enregistre une fin (une abrogation) dont il n'a pas fixé la date. `on` est la date que vous avez demandée, aujourd'hui par défaut.
+`from` est le premier jour de la version et `until` le jour où elle prend fin, non compris (le premier jour où elle ne s'applique plus), chacun `null` quand Légifrance n'en donne pas. `until_undetermined` vaut `true` quand Légifrance enregistre une fin (une abrogation) dont il n'a pas fixé la date. `on` est la date que vous avez demandée, aujourd'hui par défaut.
 
 Quand il existe une version ultérieure de l'article, ou que la version affichée a pris fin, `relocation` dit si son contenu a été modifié ou déplacé. Quand Légifrance enregistre un déplacement, la réponse le signale :
 

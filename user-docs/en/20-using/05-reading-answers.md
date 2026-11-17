@@ -90,7 +90,7 @@ dates, not from Légifrance's status label:
 | `state` | One of the four values below. |
 | `on` | The date the state applies to. |
 | `from` | The first day of the version; `null` when the source gives none. |
-| `until` | The last day of the version; `null` when the source gives none. |
+| `until` | The day the version ends, not included: the first day it no longer applies; `null` when the source gives none. |
 | `until_undetermined` | `true` when Légifrance records an end (a repeal) but has not set its date. |
 
 | `state` | Meaning |

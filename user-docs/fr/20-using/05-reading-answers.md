@@ -92,7 +92,7 @@ dates de vigueur de la version, et non à partir de l'état juridique indiqué p
 | `state` | L'une des quatre valeurs ci-dessous. |
 | `on` | La date à laquelle l'état s'applique. |
 | `from` | Le premier jour de la version ; `null` quand la source n'en donne aucun. |
-| `until` | Le dernier jour de la version ; `null` quand la source n'en donne aucun. |
+| `until` | Le jour où la version prend fin, non compris : le premier jour où elle ne s'applique plus ; `null` quand la source n'en donne aucun. |
 | `until_undetermined` | `true` quand Légifrance enregistre une fin (une abrogation) mais n'en a pas fixé la date. |
 
 | `state` | Signification |
