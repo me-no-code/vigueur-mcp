@@ -20,6 +20,8 @@
     "pretest": "npm run build",
     "test": "vitest run",
     "test:live": "VIGUEUR_LIVE=1 vitest run test/live",
+    "bundle": "node scripts/bundle.mjs",
+    "test:bundle": "VIGUEUR_BUNDLE=1 vitest run test/bundle/",
     "lint": "biome check .",
     "format": "biome format --write .",
     "dev": "npm run build && node --env-file=.env dist/index.js",
@@ -30,6 +32,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@anthropic-ai/mcpb": "^2.1.2",
     "@biomejs/biome": "^2.6.7",
     "@modelcontextprotocol/client": "^2.4.0",
     "@types/node": "^26.6.6",

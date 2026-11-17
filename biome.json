@@ -1,6 +1,6 @@
 {
   "files": {
-    "includes": ["**", "!dist", "!test/fixtures", "!**/*.md"]
+    "includes": ["**", "!dist", "!build", "!test/fixtures", "!**/*.md"]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "javascript": { "formatter": { "quoteStyle": "single" } },
