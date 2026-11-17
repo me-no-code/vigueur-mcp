@@ -10,10 +10,6 @@ export interface Config {
   problems: string[];
 }
 
-/** Where a user changes the PISTE_* values: plugin settings in Claude Code, env vars elsewhere. */
-export const CREDENTIALS_WHERE =
-  'In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration.';
-
 /** Trim, strip one matching pair of surrounding quotes, trim again; empty means unset. */
 function clean(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;

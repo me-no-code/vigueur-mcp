@@ -75,11 +75,12 @@ describe('createServer', () => {
     expect(await toolNames(client)).toEqual(['vigueur_status']);
   });
 
-  it('unconfigured: vigueur_status answers not_configured with the setup guide', async () => {
+  it('unconfigured: vigueur_status answers not_configured', async () => {
     const client = await connect(deps());
     const result = await client.callTool({ name: 'vigueur_status' });
     const a = expectAnswer(result, { source: 'PISTE', outcome: 'not_configured' });
-    expect(a.setup_guide).toContain('PISTE_CLIENT_ID');
+    expect(a.config_problems).toEqual([]);
+    expect(Object.keys(a)).not.toContain('setup_guide');
   });
 
   it('configured: registers source modules', async () => {

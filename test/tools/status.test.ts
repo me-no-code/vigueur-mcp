@@ -45,35 +45,29 @@ async function callStatus(getStatus: (ctx?: StatusContext) => Promise<StatusRepo
 const report = (r: StatusReport) => async () => r;
 
 describe('vigueur_status', () => {
-  it('unconfigured: not_configured with the setup guide', async () => {
+  it('unconfigured: not_configured, facts only', async () => {
     const a = expectAnswer(await callStatus(report(unconfigured)), {
       source: 'PISTE',
       outcome: 'not_configured',
     });
     expect(a.config_problems).toEqual([]);
-    for (const expected of [
-      'PISTE_CLIENT_ID',
-      'PISTE_CLIENT_SECRET',
-      'PISTE_ENV',
-      'piste.gouv.fr',
-      'Validate my ToS choices',
-      'Apply changes',
-      // Plugin users enter the values as plugin settings, then reconnect the server.
-      '`PISTE_CLIENT_ID` (plugin setting **PISTE client ID**)',
-      '`PISTE_CLIENT_SECRET` (**PISTE client secret**)',
-      '`PISTE_ENV` (**PISTE environment**)',
-      'In Claude Code with the Vigueur plugin, enter them with `/plugin configure vigueur@vigueur`, then run `/mcp`, select **vigueur** and choose **Reconnect**.',
-      'In another MCP client, set them as environment variables in its configuration, then restart the client.',
-    ]) {
-      expect(a.setup_guide).toContain(expected);
-    }
-    expect(a.setup_guide).not.toContain('In your MCP client configuration');
+    expect(a.warnings).toEqual([]);
     expect(a.request).toEqual({ tool: 'vigueur_status' });
     expect(a.retrieved).toBe('2026-11-16T10:20:30Z');
-    expect(a.warnings).toEqual([]);
+    // Setting Vigueur up is the install's business (the bundle, the README, the docs).
+    expect(Object.keys(a).sort()).toEqual([
+      'cached',
+      'config_problems',
+      'outcome',
+      'request',
+      'retrieved',
+      'source',
+      'vigueur_version',
+      'warnings',
+    ]);
   });
 
-  it('shows config problems verbatim alongside the setup guide', async () => {
+  it('shows config problems verbatim', async () => {
     const problems = [
       'PISTE_CLIENT_SECRET is missing (PISTE_CLIENT_ID is set)',
       'PISTE_ENV must be "production" or "sandbox" (got "prod")',
@@ -86,7 +80,6 @@ describe('vigueur_status', () => {
       },
     );
     expect(a.config_problems).toEqual(problems);
-    expect(a.setup_guide).toContain('piste.gouv.fr');
   });
 
   it('all sources ok: environment and one check per source, no warnings', async () => {
@@ -95,16 +88,25 @@ describe('vigueur_status', () => {
       outcome: 'results',
     });
     expect(a.environment).toBe('sandbox');
-    expect(a.config_problems).toEqual([]);
     expect(a.checks).toEqual([
       { source: 'Légifrance', state: 'ok', detail: null, retry_after_seconds: null },
       { source: 'Judilibre', state: 'ok', detail: null, retry_after_seconds: null },
     ]);
     expect(a.warnings).toEqual([]);
-    expect(Object.keys(a)).not.toContain('setup_guide');
+    expect(Object.keys(a).sort()).toEqual([
+      'cached',
+      'checks',
+      'environment',
+      'outcome',
+      'request',
+      'retrieved',
+      'source',
+      'vigueur_version',
+      'warnings',
+    ]);
   });
 
-  it('a source not enabled: marks it and gives the consent/apply steps as a warning', async () => {
+  it('a source not enabled: marks it, without advice', async () => {
     const a = expectAnswer(
       await callStatus(
         report({
@@ -119,12 +121,10 @@ describe('vigueur_status', () => {
     );
     expect(a.checks[0].state).toBe('ok');
     expect(a.checks[1].state).toBe('not_enabled');
-    const text = a.warnings.join('\n');
-    expect(text).toContain('Validate my ToS choices');
-    expect(text).toContain('Apply changes');
+    expect(a.warnings).toEqual([]);
   });
 
-  it('an unexpected answer: marks the source and says it may be an API change', async () => {
+  it('an unexpected answer: marks the source with what PISTE answered', async () => {
     const a = expectAnswer(
       await callStatus(
         report({
@@ -147,12 +147,10 @@ describe('vigueur_status', () => {
       detail: 'not found (HTTP 404)',
       retry_after_seconds: null,
     });
-    expect(a.warnings).toEqual([
-      'PISTE answered the check in a way Vigueur does not expect (possibly an API change); `detail` gives the answer. Try again later; if it persists, report it.',
-    ]);
+    expect(a.warnings).toEqual([]);
   });
 
-  it('credentials rejected: warns about the sandbox/production pairing', async () => {
+  it('credentials rejected: marks each source, without advice', async () => {
     const a = expectAnswer(
       await callStatus(
         report({
@@ -168,12 +166,8 @@ describe('vigueur_status', () => {
     );
     expect(a.environment).toBe('production');
     expect(a.checks[0].state).toBe('credentials_invalid');
-    expect(a.warnings.join('\n')).toContain(
-      'Sandbox credentials only work with PISTE_ENV=sandbox, production credentials with PISTE_ENV=production.',
-    );
-    expect(a.warnings.join('\n')).toContain(
-      'In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration.',
-    );
+    expect(a.checks[1].state).toBe('credentials_invalid');
+    expect(a.warnings).toEqual([]);
   });
 
   it('a failing probe: its state and detail, without the doubled source label', async () => {
@@ -204,7 +198,7 @@ describe('vigueur_status', () => {
       retry_after_seconds: null,
     });
     expect(a.checks[1].detail).toBe('service error (HTTP 500)');
-    expect(a.warnings.join('\n')).toContain('PISTE did not answer; try again in a moment');
+    expect(a.warnings).toEqual([]);
   });
 
   it('a quota_exceeded source: carries the retry delay', async () => {

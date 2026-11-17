@@ -37,6 +37,12 @@ describe('Claude Code plugin manifest', () => {
     ]);
   });
 
+  it('sends a user without a PISTE account to the docs', () => {
+    expect(plugin.userConfig.piste_client_id.description).toBe(
+      'OAuth client ID of your PISTE application (free account on https://piste.gouv.fr). No account yet? See https://github.com/me-no-code/vigueur-mcp/blob/main/user-docs/en/10-setup/01-piste-account.md',
+    );
+  });
+
   it('only references declared user_config options', () => {
     const refs = [
       ...JSON.stringify(plugin.mcpServers).matchAll(/\$\{user_config\.([A-Za-z0-9_]+)\}/g),

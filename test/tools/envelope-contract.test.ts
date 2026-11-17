@@ -207,7 +207,8 @@ describe('envelope contract', () => {
   });
 
   it('every converted tool fails as JSON when the source refuses (HTTP 403)', async () => {
-    // vigueur_status is left out: its probes report a refused source as a check, not an error (test/tools/status.test.ts covers its error path).
+    // vigueur_status is left out: its probes report a refused source as a check, not an error
+    // (test/tools/status.test.ts covers its error path).
     for (const name of [...CONVERTED].filter((n) => n !== 'vigueur_status')) {
       const c = CASES.find((x) => x.tool === name);
       expect(c, `${name} has a case in CASES`).toBeDefined();
@@ -219,11 +220,10 @@ describe('envelope contract', () => {
     }
   });
 
-  it('vigueur_status (unconfigured) answers not_configured with the setup guide', async () => {
+  it('vigueur_status (unconfigured) answers not_configured', async () => {
     const client = await connect(compose(loadConfig({})));
     const result = await client.callTool({ name: 'vigueur_status' });
     const a = expectAnswer(result, { source: 'PISTE', outcome: 'not_configured' });
-    expect(a.setup_guide).toContain('PISTE_CLIENT_ID');
-    expect(a.setup_guide).toContain('Validate my ToS choices');
+    expect(a.config_problems).toEqual([]);
   });
 });

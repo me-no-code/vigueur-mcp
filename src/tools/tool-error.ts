@@ -1,5 +1,4 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
-import { CREDENTIALS_WHERE } from '../config.js';
 import { VigueurError } from '../shared/errors.js';
 import { SOURCE_LABELS, type SourceId } from '../shared/source-id.js';
 import { VERSION } from '../version.js';
@@ -9,10 +8,6 @@ import { DEFAULT_DEADLINE_MS, deadlineHit } from './format.js';
 /** The hint that follows an error's message; `label` names the source in it. */
 function hintFor(err: VigueurError, label: string): string | undefined {
   switch (err.kind) {
-    case 'credentials_invalid':
-      return `PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). ${CREDENTIALS_WHERE} Call vigueur_status to diagnose.`;
-    case 'forbidden':
-      return 'PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application.';
     case 'quota_exceeded':
       return err.details?.retryAfterSeconds !== undefined
         ? `PISTE quota reached. Retry in about ${err.details.retryAfterSeconds} s.`
@@ -21,6 +16,8 @@ function hintFor(err: VigueurError, label: string): string | undefined {
       return 'PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.';
     case 'unexpected_response':
       return `${label} returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.`;
+    case 'credentials_invalid':
+    case 'forbidden':
     case 'deadline':
     case 'not_found':
     case 'invalid_input':

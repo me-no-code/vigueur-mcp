@@ -5,13 +5,18 @@ import { toolError } from '../../src/tools/tool-error.js';
 import { expectToolError } from '../helpers/answer.js';
 
 const hints: Record<
-  Exclude<ErrorKind, 'quota_exceeded' | 'not_found' | 'invalid_input' | 'cancelled' | 'deadline'>,
+  Exclude<
+    ErrorKind,
+    | 'quota_exceeded'
+    | 'not_found'
+    | 'invalid_input'
+    | 'cancelled'
+    | 'deadline'
+    | 'credentials_invalid'
+    | 'forbidden'
+  >,
   string
 > = {
-  credentials_invalid:
-    'PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration. Call vigueur_status to diagnose.',
-  forbidden:
-    'PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application.',
   upstream_unavailable:
     'PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.',
   unexpected_response:
@@ -56,8 +61,15 @@ describe('toolError hints', () => {
     expect(expectToolError(unknown, 'quota_exceeded').error.message).toContain('Wait a moment');
   });
 
-  it('adds no hint for not_found, invalid_input, cancelled and deadline', () => {
-    for (const kind of ['not_found', 'invalid_input', 'cancelled', 'deadline'] as const) {
+  it('adds no hint for credentials_invalid, forbidden, not_found, invalid_input, cancelled and deadline', () => {
+    for (const kind of [
+      'credentials_invalid',
+      'forbidden',
+      'not_found',
+      'invalid_input',
+      'cancelled',
+      'deadline',
+    ] as const) {
       const e = expectToolError(
         toolError(new VigueurError(kind, 'exact message'), { source: 'legifrance', request }),
         kind,
