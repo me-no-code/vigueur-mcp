@@ -1,0 +1,277 @@
+---
+title: "Dépannage et FAQ"
+level: guide
+tags: [troubleshooting, errors, faq, vigueur_status]
+summary: "Retrouvez le message que Vigueur vous a donné, comprenez ce qu'il signifie et que faire, et vérifiez votre installation avec vigueur_status."
+updated: 2026-11-17
+---
+
+# Dépannage et FAQ
+
+Commencez ici quand Claude vous dit que quelque chose ne va pas avec Vigueur. La plupart des
+problèmes viennent des identifiants PISTE, ou des deux API qui ne sont pas activées sur votre
+application PISTE. Une seule vérification repère l'un comme l'autre.
+
+## D'abord, vérifiez votre installation
+
+### Comment vérifier que Vigueur fonctionne ?
+
+Demandez à Claude : « Lance `vigueur_status`. » Il vérifie vos identifiants et demande à PISTE si
+Légifrance et Judilibre répondent. La réponse est un objet JSON (transmis sur une seule ligne de
+JSON ; indenté ici). Quand tout va bien, la réponse ressemble à ceci :
+
+```
+{
+  "source": "PISTE",
+  "outcome": "results",
+  "warnings": [],
+  "environment": "sandbox",
+  "config_problems": [],
+  "checks": [
+    {
+      "source": "Légifrance",
+      "state": "ok",
+      "detail": null,
+      "retry_after_seconds": null
+    },
+    {
+      "source": "Judilibre",
+      "state": "ok",
+      "detail": null,
+      "retry_after_seconds": null
+    }
+  ],
+  "request": {
+    "tool": "vigueur_status"
+  },
+  "retrieved": "2026-11-16T10:42:07Z",
+  "cached": [],
+  "vigueur_version": "0.1.0"
+}
+```
+
+Un problème apparaît comme un `state` autre que `ok` dans l'entrée de la source sous `checks`, avec
+les étapes pour le corriger dans `warnings`. Les états sont :
+
+| État | Sens | Aller à |
+|---|---|---|
+| `ok` | La source répond | |
+| `not_enabled` | L'API n'est pas activée sur votre application PISTE | [Légifrance ou Judilibre n'est pas activé](#une-source-affiche-not_enabled) |
+| `credentials_invalid` | PISTE a rejeté vos identifiants | [PISTE a rejeté mes identifiants](#piste-a-rejeté-mes-identifiants) |
+| `quota_exceeded` | La limite de débit de PISTE est atteinte | [Quota](#piste-indique-que-le-quota-est-atteint) |
+| `unexpected_response` | PISTE a répondu, mais pas comme Vigueur s'y attend | [Une source affiche `unexpected_response`](#une-source-affiche-unexpected_response) |
+| `unavailable` | PISTE n'a pas répondu à temps, n'a pas pu être joint, ou a répondu par une erreur de serveur | [PISTE est indisponible](#piste-est-indisponible-ou-a-dépassé-le-délai) |
+
+La vérification interroge chaque source une fois et attend sa réponse jusqu'à 8 secondes.
+
+### Claude dit n'avoir que `vigueur_status`, ou ne trouve pas les autres outils de Vigueur
+
+Vigueur ne propose ses outils juridiques que si l'identifiant client et le secret client sont
+tous deux renseignés et que le réglage d'environnement est valide. Sinon, le seul outil disponible
+est `vigueur_status`, et il indique ce qui manque. Renseignez les identifiants avec
+`/plugin configure vigueur@vigueur`, puis exécutez `/mcp`, sélectionnez **vigueur** et choisissez
+**Reconnect**. Voir
+[Installer dans Claude Code](../10-setup/02-install-claude-code.md#3-saisir-vos-identifiants).
+
+## Messages d'installation
+
+### `PISTE access is not configured yet.`
+
+Vigueur n'a pas d'identifiants utilisables : aucun n'a été saisi, ou l'un des problèmes ci-dessous
+l'a bloqué. Le cas échéant, le problème est indiqué dans `config_problems` ; les étapes
+d'installation sont dans `setup_guide`. Créez votre compte en suivant
+[Créer votre compte PISTE](../10-setup/01-piste-account.md), puis saisissez les identifiants avec
+`/plugin configure vigueur@vigueur`. Les étapes de la réponse nomment les réglages par les
+variables qui leur correspondent : `PISTE_CLIENT_ID` est le réglage **PISTE client ID**,
+`PISTE_CLIENT_SECRET` le réglage **PISTE client secret** et `PISTE_ENV` le réglage **PISTE
+environment**.
+
+### `PISTE_CLIENT_ID is missing (PISTE_CLIENT_SECRET is set)`
+
+Vous avez saisi le secret client mais pas l'identifiant client. Vigueur donne le message correspondant
+`PISTE_CLIENT_SECRET is missing (PISTE_CLIENT_ID is set)` quand c'est le secret qui manque.
+Saisissez les deux avec `/plugin configure vigueur@vigueur`.
+
+### `PISTE_ENV must be "production" or "sandbox" (got …)`
+
+Le réglage **PISTE environment** contient autre chose. Mettez-y `production` ou `sandbox`. Voir
+[bac à sable ou production](../10-setup/01-piste-account.md#bac-à-sable-ou-production). Le message ne
+répète la valeur que si elle est courte et composée de lettres ; sinon il dit `an unrecognised value`,
+au cas où un secret aurait été collé là par erreur.
+
+### PISTE a rejeté mes identifiants
+
+Le message de Vigueur :
+
+```
+PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration. Call vigueur_status to diagnose.
+```
+
+Il vient après l'un de ces messages : `PISTE rejected the credentials (HTTP 400).`, `PISTE rejected the credentials
+(HTTP 401).` ou `Légifrance: credentials rejected (HTTP 401)` (ou `Judilibre:`). Ils signifient la même
+chose ; `vigueur_status` l'indique par `credentials_invalid`. Vérifiez, dans cet ordre :
+
+1. L'identifiant client et le secret client ont été copiés en entier, sans espace en trop.
+2. Le réglage d'environnement correspond à l'application : `sandbox` pour l'application que PISTE a
+   créée pour vous, `production` pour celle que vous avez créée vous-même.
+
+Exécutez ensuite `/plugin configure vigueur@vigueur`, saisissez à nouveau les valeurs, et
+redémarrez le serveur (voir
+[le serveur est toujours l'ancien](#après-une-mise-à-jour-claude-se-comporte-toujours-comme-avant)).
+
+### Une source affiche `not_enabled`
+
+Vos identifiants fonctionnent, mais l'application n'est pas abonnée à cette API. La réponse de la
+vérification donne les étapes ; en bref, sur piste.gouv.fr :
+
+1. Ouvrez la page de consentement (« Cliquez ici pour accéder à la page de consentement »), cochez
+   **Légifrance** et **JUDILIBRE**, puis cliquez sur **Validate my ToS choices**.
+2. Modifiez l'application, cochez **Légifrance** et **JUDILIBRE**, puis cliquez sur **Apply
+   changes** (« Appliquer les modifications »). Les cases deviennent grises une fois l'abonnement
+   effectif ; vérifiez le tableau **Subscribed APIs**.
+
+Quand PISTE refuse une recherche ou une lecture, la réponse est une erreur (`"outcome": "error"`, `"kind": "forbidden"`).
+Son `message` est `Légifrance: access refused (HTTP 403) PISTE refused this request (HTTP 403).
+Call vigueur_status to check that the API is enabled on your PISTE application.` (ou commence par
+`Judilibre:`). La cause est la même.
+
+## Messages pendant que Claude lit le droit
+
+Quand une recherche ou une lecture échoue, la réponse est un objet JSON avec `"outcome": "error"`.
+Son `error` contient un `kind` (la famille d'échec, comme `quota_exceeded`) et un `message`, le
+texte cité dans les sections ci-dessous. Un message a deux parties : une première phrase sur ce qui
+s'est passé, puis une phrase sur ce qu'il faut faire. Voir
+[Lire les réponses de Vigueur](../20-using/05-reading-answers.md#quand-quelque-chose-ne-va-pas).
+
+### PISTE indique que le quota est atteint
+
+```
+"error": {
+  "kind": "quota_exceeded",
+  "message": "Légifrance: rate limit reached (HTTP 429) PISTE quota reached. Retry in about 30 s."
+}
+```
+
+PISTE limite le nombre de requêtes qu'une application peut envoyer. Quand PISTE dit combien de temps
+attendre, le message l'indique ; sinon il dit
+`PISTE quota reached. Wait a moment and try again.` Attendez, puis reposez la question. Vigueur a déjà réessayé une fois de lui-même.
+
+### PISTE est indisponible ou a dépassé le délai
+
+Les messages que vous pouvez voir (`kind` `upstream_unavailable`), chacun suivi de
+`PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.` :
+
+- `Légifrance: service error (HTTP 503)` (ou un autre numéro 5xx, ou `Judilibre:` à la place)
+- `Légifrance: request timed out after 10000 ms`
+- `Légifrance: network error while contacting the service`
+- `PISTE authentication timed out.` ou `PISTE authentication failed: network error.`
+- `PISTE authentication is unavailable (HTTP …).` ou `PISTE authentication returned an unexpected
+  response.`
+
+Vigueur attend jusqu'à 10 secondes la réponse à chaque requête envoyée à PISTE. Une requête vers
+Légifrance ou Judilibre qui échoue ainsi est tentée une seconde fois avant que Vigueur abandonne ; une
+connexion à PISTE qui échoue (les messages `PISTE authentication`) ne l'est pas. Vérifiez votre
+connexion internet, attendez un moment et reposez la question. Si l'échec persiste, vérifiez sur
+piste.gouv.fr s'il y a un incident en cours.
+
+### Une source affiche `unexpected_response`
+
+PISTE a répondu à la vérification, mais pas comme Vigueur s'y attend : un HTTP 400 ou 404, ou une
+réponse que Vigueur ne peut pas lire. `detail` donne ce que PISTE a répondu, par exemple `not found (HTTP 404)`. Cela signifie en général que PISTE a changé quelque chose de son côté, pas que
+votre installation est en cause. Réessayez plus tard ; si cela persiste, signalez-le avec le
+`detail`.
+
+### `Légifrance did not answer within 45 s`
+
+Chaque question que Claude pose à Vigueur dispose de 45 secondes au total. Quand la source met
+plus longtemps, Vigueur s'arrête et répond par une erreur de `kind` `deadline` :
+
+```
+"error": {
+  "kind": "deadline",
+  "message": "Légifrance did not answer within 45 s. Try again in a moment."
+}
+```
+
+Le même message existe pour Judilibre. Reposez la question ; si cela persiste, formulez une demande plus
+restreinte, par exemple sur une période plus courte.
+
+### `… returned a response Vigueur does not understand`
+
+```
+"error": {
+  "kind": "unexpected_response",
+  "message": "Légifrance: unexpected response (not valid JSON) Légifrance returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it."
+}
+```
+
+Le message commence par l'erreur propre à la source, comme `Légifrance: unexpected response (not valid
+JSON)`. La source a répondu sous une forme que Vigueur n'attendait pas. Réessayez plus
+tard. Si cela persiste, signalez-le au projet Vigueur.
+
+### `Unexpected error: …`
+
+Pour tout autre échec (`kind` `unexpected`), le message se termine par : « Call vigueur_status to
+check the setup. » Lancez d'abord cette vérification. Si elle ne signale aucun problème, signalez le
+message au projet Vigueur.
+
+### `request cancelled`
+
+Vous, ou Claude, avez arrêté l'appel (`kind` `cancelled`). Il n'y a pas de problème.
+
+## Quand rien n'est trouvé
+
+Ne rien trouver n'est pas une erreur. La réponse contient `"outcome": "not_found"` (un document demandé
+n'existe pas) ou `"outcome": "no_results"` (une recherche ou une liste est revenue vide), et les
+phrases citées ci-dessous sont dans ses `warnings`.
+
+### `No Légifrance article with id …` ou `No article … in … on Légifrance.`
+
+La source ne détient pas cet article. Vérifiez l'intitulé du code et le numéro. Vigueur ne
+devine pas : pour un intitulé de code erroné, il dit `Unknown code "…": no Légifrance code has this title` et peut ajouter des suggestions « Did you mean » que vous devez confirmer.
+
+Quand un numéro existe dans plusieurs codes et que vous n'avez donné aucun code, Vigueur liste les
+candidats et vous demande d'en choisir un.
+
+### `No Légifrance decision with id …` ou `No Judilibre decision with id …`
+
+L'identifiant est erroné, ou la décision est dans l'autre source. Le message vous renvoie à
+`legifrance_search_case_law` ou `judilibre_search_decisions`. Légifrance ne détient pas toutes les
+décisions de la Cour de cassation ; pour une décision récente, une décision de cour d'appel ou un
+rejet non spécialement motivé, utilisez Judilibre. Voir [RNSM/NA](03-glossary.md#rnsmna).
+
+### Un `items` vide et `"outcome": "no_results"`
+
+La recherche a bien eu lieu mais n'a rien trouvé : `items` est vide, et pour une recherche de
+jurisprudence `warnings` contient une phrase commençant par `No` et nommant vos critères. Le même
+`no_results` revient quand vous demandez une page au-delà de la dernière : `page` dit alors quelle
+page vous avez demandée et combien il y en a. Essayez d'autres mots, moins de filtres, ou l'autre
+source.
+
+## Messages sur ce que vous avez demandé
+
+Ces messages viennent de la requête elle-même, pas de PISTE. Claude corrige en général la requête et réessaie
+de lui-même. Exemples :
+
+- `"offset" … is past the end of the text (… characters).` (un décalage égal à la longueur compte comme au-delà de la fin)
+- `No text found for "…". Check the number, nature or id.` (`kind` `invalid_input` : le texte demandé pour une
+  liste de modifications n'existe pas sous la forme indiquée. Donnez la nature et le numéro (« loi 78-17 »), le NOR, ou
+  l'identifiant LEGITEXT ou JORFTEXT.)
+- `"until" (…) is before "since" (…).` ou `"date_from" must not be after "date_to".`
+- `"…" matches several texts: … Use the LEGITEXT id or the NOR.`
+- `Légifrance: request rejected (HTTP 400): …` (ou un autre numéro 4xx), suivi du début de
+  l'explication propre à la source.
+
+## Après une mise à jour
+
+### Après une mise à jour, Claude se comporte toujours comme avant
+
+Chaque session Claude Code ouverte continue d'exécuter l'ancien serveur jusqu'à ce que vous le
+reconnectiez. `/reload-plugins` seul ne suffit pas. Exécutez `/mcp`, sélectionnez **vigueur**, puis
+choisissez **Reconnect**. Une nouvelle session démarre la nouvelle version. Voir
+[Mettre à jour Vigueur](../10-setup/04-updating.md).
+
+## Si le problème persiste
+
+Lancez `vigueur_status` et conservez sa réponse, ainsi que le message exact que vous avez vu. Ne collez
+jamais votre secret client nulle part.

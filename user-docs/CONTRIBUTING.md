@@ -102,3 +102,27 @@ These pages are published with the repository. Write accordingly.
 
 Link other pages by relative path, even when the target is not written yet. The full map is in
 [en/README.md](en/README.md).
+
+## French pages
+
+A French page says what its English twin says, no more and no less. When the English is wrong,
+fix both.
+
+- **Kept as written in English:** everything in a code block or in backticks (Vigueur's messages,
+  JSON excerpts, tool names, field names and values), link targets, URLs, `level` and `tags`.
+  Vigueur answers in English; the pages quote it as it is.
+- **Translated:** the prose, the headings, the table text outside backticks, and the `title` and
+  `summary` of the front matter, both in double quotes (French puts a space before its colons).
+- **Same outline:** the same headings, in the same order and at the same levels, so a link to a
+  section has a twin on the other side. The glossary is the one exception: its terms follow French
+  alphabetical order.
+- **Anchors:** a link to a section uses the French heading's anchor (lowercase, punctuation
+  dropped, accents kept, spaces as hyphens: `### Statut (le mot de Légifrance)` is
+  `#statut-le-mot-de-légifrance`).
+- **Voice:** *vous*, short sentences, active voice. "Ask Claude to…" is « Demandez à Claude de… ».
+  French quotation marks (« ») for words; backticks for anything Vigueur writes. A space before
+  `:`, `;`, `?` and `!`, none before `.` and `,`.
+- **Example requests** on tool pages: French first, then English.
+- **Words:** the official wording of the sources and the texts: Légifrance's and Judilibre's own
+  labels, the codes, the Cour de cassation. When in doubt, check the source, and use the same
+  word for the same thing on every page.
