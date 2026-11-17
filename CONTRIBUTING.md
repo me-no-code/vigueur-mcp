@@ -15,6 +15,7 @@ own writing rules in [user-docs/CONTRIBUTING.md](user-docs/CONTRIBUTING.md).
 ```sh
 cp .env.example .env   # then fill in PISTE_CLIENT_ID, PISTE_CLIENT_SECRET and PISTE_ENV
 npm install
+git config core.hooksPath .githooks   # once per clone: user docs are changed in both languages
 npm test               # builds, then runs the offline test suite (no credentials, no network)
 npm run typecheck
 npm run lint

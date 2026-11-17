@@ -103,6 +103,16 @@ These pages are published with the repository. Write accordingly.
 Link other pages by relative path, even when the target is not written yet. The full map is in
 [en/README.md](en/README.md).
 
+## Both languages, every time
+
+A change to a page is a change to its twin. Commit both together, with the same `updated` date in
+both front matters. When only one language needs new words (a typo, a French turn of phrase), still
+read the twin and bump its `updated` date: the date says when the pair was last checked.
+
+Two checks hold this: `npm test` fails when a page has no twin or when twins carry different
+`updated` dates, and the pre-commit hook in `.githooks` (turned on with
+`git config core.hooksPath .githooks`) refuses a commit that stages one twin without the other.
+
 ## French pages
 
 A French page says what its English twin says, no more and no less. When the English is wrong,

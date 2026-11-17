@@ -1,0 +1,24 @@
+#!/bin/sh
+# Refuse a commit that changes a user-docs page in one language without its twin in the other.
+# Turn it on once per clone: git config core.hooksPath .githooks
+# A one-language fix still bumps the twin's `updated` date; --no-verify only when it already has today's.
+
+staged=$(git diff --cached --name-only --diff-filter=ACDMR -- 'user-docs/en/*.md' 'user-docs/fr/*.md')
+[ -z "$staged" ] && exit 0
+
+missing=''
+for path in $staged; do
+  case "$path" in
+    user-docs/en/*) twin="user-docs/fr/${path#user-docs/en/}" ;;
+    user-docs/fr/*) twin="user-docs/en/${path#user-docs/fr/}" ;;
+    *) continue ;;
+  esac
+  printf '%s\n' "$staged" | grep -qxF "$twin" || missing="$missing
+  $path (twin: $twin)"
+done
+
+if [ -n "$missing" ]; then
+  printf 'user-docs: staged without their twin in the other language:%s\n' "$missing" >&2
+  printf 'Update the twin too: at least its `updated` date, once you have checked it needs no other\nchange. If the twin already carries today'"'"'s date and needs no change, commit with --no-verify.\n' >&2
+  exit 1
+fi
