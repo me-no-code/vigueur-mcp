@@ -1,9 +1,7 @@
 import type { SourceId } from './source-id.js';
 
 export type ErrorKind =
-  | 'credentials_missing'
   | 'credentials_invalid'
-  | 'api_not_enabled'
   | 'forbidden'
   | 'quota_exceeded'
   | 'upstream_unavailable'

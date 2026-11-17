@@ -9,12 +9,8 @@ import { DEFAULT_DEADLINE_MS, deadlineHit } from './format.js';
 /** The hint that follows an error's message; `label` names the source in it. */
 function hintFor(err: VigueurError, label: string): string | undefined {
   switch (err.kind) {
-    case 'credentials_missing':
-      return 'PISTE credentials are not configured. Call vigueur_status for setup instructions.';
     case 'credentials_invalid':
       return `PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). ${CREDENTIALS_WHERE} Call vigueur_status to diagnose.`;
-    case 'api_not_enabled':
-      return 'This API is not enabled on your PISTE application. Call vigueur_status for the steps to enable it.';
     case 'forbidden':
       return 'PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application.';
     case 'quota_exceeded':
