@@ -3,7 +3,7 @@ title: judilibre_get_decision
 level: reference
 tags: [tool, judilibre, case-law, read]
 summary: Read one Judilibre decision, whole or by part (zone), with its summary, visa and attacked decision, page by page.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # judilibre_get_decision

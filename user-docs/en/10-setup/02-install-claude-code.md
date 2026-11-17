@@ -3,7 +3,7 @@ title: Install in Claude Code
 level: start
 tags: [install, claude-code, setup]
 summary: Install Vigueur in Claude Code from a local build, enter your PISTE credentials and check that Légifrance and Judilibre answer.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # Install in Claude Code

@@ -3,7 +3,7 @@ title: legifrance_browse_code
 level: reference
 tags: [tool, legifrance, code, table-of-contents]
 summary: Walk a code's table of contents one level at a time, as it stood on a date.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_browse_code

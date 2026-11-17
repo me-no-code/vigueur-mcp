@@ -3,7 +3,7 @@ title: Update Vigueur
 level: guide
 tags: [update, claude-code]
 summary: Update Vigueur to a newer version and make the open Claude Code session use it.
-updated: 2026-11-15
+updated: 2026-11-17
 ---
 
 # Update Vigueur

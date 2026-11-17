@@ -3,7 +3,7 @@ title: Case law
 level: guide
 tags: [case-law, judilibre, legifrance, decisions]
 summary: Choose between Légifrance and Judilibre, find a decision by number, ECLI or words, and read it whole or by zone.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # Case law

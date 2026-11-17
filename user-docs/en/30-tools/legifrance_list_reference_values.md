@@ -3,7 +3,7 @@ title: legifrance_list_reference_values
 level: reference
 tags: [tool, legifrance, reference, codes, natures, emitters]
 summary: List the codes, text natures and emitters you can use as filters in the other Légifrance tools.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_list_reference_values

@@ -3,7 +3,7 @@ title: Privacy and your data
 level: guide
 tags: [privacy, credentials, logs]
 summary: Know what Vigueur stores and where, what leaves your computer, what the logs hold, and what uninstalling removes.
-updated: 2026-11-15
+updated: 2026-11-17
 ---
 
 # Privacy and your data

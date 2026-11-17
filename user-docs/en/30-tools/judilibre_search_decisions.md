@@ -3,7 +3,7 @@ title: judilibre_search_decisions
 level: reference
 tags: [tool, judilibre, case-law, search]
 summary: Search Judilibre for Cour de cassation and lower-court decisions, choose how the words combine, and read what each answer shows.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # judilibre_search_decisions

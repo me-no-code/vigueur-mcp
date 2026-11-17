@@ -3,7 +3,7 @@ title: The Journal officiel and tracking changes
 level: guide
 tags: [journal-officiel, changes, tracking]
 summary: Read the latest Journal officiel, filter it, see what changed in a code or a law since a date and keep track of new texts.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # The Journal officiel and tracking changes

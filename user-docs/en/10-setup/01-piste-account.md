@@ -3,7 +3,7 @@ title: Create your PISTE account
 level: start
 tags: [setup, piste, credentials]
 summary: Create a free PISTE account and application, subscribe it to the Légifrance and Judilibre APIs, and get the client ID and secret Vigueur needs.
-updated: 2026-11-15
+updated: 2026-11-17
 ---
 
 # Create your PISTE account

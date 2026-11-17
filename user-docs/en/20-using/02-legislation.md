@@ -3,7 +3,7 @@ title: Codes, laws and decrees
 level: guide
 tags: [legislation, codes, articles, history, collective-agreements]
 summary: Read an article, a whole text or a code's table of contents, on any date, and find the texts that amended it.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # Codes, laws and decrees

@@ -3,7 +3,7 @@ title: legifrance_get_article_history
 level: reference
 tags: [tool, legifrance, article, history]
 summary: List every version of a code article with its dates and the texts that created, amended or repealed it.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_get_article_history

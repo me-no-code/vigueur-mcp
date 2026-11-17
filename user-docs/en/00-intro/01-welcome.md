@@ -3,7 +3,7 @@ title: Welcome to Vigueur
 level: intro
 tags: [intro, overview]
 summary: Know what Vigueur lets Claude do with French law, what it does not do, and which page to read next.
-updated: 2026-11-15
+updated: 2026-11-17
 ---
 
 # Welcome to Vigueur

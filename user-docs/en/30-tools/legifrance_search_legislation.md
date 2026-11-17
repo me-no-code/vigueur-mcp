@@ -3,7 +3,7 @@ title: legifrance_search_legislation
 level: reference
 tags: [tool, legifrance, search, codes, loda, jorf, kali]
 summary: Search codes, consolidated laws and decrees, the Journal officiel and national collective agreements, and get a list of hits with their links.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_search_legislation

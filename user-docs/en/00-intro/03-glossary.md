@@ -3,7 +3,7 @@ title: Glossary
 level: reference
 tags: [glossary, terms]
 summary: Look up the French legal and technical terms that Vigueur's answers use.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # Glossary

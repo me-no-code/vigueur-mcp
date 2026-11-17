@@ -3,7 +3,7 @@ title: How Vigueur works
 level: intro
 tags: [intro, architecture, privacy]
 summary: Understand what runs where when you ask Claude a question, and what the answers do and do not contain.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # How Vigueur works

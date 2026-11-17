@@ -3,7 +3,7 @@ title: legifrance_get_decision
 level: reference
 tags: [tool, legifrance, case-law, read]
 summary: Read one decision from Légifrance by its id, with its identity, official link and full text, page by page.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_get_decision

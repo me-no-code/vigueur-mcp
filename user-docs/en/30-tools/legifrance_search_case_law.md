@@ -3,7 +3,7 @@ title: legifrance_search_case_law
 level: reference
 tags: [tool, legifrance, case-law, search]
 summary: Search the decisions held by Légifrance (judicial, administrative, constitutional, CNIL and financial courts) and know what each answer shows and leaves out.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_search_case_law

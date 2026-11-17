@@ -3,7 +3,7 @@ title: Uninstall Vigueur
 level: guide
 tags: [uninstall, claude-code, privacy]
 summary: Remove Vigueur and its credentials from Claude Code, and know what is left behind and how to clear it.
-updated: 2026-11-15
+updated: 2026-11-17
 ---
 
 # Uninstall Vigueur

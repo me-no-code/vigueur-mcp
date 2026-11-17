@@ -3,7 +3,7 @@ title: Légifrance
 level: reference
 tags: [sources, legifrance, codes, case-law, journal-officiel]
 summary: Know what Légifrance holds, which collection answers which Vigueur tool, how statuses and validity dates work, and where the source has gaps or delays.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # Légifrance

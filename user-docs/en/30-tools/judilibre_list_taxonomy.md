@@ -3,7 +3,7 @@ title: judilibre_list_taxonomy
 level: reference
 tags: [tool, judilibre, taxonomy, filters]
 summary: List the values Judilibre uses to classify decisions (chambers, formations, outcomes, courts, themes) so you can filter a search with the right key.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # judilibre_list_taxonomy

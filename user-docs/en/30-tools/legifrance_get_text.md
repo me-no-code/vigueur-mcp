@@ -3,7 +3,7 @@ title: legifrance_get_text
 level: reference
 tags: [tool, legifrance, law, decree, text]
 summary: Read a law, ordinance, decree or order, as its outline or article by article, in the version in force on a date or as published.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_get_text

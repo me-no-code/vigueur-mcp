@@ -3,7 +3,7 @@ title: legifrance_latest_jo
 level: reference
 tags: [tool, legifrance, journal-officiel, jorf]
 summary: Read the latest issues of the Journal officiel, or the issues of one publication date, with the table of contents of each.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_latest_jo
