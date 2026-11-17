@@ -267,8 +267,8 @@ export const LEGIFRANCE_FIXTURE_ROUTES: readonly FixtureRoute[] = [
     fixture: '30-search-loda-date-num-78-17',
   },
   // Loi 78-17 read on 1970-01-01, before it existed: production answers the unknown-id 400 (the
-  // client turned it into "no such text"; the 400 body was not recorded), so the
-  // recorded unknown-id body answers it.
+  // client turns it into "no such text"; that 400 body was not recorded), so the recorded
+  // unknown-id body answers it.
   {
     path: '/consult/lawDecree',
     when: (b) =>
