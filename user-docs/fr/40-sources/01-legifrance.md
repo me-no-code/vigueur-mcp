@@ -8,7 +8,7 @@ updated: 2026-11-17
 
 # Légifrance
 
-Légifrance est le service public de diffusion du droit du gouvernement français. Vigueur le lit par la
+Légifrance est le service public de la diffusion du droit du gouvernement français. Vigueur le lit par la
 passerelle PISTE ([PISTE](03-piste.md)). Cette page indique ce que détient Légifrance, comment Vigueur
 utilise chaque partie, et ce qui a été observé à son sujet. Les observations sont datées : elles
 décrivent la source en novembre 2026 et peuvent changer.
@@ -46,7 +46,7 @@ Légifrance est affiché à côté du résultat, tel que la source l'écrit (`VI
 `ABROGE`…), mais ce sont les dates qui tranchent.
 
 **Dates sentinelles.** Légifrance écrit « pas de fin » sous la forme de l'année 2999 et « date non
-déterminée » (une abrogation programmée sans date pour l'instant) sous la forme d'une date en 2222.
+déterminée » (une abrogation différée sans date pour l'instant) sous la forme d'une date en 2222.
 Vigueur ne les montre jamais comme de vraies dates : l'absence de fin se lit `"until": null`, et une
 abrogation sans date pour l'instant se lit `"until_undetermined": true`. Un `status` se lit, par
 exemple, comme suit (la réponse à une lecture de l'article 1240 du Code civil, puis de l'article 1382 à
@@ -89,7 +89,7 @@ est celui de Vigueur ; le libellé propre à Légifrance est donné à côté, d
 **Versions programmées.** Légifrance liste des versions qui entrent en vigueur plus tard,
 parfois dans plusieurs années (observé : des modifications programmées du Code civil et du Code du
 travail). Une version programmée est présentée comme pas encore en vigueur à la date du jour, et une
-abrogation programmée n'est jamais cachée derrière « en vigueur ».
+abrogation différée n'est jamais cachée derrière « en vigueur ».
 
 **Un statut peut contredire les liens d'abrogation.** Observé en novembre 2026 : certains articles de
 l'ancienne partie législative du Code du travail portent encore le libellé « en vigueur » sans date de
@@ -167,9 +167,9 @@ qu'il ne sait pas lire est montré tel que Légifrance l'a écrit.
 **Numéros.**
 
 - Un numéro de pourvoi fonctionne quelle que soit sa graphie (`24-16.924` ou `2416924`).
-- Les décisions du Conseil constitutionnel exigent le numéro exact sous lequel elles sont classées. **Les
-  décisions jointes sont classées sous le numéro combiné complet**, tel que `2026-1217/1218`. La recherche
-  par le numéro de l'une des deux (`2026-1217`) ne donne rien. Vigueur retire la nature placée en fin
+- Les décisions du Conseil constitutionnel exigent le numéro exact sous lequel elles sont classées. **Une
+  décision rendue sur des affaires jointes est classée sous le numéro combiné complet**, tel que
+  `2026-1217/1218`. La recherche par l'un des deux numéros (`2026-1217`) ne donne rien. Vigueur retire la nature placée en fin
   de numéro (`QPC`, `DC`). Quand une recherche par un numéro sans `/` ne trouve rien, Vigueur le dit et renvoie vers la
   forme combinée.
 - Les numéros de la CNIL se présentent sous la forme `2026-023` ; ceux de la Cour des comptes sous la

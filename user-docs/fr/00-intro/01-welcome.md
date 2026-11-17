@@ -28,7 +28,7 @@ du gouvernement français. Rien ne passe par un serveur de Vigueur : il n'y en a
   décision et peut la lire en entier, ou une partie seulement.
 - « Qu'est-ce qui a été publié au dernier Journal officiel ? » Claude liste les derniers numéros.
 
-Les réponses indiquent leur source, le statut juridique quand la source en donne un, les dates utiles
+Les réponses indiquent leur source, l'état juridique quand la source en donne un, les dates utiles
 et les liens officiels. Voir [Lire les réponses de Vigueur](../20-using/05-reading-answers.md).
 
 ## Ce que Vigueur ne fait pas

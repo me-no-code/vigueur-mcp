@@ -43,7 +43,7 @@ Note: the source's own statistics give an impossible earliest date for the court
 
 ## Zones
 
-For many decisions, Judilibre marks the text in zones: `introduction`, `expose`, `moyens`, `motivations`, `dispositif`, sometimes `annexes`. A zone can come in several pieces; the pieces interleave (the *moyens* and the *motivations* alternate).
+For many decisions, Judilibre marks the text in zones: `introduction`, `expose`, `moyens`, `motivations`, `dispositif`, sometimes `annexes`. A zone can come in several pieces; the pieces interleave (the *moyens* and the *motivation* alternate).
 
 **Decisions without zones.** Observed: an unpublished decision of 2025 and an old Bulletin decision (2012) had no zones; Bulletin decisions and appeal-court decisions had them. The appeal-court decision observed had no `moyens` zone. When you ask for a zone that a decision lacks, Vigueur shows the full text and says so.
 

@@ -63,9 +63,9 @@ You can search three ways.
 > Find pourvoi 24-16.924. / Décision du Conseil constitutionnel 2026-1217 QPC.
 
 On Judilibre, give the number as the search words. On Légifrance, the number has its own field and
-also accepts Conseil d'État, CNIL, Conseil constitutionnel and Cour des comptes numbers. Joined
-decisions of the Conseil constitutionnel carry a combined number such as `2026-1217/1218`; if you give
-only one of them and nothing matches, the answer reminds you of the combined form.
+also accepts Conseil d'État, CNIL, Conseil constitutionnel and Cour des comptes numbers. A
+Conseil constitutionnel decision on joined cases carries a combined number such as `2026-1217/1218`; if you
+give only one of the two numbers and nothing matches, the answer reminds you of the combined form.
 
 **By ECLI.**
 
@@ -82,7 +82,7 @@ all the words must appear.
 
 You can narrow a search by decision dates, court level, Cour de cassation chamber and publication
 on both sources. On Judilibre you can also filter by formation, outcome and court location, and
-search one part of the decision only: the *moyens*, the *motivations*, the summary and so on. Ask
+search one part of the decision only: the *moyens*, the *motivation*, the summary and so on. Ask
 Claude for the values a filter accepts:
 [`judilibre_list_taxonomy`](../30-tools/judilibre_list_taxonomy.md) lists Judilibre's.
 

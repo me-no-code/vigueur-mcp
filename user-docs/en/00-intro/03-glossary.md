@@ -161,7 +161,7 @@ found with a legislation search and their articles read as articles; they are no
 
 ### Légifrance
 
-The French government's official legal publication service: codes, consolidated laws and decrees,
+The French government's public service for the dissemination of law: codes, consolidated laws and decrees,
 the *Journal officiel*, collective agreements and part of the case law. See
 [Légifrance](../40-sources/01-legifrance.md).
 
@@ -226,7 +226,7 @@ application; its credentials only work with the production setting. Compare [San
 
 ### Publication level
 
-How widely the Cour de cassation published a decision. Judilibre uses these labels.
+How the Cour de cassation published a decision. Judilibre uses these labels.
 
 | Label shown | Meaning |
 |---|---|
@@ -289,7 +289,7 @@ answer gives it in the `legifrance_status` field, next to the in-force `status`.
 | `MODIFIE` | Modified: a later version replaced this one |
 | `MODIFIE_MORT_NE` | Still-born: replaced before it ever applied |
 | `ABROGE` | Repealed |
-| `ABROGE_DIFF` | Repeal scheduled for a later date |
+| `ABROGE_DIFF` | Deferred repeal, at a later date |
 | `ANNULE` | Annulled |
 | `PERIME` | Expired |
 | `TRANSFERE`, `DEPLACE` | Moved elsewhere |
@@ -334,12 +334,12 @@ A named part of a decision on Judilibre. Ask Claude for one zone to read only th
 
 | Zone | Part of the decision |
 |---|---|
-| `introduction` | The opening: court, parties, the *pourvoi* |
+| `introduction` | The header (*en-tête*): court, parties, the *pourvoi* |
 | `expose` | The facts and the procedure (*exposé du litige*) |
 | `moyens` | The grounds a party argues (*moyens*) |
-| `motivations` | The court's reasoning (*motivations*) |
+| `motivations` | The court's reasoning (*motivation*) |
 | `dispositif` | The operative part, where the court rules (*dispositif*) |
-| `annexes` | Annexes, when there are any |
+| `annexes` | The annexed grounds (*moyens annexés*), when there are any |
 
 Cour de cassation decisions carry zones when the source marks them; court-of-appeal decisions seen
 in November 2026 had them too, without `moyens`. Some decisions carry no zone markup; Vigueur then

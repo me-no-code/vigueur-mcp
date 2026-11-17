@@ -25,7 +25,7 @@ Only `collection` is required. With no other criterion, the tool lists the newes
 |---|---|---|---|---|
 | `collection` | Yes | Which collection to search. | `judicial` (Cour de cassation and some courts of appeal), `administrative` (Conseil d'État, cours administratives d'appel, tribunaux administratifs), `constitutional` (Conseil constitutionnel), `cnil` (CNIL deliberations), `financial` (Cour des comptes and the regional and territorial chambers of accounts) | none |
 | `query` | No | Words to find in the decision. All the words must appear. | Free text | none |
-| `number` | No | A decision number. A leading "n°" is dropped and the number is rewritten the way Légifrance holds it. | [Pourvoi](../00-intro/03-glossary.md) `24-16.924` or `2416924`; Conseil d'État `400000`; CNIL `2026-023`; Conseil constitutionnel `2026-1217` (a trailing nature such as `QPC` is dropped; joined decisions need the combined number `2026-1217/1218`); Cour des comptes `S-2026-1111` | none |
+| `number` | No | A decision number. A leading "n°" is dropped and the number is rewritten the way Légifrance holds it. | [Pourvoi](../00-intro/03-glossary.md) `24-16.924` or `2416924`; Conseil d'État `400000`; CNIL `2026-023`; Conseil constitutionnel `2026-1217` (a trailing nature such as `QPC` is dropped; a decision on joined cases needs the combined number `2026-1217/1218`); Cour des comptes `S-2026-1111` | none |
 | `ecli` | No | A European Case Law Identifier. Judicial and administrative collections only. | For example `ECLI:FR:CCASS:2025:SO01200` | none |
 | `date_from` | No | Earliest decision date. A blank value counts as absent. | `YYYY-MM-DD` | none |
 | `date_to` | No | Latest decision date. Must not be before `date_from`. | `YYYY-MM-DD` | none |
@@ -106,8 +106,8 @@ A decision holds:
 |---|---|
 | `title` | The title as Légifrance writes it, cut at 300 characters. |
 | `id`, `link` | The Légifrance id and the official page, built by Vigueur from the id. |
-| `court`, `chamber`, `nature` | The court, the chamber or formation and the nature of the act, as the source states them; each `null` when not given. |
-| `decided`, `numbers` | The decision date and the decision numbers (several for joined decisions). |
+| `court`, `chamber`, `nature` | The court, the chamber or formation and the nature of the decision, as the source states them; each `null` when not given. |
+| `decided`, `numbers` | The decision date and the decision numbers (several for joined cases). |
 | `publication`, `solution` | How the source records the publication and the outcome; `null` when it gives none. A decision without publication information shows `null`: Vigueur never writes "unpublished" for it. |
 | `excerpt` | The matching passage when Légifrance gives one, cut at 700 characters; otherwise `null`. |
 | `read_with` | The call that returns the full decision. |

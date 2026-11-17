@@ -8,7 +8,7 @@ updated: 2026-11-17
 
 # Légifrance
 
-Légifrance is the French government's legal publication service. Vigueur reads it through the PISTE gateway ([PISTE](03-piste.md)). This page says what Légifrance holds, how Vigueur uses each part, and what has been observed about it. Observations are dated: they describe the source in November 2026 and can change.
+Légifrance is the French government's public service for the dissemination of law. Vigueur reads it through the PISTE gateway ([PISTE](03-piste.md)). This page says what Légifrance holds, how Vigueur uses each part, and what has been observed about it. Observations are dated: they describe the source in November 2026 and can change.
 
 ## Collections at a glance
 
@@ -34,7 +34,7 @@ Size, observed in November 2026: the codes list held 108 codes, 76 in force and 
 
 **Every article has versions.** Each version has a start date and an end date. Vigueur judges whether a version applies on a given date from those two dates alone: it applies from its start date up to, but not including, its end date. Légifrance's own status label is shown beside the result, as the source writes it (`VIGUEUR`, `MODIFIE`, `ABROGE`…), but the date decides.
 
-**Sentinel dates.** Légifrance writes "no end" as the year 2999 and "date not determined" (a scheduled repeal with no date yet) as a date in 2222. Vigueur never shows these as real dates: no end reads `"until": null`, and a repeal with no date yet reads `"until_undetermined": true`. A `status` reads, for example, as follows (the answer to a reading of article 1240 of the Code civil, then of article 1382 on a date after 2016, then, for a section of the Code du travail read as of 2005-01-01, a version that starts later):
+**Sentinel dates.** Légifrance writes "no end" as the year 2999 and "date not determined" (a deferred repeal with no date yet) as a date in 2222. Vigueur never shows these as real dates: no end reads `"until": null`, and a repeal with no date yet reads `"until_undetermined": true`. A `status` reads, for example, as follows (the answer to a reading of article 1240 of the Code civil, then of article 1382 on a date after 2016, then, for a section of the Code du travail read as of 2005-01-01, a version that starts later):
 
 ```
 "status": {
@@ -68,7 +68,7 @@ Size, observed in November 2026: the codes list held 108 codes, 76 in force and 
 
 The `state` is `in_force`, `not_in_force`, `not_yet_in_force` or `never_applied`. (The wording of `state` is Vigueur's; Légifrance's own label is given beside it in `legifrance_status`.)
 
-**Versions scheduled in the future.** Légifrance lists versions that enter into force later, some years ahead (observed: scheduled changes to the Code civil and to the Code du travail). A scheduled version is shown as not yet in force on today's date, and a scheduled repeal is never hidden behind "in force".
+**Versions scheduled in the future.** Légifrance lists versions that enter into force later, some years ahead (observed: scheduled changes to the Code civil and to the Code du travail). A scheduled version is shown as not yet in force on today's date, and a deferred repeal is never hidden behind "in force".
 
 **A status can contradict the repeal links.** Observed in November 2026: some articles of the old legislative part of the Code du travail still carry the label "in force" with no end date while the source also records their repeal. When Vigueur sees both, a warning says so:
 
@@ -109,7 +109,7 @@ Agreements are searched by IDCC or by words, and only through `legifrance_search
 **Numbers.**
 
 - A *pourvoi* number works in any spelling (`24-16.924` or `2416924`).
-- Conseil constitutionnel decisions need the number exactly as filed. **Joined decisions are filed under the full combined number**, such as `2026-1217/1218`. The number of one of the two (`2026-1217`) finds nothing. A trailing nature (`QPC`, `DC`) is dropped by Vigueur. When a search by a number without `/` finds nothing, Vigueur says so and points to the combined form.
+- Conseil constitutionnel decisions need the number exactly as filed. **A decision on joined cases is filed under the full combined number**, such as `2026-1217/1218`. The number of one of the two (`2026-1217`) finds nothing. A trailing nature (`QPC`, `DC`) is dropped by Vigueur. When a search by a number without `/` finds nothing, Vigueur says so and points to the combined form.
 - CNIL numbers read like `2026-023`; Cour des comptes numbers like `S-2026-1111`.
 
 **Filters.**

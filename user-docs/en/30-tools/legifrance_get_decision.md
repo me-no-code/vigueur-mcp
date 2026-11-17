@@ -82,7 +82,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 |---|---|
 | `id`, `ecli`, `link` | The Légifrance id, the ECLI (`null` when there is none) and the official page, built by Vigueur from the id. |
 | `title` | The title as Légifrance writes it, cut at 300 characters. |
-| `court`, `chamber`, `nature` | The court, the chamber or formation and the nature of the act, as the source states them; each `null` when not given. |
+| `court`, `chamber`, `nature` | The court, the chamber or formation and the nature of the decision, as the source states them; each `null` when not given. |
 | `decided`, `numbers` | The decision date and the decision numbers. |
 | `publication`, `solution` | How the source records the publication and the outcome; `null` when it gives none. |
 | `legifrance_status`, `published` | For a CNIL deliberation, Légifrance's status label and the publication date; `null` otherwise. |

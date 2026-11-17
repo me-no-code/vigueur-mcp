@@ -207,7 +207,7 @@ se lisent pas comme des textes.
 
 ### Légifrance
 
-Le service public officiel de publication du droit du gouvernement français : codes, lois et
+Le service public officiel de la diffusion du droit du gouvernement français : codes, lois et
 décrets consolidés, Journal officiel, conventions collectives et une partie de la jurisprudence.
 Voir [Légifrance](../40-sources/01-legifrance.md).
 
@@ -219,7 +219,7 @@ recherches qui y sont faites renvoient les versions en vigueur à une date (aujo
 
 ### Niveau de publication
 
-Le degré de diffusion que la Cour de cassation a donné à une décision. Judilibre utilise ces libellés.
+La manière dont la Cour de cassation a publié une décision. Judilibre utilise ces libellés.
 
 | Libellé affiché | Sens |
 |---|---|
@@ -294,7 +294,7 @@ réponses le donnent dans le champ `summary` quand la source en a un.
 
 ### Statut (le mot de Légifrance)
 
-Légifrance enregistre un statut juridique pour chaque version d'un article ou d'un texte, sous la
+Légifrance enregistre un état juridique pour chaque version d'un article ou d'un texte, sous la
 forme d'un mot français en majuscules. Une réponse le donne dans le champ `legifrance_status`, à côté
 du `status` qui dit si la version est en vigueur. Les plus courants :
 
@@ -306,7 +306,7 @@ du `status` qui dit si la version est en vigueur. Les plus courants :
 | `MODIFIE` | Modifié : une version ultérieure a remplacé celle-ci |
 | `MODIFIE_MORT_NE` | Version mort-née : remplacée avant d'avoir jamais été appliquée |
 | `ABROGE` | Abrogé |
-| `ABROGE_DIFF` | Abrogation programmée à une date ultérieure |
+| `ABROGE_DIFF` | Abrogation différée à une date ultérieure |
 | `ANNULE` | Annulé |
 | `PERIME` | Périmé |
 | `TRANSFERE`, `DEPLACE` | Déplacé ailleurs |
@@ -354,12 +354,12 @@ partie.
 
 | Zone | Partie de la décision |
 |---|---|
-| `introduction` | L'ouverture : juridiction, parties, le pourvoi |
+| `introduction` | L'en-tête : juridiction, parties, le pourvoi |
 | `expose` | Les faits et la procédure (exposé du litige) |
 | `moyens` | Les griefs qu'une partie soutient (moyens) |
-| `motivations` | Le raisonnement de la juridiction (motivations) |
+| `motivations` | Le raisonnement de la juridiction (motivation) |
 | `dispositif` | La partie où la juridiction statue (dispositif) |
-| `annexes` | Les annexes, quand il y en a |
+| `annexes` | Les moyens annexés, quand il y en a |
 
 Les décisions de la Cour de cassation portent des zones quand la source les marque ; les décisions
 de cour d'appel observées en novembre 2026 en avaient aussi, sans `moyens`. Certaines décisions ne

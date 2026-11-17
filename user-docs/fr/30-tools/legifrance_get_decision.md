@@ -82,7 +82,7 @@ Le type de réponse (`outcome`) vaut `found` ou `not_found`.
 |---|---|
 | `id`, `ecli`, `link` | L'identifiant Légifrance, l'ECLI (`null` s'il n'y en a pas) et la page officielle, construite par Vigueur à partir de l'identifiant. |
 | `title` | Le titre tel que Légifrance l'écrit, coupé à 300 caractères. |
-| `court`, `chamber`, `nature` | La juridiction, la chambre ou la formation et la nature de l'acte, tels que la source les indique ; chacun vaut `null` s'il n'est pas donné. |
+| `court`, `chamber`, `nature` | La juridiction, la chambre ou la formation et la nature de la décision, tels que la source les indique ; chacun vaut `null` s'il n'est pas donné. |
 | `decided`, `numbers` | La date de la décision et les numéros de la décision. |
 | `publication`, `solution` | Comment la source enregistre la publication et la solution ; `null` quand elle n'en donne aucune. |
 | `legifrance_status`, `published` | Pour une délibération de la CNIL, le libellé de statut de Légifrance et la date de publication ; `null` sinon. |

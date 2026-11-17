@@ -80,7 +80,7 @@ impossible (l'année 201), une erreur de données. Ne la prenez pas pour le déb
 
 Pour de nombreuses décisions, Judilibre balise le texte en zones : `introduction`, `expose`, `moyens`,
 `motivations`, `dispositif`, parfois `annexes`. Une zone peut venir en plusieurs morceaux ; les
-morceaux s'entrelacent (les moyens et les motivations alternent).
+morceaux s'entrelacent (les moyens et la motivation alternent).
 
 **Décisions sans zones.** Observé : une décision non publiée de 2025 et une ancienne décision publiée au
 Bulletin (2012) n'avaient pas de zones ; les décisions publiées au Bulletin et les décisions de cour

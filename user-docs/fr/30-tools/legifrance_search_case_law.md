@@ -25,7 +25,7 @@ Seul `collection` est obligatoire. Sans autre critère, l'outil liste les décis
 |---|---|---|---|---|
 | `collection` | Oui | Le fonds où chercher. | `judicial` (Cour de cassation et certaines cours d'appel), `administrative` (Conseil d'État, cours administratives d'appel, tribunaux administratifs), `constitutional` (Conseil constitutionnel), `cnil` (délibérations de la CNIL), `financial` (Cour des comptes et chambres régionales et territoriales des comptes) | Aucun |
 | `query` | Non | Les mots à trouver dans la décision. Tous les mots doivent apparaître. | Texte libre | Aucun |
-| `number` | Non | Un numéro de décision. Un « n° » en tête est retiré et le numéro est réécrit sous la forme où Légifrance l'enregistre. | [Pourvoi](../00-intro/03-glossary.md) `24-16.924` ou `2416924` ; Conseil d'État `400000` ; CNIL `2026-023` ; Conseil constitutionnel `2026-1217` (une nature en fin de numéro, comme `QPC`, est retirée ; les décisions jointes exigent le numéro combiné `2026-1217/1218`) ; Cour des comptes `S-2026-1111` | Aucun |
+| `number` | Non | Un numéro de décision. Un « n° » en tête est retiré et le numéro est réécrit sous la forme où Légifrance l'enregistre. | [Pourvoi](../00-intro/03-glossary.md) `24-16.924` ou `2416924` ; Conseil d'État `400000` ; CNIL `2026-023` ; Conseil constitutionnel `2026-1217` (une nature en fin de numéro, comme `QPC`, est retirée ; une décision rendue sur des affaires jointes exige le numéro combiné `2026-1217/1218`) ; Cour des comptes `S-2026-1111` | Aucun |
 | `ecli` | Non | Un identifiant européen de jurisprudence (*European Case Law Identifier*). Fonds judiciaire et administratif seulement. | Par exemple `ECLI:FR:CCASS:2025:SO01200` | Aucun |
 | `date_from` | Non | Date de décision la plus ancienne. Une valeur vide compte comme non fournie. | `YYYY-MM-DD` | Aucun |
 | `date_to` | Non | Date de décision la plus récente. Ne doit pas être antérieure à `date_from`. | `YYYY-MM-DD` | Aucun |
@@ -106,8 +106,8 @@ Une décision contient :
 |---|---|
 | `title` | Le titre tel que Légifrance l'écrit, coupé à 300 caractères. |
 | `id`, `link` | L'identifiant Légifrance et la page officielle, construite par Vigueur à partir de l'identifiant. |
-| `court`, `chamber`, `nature` | La juridiction, la chambre ou la formation et la nature de l'acte, tels que la source les indique ; chacun vaut `null` s'il n'est pas donné. |
-| `decided`, `numbers` | La date de la décision et les numéros de la décision (plusieurs pour des décisions jointes). |
+| `court`, `chamber`, `nature` | La juridiction, la chambre ou la formation et la nature de la décision, tels que la source les indique ; chacun vaut `null` s'il n'est pas donné. |
+| `decided`, `numbers` | La date de la décision et les numéros de la décision (plusieurs pour des affaires jointes). |
 | `publication`, `solution` | Comment la source enregistre la publication et la solution ; `null` quand elle n'en donne aucune. Une décision sans information de publication affiche `null` : Vigueur n'écrit jamais « unpublished » à sa place. |
 | `excerpt` | Le passage correspondant quand Légifrance en donne un, coupé à 700 caractères ; sinon `null`. |
 | `read_with` | L'appel qui renvoie la décision complète. |

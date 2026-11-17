@@ -66,9 +66,9 @@ sa graphie (`24-16.924`, `2416924`) :
 
 Sur Judilibre, donnez le numéro comme mots de recherche. Sur Légifrance, le numéro a son propre champ
 et accepte aussi les numéros du Conseil d'État, de la CNIL, du Conseil constitutionnel et de la Cour
-des comptes. Les décisions jointes du Conseil constitutionnel portent un numéro combiné tel que
-`2026-1217/1218` ; si vous n'en donnez qu'un seul et que rien ne correspond, la réponse vous rappelle
-la forme combinée.
+des comptes. Une décision du Conseil constitutionnel rendue sur des affaires jointes porte un numéro
+combiné tel que `2026-1217/1218` ; si vous ne donnez que l'un des deux numéros et que rien ne
+correspond, la réponse vous rappelle la forme combinée.
 
 **Par ECLI.**
 
@@ -86,7 +86,7 @@ tous les mots doivent apparaître.
 Vous pouvez restreindre une recherche par dates de décision, niveau de juridiction, chambre de la Cour
 de cassation et publication, sur les deux sources. Sur Judilibre, vous pouvez aussi filtrer par
 formation, solution et lieu de la juridiction, et chercher dans une seule partie de la décision : les
-moyens, les motivations, le sommaire, etc. Demandez à Claude les valeurs qu'accepte un filtre :
+moyens, la motivation, le sommaire, etc. Demandez à Claude les valeurs qu'accepte un filtre :
 [`judilibre_list_taxonomy`](../30-tools/judilibre_list_taxonomy.md) liste celles de Judilibre.
 
 Les résultats sont découpés en pages de 10 par défaut (jusqu'à 20). La réponse indique combien de
