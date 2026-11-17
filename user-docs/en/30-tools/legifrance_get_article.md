@@ -3,7 +3,7 @@ title: legifrance_get_article
 level: reference
 tags: [tool, legifrance, article, code]
 summary: Read one article of a French code on a given date, and see whether it was in force then and where its content moved.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # legifrance_get_article
@@ -385,7 +385,7 @@ Other errors (missing credentials, quota, source unavailable, no answer within 4
 > **The verdict comes from dates.** "In force" is computed from the validity dates Légifrance gives for the version. Vigueur reports it and any disagreement with Légifrance's label; it does not say what the article means for your case.
 
 - One article version per answer. To see every version and the texts that amended them, use [`legifrance_get_article_history`](legifrance_get_article_history.md).
-- It reads codes and collective agreement articles by id. It does not read whole laws or decrees: use [`legifrance_get_text`](legifrance_get_text.md).
+- It reads code articles, and collective agreement articles by their id. It does not read whole laws or decrees: use [`legifrance_get_text`](legifrance_get_text.md).
 - It finds an article by its number, not by its words: to find articles on a subject, use [`legifrance_search_legislation`](legifrance_search_legislation.md).
 - Where content moved, the answer relies on Légifrance's own record of concordances. When there is none, the "inferred from text comparison" sentence is an inference.
 

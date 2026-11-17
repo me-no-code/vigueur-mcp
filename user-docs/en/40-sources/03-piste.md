@@ -3,7 +3,7 @@ title: PISTE
 level: reference
 tags: [sources, piste, quota, sandbox, production]
 summary: Understand what PISTE is, how sandbox and production differ, why one application serves both sources, how the shared quota behaves, and how Vigueur retries and times out.
-updated: 2026-11-15
+updated: 2026-11-17
 ---
 
 # PISTE
@@ -43,8 +43,8 @@ PISTE limits how many requests an application can make. Observed in November 202
 | Situation | Vigueur's behaviour |
 |---|---|
 | HTTP 429 (quota) | Waits and retries once. The wait is the delay PISTE gives, up to 10 seconds; without one, half a second. If it fails again, you get the quota answer. |
-| HTTP 5xx, network error or timeout | Retries once after half a second. If it fails again, you get "PISTE is unavailable or timed out". |
-| PISTE sign-in (getting a token) fails | No retry. A refused sign-in is reported as rejected credentials; a sign-in that times out or fails otherwise as "PISTE is unavailable or timed out". |
+| HTTP 5xx, network error or timeout | Retries once after half a second. If it fails again, you get `PISTE is unavailable or timed out`. |
+| PISTE sign-in (getting a token) fails | No retry. A refused sign-in is reported as rejected credentials; a sign-in that times out or fails otherwise as `PISTE is unavailable or timed out`. |
 | HTTP 401 (token rejected) | Discards the token, gets a new one and retries once. If rejected again, you get the rejected-credentials answer. |
 | HTTP 403 | No retry. Reported as access refused: check that the API is subscribed. |
 | HTTP 404 | No retry. Reported as not found. |

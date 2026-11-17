@@ -148,13 +148,13 @@ sentence about what to do. See [Reading Vigueur's answers](../20-using/05-readin
 ```
 
 PISTE limits how many requests an application can make. When PISTE says how long to wait, the
-message gives it; otherwise it reads "PISTE quota reached. Wait a moment and try again." Wait, then
+message gives it; otherwise it reads `PISTE quota reached. Wait a moment and try again.` Wait, then
 ask again. Vigueur has already retried once by itself.
 
 ### PISTE is unavailable or timed out
 
-The messages you may see (`kind` `upstream_unavailable`), each followed by "PISTE is unavailable or
-timed out. Wait a moment and try again; if it persists, call vigueur_status.":
+The messages you may see (`kind` `upstream_unavailable`), each followed by
+`PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.`:
 
 - `Légifrance: service error (HTTP 503)` (or another 5xx number, or `Judilibre:` instead)
 - `Légifrance: request timed out after 10000 ms`

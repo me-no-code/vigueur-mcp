@@ -3,7 +3,7 @@ title: Judilibre
 level: reference
 tags: [sources, judilibre, case-law, cour-de-cassation]
 summary: Know what Judilibre holds, how its search and zones behave, which filters work, and the quirks seen at the source.
-updated: 2026-11-16
+updated: 2026-11-17
 ---
 
 # Judilibre
@@ -23,7 +23,7 @@ Judilibre is the Cour de cassation's open-data base of court decisions. Vigueur 
 Note: the source's own statistics give an impossible earliest date for the courts of appeal (the year 201), a data error. Do not read it as coverage.
 
 - Judilibre holds the Cour de cassation and the lower courts of the judicial order only. The Conseil d'État, Conseil constitutionnel, CNIL and financial courts are on Légifrance ([Légifrance](01-legifrance.md)).
-- **Fresh.** Observed: a Cour de cassation decision dated 10 November 2026 was already updated the same day. Légifrance holds the same decisions weeks later, and not all of them.
+- **Fresh.** Observed: a Cour de cassation decision dated 10 November 2026 was already on Judilibre that same day. Légifrance holds the same decisions weeks later, and not all of them.
 - **Decision kinds.** Judilibre classifies decisions as [*arrêt*](../00-intro/03-glossary.md), request for an opinion (*avis*), QPC, *ordonnance*, *saisie* or other. Observed: every Cour de cassation decision seen from 2021 on was typed "other", so the kind is not a useful filter and Vigueur does not show or offer it.
 - **Unreasoned rejections.** Judilibre holds the Cour de cassation's rejections not specially reasoned and non-admissions, which Légifrance does not. They carry the formation `Formation restreinte RNSM/NA (rejet non spécialement motivé ou non-admission)` and the outcome `Rejet`.
 - **Ids.** A Judilibre decision id is 24 hexadecimal characters. An unknown id and a badly formed one are answered the same way by the source; Vigueur checks the shape itself and says so.
