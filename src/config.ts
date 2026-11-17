@@ -10,7 +10,13 @@ export interface Config {
   problems: string[];
 }
 
-/** Trim, strip one matching pair of surrounding quotes, trim again; empty means unset. */
+/** A `${user_config.KEY}` an app passed through unfilled. */
+const UNFILLED = /^\$\{user_config\.[A-Za-z0-9_]+\}$/;
+
+/**
+ * Trim, strip one matching pair of surrounding quotes, trim again; empty or an unfilled
+ * `${user_config.…}` placeholder means unset.
+ */
 function clean(value: string | undefined): string | undefined {
   if (value === undefined) return undefined;
   let v = value.trim();
@@ -18,8 +24,14 @@ function clean(value: string | undefined): string | undefined {
   if (v.length >= 2 && (first === '"' || first === "'") && v.endsWith(first)) {
     v = v.slice(1, -1).trim();
   }
-  return v === '' ? undefined : v;
+  return v === '' || UNFILLED.test(v) ? undefined : v;
 }
+
+/** Echo only short alphabetic values: anything else may be a secret pasted into the wrong var. */
+const echo = (raw: string): string =>
+  /^[A-Za-z-]{1,20}$/.test(raw) ? `"${raw}"` : 'an unrecognised value';
+
+const unconfigured = (problem: string): Config => ({ piste: null, problems: [problem] });
 
 export function loadConfig(env: Record<string, string | undefined>): Config {
   const clientId = clean(env.PISTE_CLIENT_ID);
@@ -41,15 +53,31 @@ export function loadConfig(env: Record<string, string | undefined>): Config {
     };
   }
 
-  const rawEnv = clean(env.PISTE_ENV) ?? 'production';
-  const pisteEnv = rawEnv.toLowerCase();
-  if (pisteEnv !== 'production' && pisteEnv !== 'sandbox') {
-    // Echo only short alphabetic values: anything else may be a secret pasted into the wrong var.
-    const got = /^[A-Za-z-]{1,20}$/.test(rawEnv) ? `"${rawEnv}"` : 'an unrecognised value';
-    return {
-      piste: null,
-      problems: [`PISTE_ENV must be "production" or "sandbox" (got ${got})`],
-    };
+  let pisteEnv: PisteEnv | undefined;
+  const rawEnv = clean(env.PISTE_ENV);
+  if (rawEnv !== undefined) {
+    const value = rawEnv.toLowerCase();
+    if (value !== 'production' && value !== 'sandbox') {
+      return unconfigured(`PISTE_ENV must be "production" or "sandbox" (got ${echo(rawEnv)})`);
+    }
+    pisteEnv = value;
   }
-  return { piste: { clientId, clientSecret, env: pisteEnv }, problems: [] };
+  // PISTE_PRODUCTION is the same choice as a yes/no, for apps whose settings offer a switch.
+  const rawProduction = clean(env.PISTE_PRODUCTION);
+  if (rawProduction !== undefined) {
+    const value = rawProduction.toLowerCase();
+    if (value !== 'true' && value !== 'false') {
+      return unconfigured(
+        `PISTE_PRODUCTION must be "true" or "false" (got ${echo(rawProduction)})`,
+      );
+    }
+    const chosen: PisteEnv = value === 'true' ? 'production' : 'sandbox';
+    if (pisteEnv !== undefined && pisteEnv !== chosen) {
+      return unconfigured(
+        `PISTE_ENV is "${pisteEnv}" but PISTE_PRODUCTION is "${value}": set only one`,
+      );
+    }
+    pisteEnv = chosen;
+  }
+  return { piste: { clientId, clientSecret, env: pisteEnv ?? 'production' }, problems: [] };
 }
