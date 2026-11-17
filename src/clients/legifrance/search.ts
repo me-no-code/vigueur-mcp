@@ -22,7 +22,6 @@ import {
 import { mapPisteStatus } from './status-map.js';
 import { cleanTitle, parseApiDate, stripIdSuffix, stripMarks } from './wire.js';
 
-const MAX_PAGE_SIZE = 100;
 const TEXT_ID = /^(?:LEGITEXT|JORFTEXT|KALITEXT)/;
 
 // ---------------------------------------------------------------------------------------------
@@ -62,12 +61,6 @@ const invalid = (message: string) => new VigueurError('invalid_input', message);
 const given = (v: string | undefined): v is string => v !== undefined && v.trim() !== '';
 
 function validate(q: LegislationQuery): void {
-  if (!Number.isInteger(q.pageSize) || q.pageSize < 1 || q.pageSize > MAX_PAGE_SIZE) {
-    throw invalid(`"page_size" must be a whole number from 1 to ${MAX_PAGE_SIZE}.`);
-  }
-  if (!Number.isInteger(q.page) || q.page < 1) {
-    throw invalid('"page" must be a whole number from 1.');
-  }
   if (!CRITERIA.some((c) => given(q[c]))) {
     throw invalid(
       'Give at least one of "query", "article_number", "text_number", "nor" or "idcc": "code", "nature" and the publication dates only narrow a search.',

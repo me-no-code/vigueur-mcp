@@ -58,18 +58,20 @@ describe('createLatestJo', () => {
     expect(view.filter).toEqual({ nature: null, emitter: null, matchedEmitters: [] });
   });
 
-  it('rejects a count outside 1-10', async () => {
-    const { repo } = seeded();
+  it('rejects a count outside 1-10, or not whole, before any request', async () => {
+    const { repo, calls } = seeded();
     const run = createLatestJo(repo, { today });
     await expect(run({ count: 0 })).rejects.toMatchObject({ kind: 'invalid_input' });
     await expect(run({ count: 11 })).rejects.toMatchObject({ kind: 'invalid_input' });
+    await expect(run({ count: 1.5 })).rejects.toMatchObject({ kind: 'invalid_input' });
+    expect(calls.latestJo).toHaveLength(0);
   });
 
   it('with a date lists the day then reads each issue (max 3)', async () => {
     const listed = ['A', 'B', 'C', 'D'].map((id) => ({ ...issue(id, null), groups: null }));
     const { repo, calls } = fakeLegislation({
       overrides: {
-        async joIssuesBetween() {
+        async joIssuesOn() {
           return listed;
         },
         async joIssue(id) {
@@ -78,7 +80,7 @@ describe('createLatestJo', () => {
       },
     });
     const view = await createLatestJo(repo, { today })({ date: '2026-11-11' });
-    expect(calls.joIssuesBetween[0]?.args).toEqual(['2026-11-11', '2026-11-11']);
+    expect(calls.joIssuesOn[0]?.args).toEqual(['2026-11-11']);
     expect(calls.joIssue.map((c) => c.args[0])).toEqual(['A', 'B', 'C']);
     expect(calls.latestJo).toHaveLength(0);
     expect(view.issues.map((i) => i.id)).toEqual(['A', 'C']);

@@ -119,6 +119,12 @@ describe('createSearchLegislation', () => {
     expect(await message({ collection: 'codes', query: 'x', pageSize: 51 })).toBe(
       '"page_size" must be a whole number from 1 to 50, got 51.',
     );
+    expect(await message({ collection: 'codes', query: 'x', pageSize: 0 })).toContain(
+      '"page_size" must be a whole number from 1 to 50',
+    );
+    expect(await message({ collection: 'codes', query: 'x', page: 0 })).toContain(
+      '"page" must be a whole number',
+    );
     expect(await message({ collection: 'codes', query: 'x', atDate: '2020-13-01' })).toContain(
       '"at_date": "2020-13-01" is not a valid date',
     );

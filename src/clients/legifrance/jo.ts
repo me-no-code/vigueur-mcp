@@ -6,7 +6,6 @@ import type {
   JoIssue,
   JoText,
 } from '../../services/legislation/ports.js';
-import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
 import { asObj, isObj, list, type Obj, optStr, postJson, shape, str } from './request.js';
 import { buildJorfFilterOnlyBody } from './search.js';
@@ -15,11 +14,8 @@ import { cleanTitle, parseApiDate, stripIdSuffix } from './wire.js';
 // Journal officiel: /consult/lastNJo and /consult/jorfCont (issues, newest first, dates are
 // publication dates) and the facets of a filter-only JORF search.
 
-const MIN_ISSUES = 1;
-const MAX_ISSUES = 10;
+/** Issues asked for in one page: a publication date has one or two. */
 const CONT_PAGE_SIZE = 10;
-/** Safety stop for a date range: more pages than this is not a plausible answer. */
-const MAX_CONT_PAGES = 50;
 
 /** Empty strings are as good as absent on the wire. */
 const orNull = (o: Obj, key: string): string | null => {
@@ -84,29 +80,17 @@ const mapLatest = (raw: unknown): JoIssue[] =>
   list(asObj(raw, 'body'), 'containers', true).map(mapIssue);
 
 /** `/consult/jorfCont` answers `{ items: [{ joCont }], totalNbResult }`. */
-function mapCont(raw: unknown): { issues: JoIssue[]; total: number } {
-  const o = asObj(raw, 'body');
-  const issues = list(o, 'items', true).map((item) => {
+const mapCont = (raw: unknown): JoIssue[] =>
+  list(asObj(raw, 'body'), 'items', true).map((item) => {
     if (!isObj(item.joCont)) throw shape('item without joCont');
     return mapIssue(item.joCont);
   });
-  const total = typeof o.totalNbResult === 'number' ? o.totalNbResult : issues.length;
-  return { issues, total };
-}
 
 export function getLatestJo(
   http: PisteHttp,
   count: number,
   ctx: CallContext | undefined,
 ): Promise<JoIssue[]> {
-  if (!Number.isInteger(count) || count < MIN_ISSUES || count > MAX_ISSUES) {
-    return Promise.reject(
-      new VigueurError(
-        'invalid_input',
-        `"count" must be a whole number from ${MIN_ISSUES} to ${MAX_ISSUES}.`,
-      ),
-    );
-  }
   return postJson(http, '/consult/lastNJo', { nbElement: count }, ctx, mapLatest);
 }
 
@@ -116,23 +100,14 @@ const day = (d: IsoDate) => ({
   year: Number(d.slice(0, 4)),
 });
 
-export async function getJoIssuesBetween(
+export async function getJoIssuesOn(
   http: PisteHttp,
-  from: IsoDate,
-  to: IsoDate,
+  date: IsoDate,
   ctx: CallContext | undefined,
 ): Promise<JoIssue[]> {
-  const issues: JoIssue[] = [];
-  for (let page = 1; page <= MAX_CONT_PAGES; page++) {
-    const body = { start: day(from), end: day(to), pageNumber: page, pageSize: CONT_PAGE_SIZE };
-    const got = await postJson(http, '/consult/jorfCont', body, ctx, mapCont);
-    issues.push(...got.issues.map((i) => ({ ...i, groups: null })));
-    if (got.issues.length === 0 || issues.length >= got.total) return issues;
-  }
-  throw new VigueurError(
-    'invalid_input',
-    `There are more than ${MAX_CONT_PAGES * CONT_PAGE_SIZE} Journal officiel issues between ${from} and ${to}: narrow the date range.`,
-  );
+  const body = { start: day(date), end: day(date), pageNumber: 1, pageSize: CONT_PAGE_SIZE };
+  const issues = await postJson(http, '/consult/jorfCont', body, ctx, mapCont);
+  return issues.map((i) => ({ ...i, groups: null }));
 }
 
 export async function getJoIssue(
@@ -141,7 +116,7 @@ export async function getJoIssue(
   ctx: CallContext | undefined,
 ): Promise<JoIssue | null> {
   const body = { id, pageNumber: 1, pageSize: CONT_PAGE_SIZE };
-  const { issues } = await postJson(http, '/consult/jorfCont', body, ctx, mapCont);
+  const issues = await postJson(http, '/consult/jorfCont', body, ctx, mapCont);
   return issues[0] ?? null;
 }
 

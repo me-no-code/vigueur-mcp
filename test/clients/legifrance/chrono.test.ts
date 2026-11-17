@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
-import { VigueurError } from '../../../src/shared/errors.js';
 import { fakePisteHttp } from '../../helpers/fake-piste-http.js';
 
 const CIVIL = 'LEGITEXT000006070721';
@@ -132,17 +131,6 @@ describe('listChanges', () => {
         amendingArticleId: null,
       },
     ]);
-  });
-
-  it('rejects an inverted range without calling Légifrance', async () => {
-    const { repo, calls } = setup();
-    const err = await repo.listChanges(CIVIL, '2026-12-31', '2026-01-01').then(
-      () => undefined,
-      (e: unknown) => e,
-    );
-    expect(err).toBeInstanceOf(VigueurError);
-    expect((err as VigueurError).kind).toBe('invalid_input');
-    expect(calls).toHaveLength(0);
   });
 
   it('reports a malformed body as an unexpected response', async () => {

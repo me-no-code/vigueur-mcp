@@ -1,6 +1,5 @@
 import { type IsoDate, isoDateInParis } from '../../domain/dates.js';
 import type { CallContext, ChangeEntry, ChangeLog } from '../../services/legislation/ports.js';
-import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
 import { asObj, HISTORY_ACTIONS, keyed, list, lookup, optStr, postJson } from './request.js';
 import { cleanTitle, parseApiDate, stripIdSuffix } from './wire.js';
@@ -64,9 +63,6 @@ export function listChanges(
   today: Date,
   ctx?: CallContext,
 ): Promise<ChangeLog> {
-  if (from > to) {
-    return Promise.reject(new VigueurError('invalid_input', 'from must not be after to.'));
-  }
   const body = {
     textCid,
     dateConsult: isoDateInParis(today),

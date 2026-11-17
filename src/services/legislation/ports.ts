@@ -296,8 +296,8 @@ export interface LegislationRepository {
   getJorfTextByNor(nor: string, ctx?: CallContext): Promise<TextRecord | null>;
   /** The latest `count` (1 to 10) issues of the Journal officiel, newest first, with their texts. */
   latestJo(count: number, ctx?: CallContext): Promise<JoIssue[]>;
-  /** Issues published in `from..to` (inclusive); `groups` is null: read one with `joIssue`. */
-  joIssuesBetween(from: IsoDate, to: IsoDate, ctx?: CallContext): Promise<JoIssue[]>;
+  /** Issues published on `date`; `groups` is null: read one with `joIssue`. */
+  joIssuesOn(date: IsoDate, ctx?: CallContext): Promise<JoIssue[]>;
   /** One issue with its texts; `null` when unknown. */
   joIssue(id: string, ctx?: CallContext): Promise<JoIssue | null>;
   /** Natures and emitters of the JORF texts published in `from..to`, by count then value. */

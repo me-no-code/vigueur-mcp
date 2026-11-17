@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
-import { VigueurError } from '../../../src/shared/errors.js';
 import { type FakeRoute, fakePisteHttp } from '../../helpers/fake-piste-http.js';
 
 function client(routes: FakeRoute[]) {
@@ -84,13 +83,6 @@ describe('latestJo (fixture 47)', () => {
     }
   });
 
-  it.each([0, 11, 1.5])('rejects count %s before any request', async (count) => {
-    const { repo, calls } = client([serve('/consult/lastNJo', '47-lastNJo-3')]);
-    await expect(repo.latestJo(count)).rejects.toMatchObject({ kind: 'invalid_input' });
-    await expect(repo.latestJo(count)).rejects.toBeInstanceOf(VigueurError);
-    expect(calls).toHaveLength(0);
-  });
-
   it('forwards the abort signal', async () => {
     const { repo, calls } = client([serve('/consult/lastNJo', '47-lastNJo-3')]);
     const signal = new AbortController().signal;
@@ -104,16 +96,17 @@ describe('latestJo (fixture 47)', () => {
   });
 });
 
-describe('joIssuesBetween (fixture 57)', () => {
-  it('sends day/month/year objects and lists issues without groups', async () => {
+describe('joIssuesOn (fixture 57)', () => {
+  it('asks for one publication date and lists the issues without groups', async () => {
     const { repo, calls } = client([serve('/consult/jorfCont', '57-jorfCont-date-range')]);
-    const issues = await repo.joIssuesBetween('2026-11-05', '2026-11-11');
+    // The recorded answer covers 5 to 11 November; the client lists whatever the answer holds.
+    const issues = await repo.joIssuesOn('2026-11-11');
     expect(calls.map((c) => c.req)).toEqual([
       {
         method: 'POST',
         path: '/consult/jorfCont',
         body: {
-          start: { dayOfMonth: 5, month: 11, year: 2026 },
+          start: { dayOfMonth: 11, month: 11, year: 2026 },
           end: { dayOfMonth: 11, month: 11, year: 2026 },
           pageNumber: 1,
           pageSize: 10,
@@ -127,56 +120,6 @@ describe('joIssuesBetween (fixture 57)', () => {
       title: 'JORF n°0264 du 11 novembre 2026',
       publishedOn: '2026-11-11',
     });
-  });
-});
-
-describe('joIssuesBetween paging', () => {
-  const joCont = (n: number) => ({
-    joCont: {
-      id: `JORFCONT${String(n).padStart(12, '0')}`,
-      titre: `JORF n°${n}`,
-      num: String(n),
-      datePubli: 1794355200000,
-      idEli: `/eli/jo/2026/11/11/${n}`,
-      structure: null,
-    },
-  });
-  const page = (from: number, count: number, total: number) => ({
-    items: Array.from({ length: count }, (_, i) => joCont(from + i)),
-    totalNbResult: total,
-  });
-  const pageOf = (body: unknown) => (body as { pageNumber: number }).pageNumber;
-
-  it('accumulates pages in order with an incrementing pageNumber', async () => {
-    const { repo, calls } = client([
-      { path: '/consult/jorfCont', when: (b) => pageOf(b) === 1, reply: page(1, 10, 13) },
-      { path: '/consult/jorfCont', when: (b) => pageOf(b) === 2, reply: page(11, 3, 13) },
-    ]);
-    const issues = await repo.joIssuesBetween('2026-01-01', '2026-11-11');
-    expect(issues.map((i) => i.number)).toEqual(
-      Array.from({ length: 13 }, (_, i) => String(i + 1)),
-    );
-    expect(calls.map((c) => pageOf(c.req.body))).toEqual([1, 2]);
-  });
-
-  it('stops on an empty page', async () => {
-    const { repo, calls } = client([
-      { path: '/consult/jorfCont', when: (b) => pageOf(b) === 1, reply: page(1, 10, 99) },
-      { path: '/consult/jorfCont', when: (b) => pageOf(b) === 2, reply: page(11, 0, 99) },
-    ]);
-    const issues = await repo.joIssuesBetween('2026-01-01', '2026-11-11');
-    expect(issues).toHaveLength(10);
-    expect(calls).toHaveLength(2);
-  });
-
-  it('refuses a partial list when the page cap is reached with issues remaining', async () => {
-    const { repo, calls } = client([{ path: '/consult/jorfCont', reply: page(1, 10, 100000) }]);
-    const err = await repo.joIssuesBetween('2000-01-01', '2026-11-11').catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(VigueurError);
-    expect(err).toMatchObject({ kind: 'invalid_input' });
-    expect((err as Error).message).toContain('more than 500');
-    expect((err as Error).message).toContain('2000-01-01');
-    expect(calls).toHaveLength(50);
   });
 });
 

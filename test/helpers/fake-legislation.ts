@@ -164,7 +164,7 @@ export interface RepositoryArgs {
   getJorfText: [textCid: string];
   getJorfTextByNor: [nor: string];
   latestJo: [count: number];
-  joIssuesBetween: [from: IsoDate, to: IsoDate];
+  joIssuesOn: [date: IsoDate];
   joIssue: [id: string];
   jorfFacets: [from: IsoDate, to: IsoDate];
   getCodeToc: [codeId: string, asOf: IsoDate];
@@ -265,7 +265,7 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     async latestJo() {
       return [];
     },
-    async joIssuesBetween() {
+    async joIssuesOn() {
       return [];
     },
     async joIssue() {
@@ -307,7 +307,7 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
     getJorfText: [],
     getJorfTextByNor: [],
     latestJo: [],
-    joIssuesBetween: [],
+    joIssuesOn: [],
     joIssue: [],
     jorfFacets: [],
     getCodeToc: [],
@@ -363,9 +363,9 @@ export function fakeLegislation(seed: FakeLegislationSeed = {}): {
       calls.latestJo.push({ args: [count], ctx });
       return impl.latestJo(count, ctx);
     },
-    joIssuesBetween(from, to, ctx) {
-      calls.joIssuesBetween.push({ args: [from, to], ctx });
-      return impl.joIssuesBetween(from, to, ctx);
+    joIssuesOn(date, ctx) {
+      calls.joIssuesOn.push({ args: [date], ctx });
+      return impl.joIssuesOn(date, ctx);
     },
     joIssue(id, ctx) {
       calls.joIssue.push({ args: [id], ctx });

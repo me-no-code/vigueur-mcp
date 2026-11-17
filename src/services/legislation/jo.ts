@@ -57,7 +57,7 @@ export function createLatestJo(
     let selected: JoIssue[];
     if (input.date !== undefined) {
       const date = requireIsoDate(input.date, '"date"');
-      const listed = (await repo.joIssuesBetween(date, date, ctx)).slice(0, MAX_ISSUES_PER_DATE);
+      const listed = (await repo.joIssuesOn(date, ctx)).slice(0, MAX_ISSUES_PER_DATE);
       const read: JoIssue[] = [];
       for (const issue of listed) {
         const full = await repo.joIssue(issue.id, ctx);

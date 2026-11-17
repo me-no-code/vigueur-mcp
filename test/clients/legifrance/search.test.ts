@@ -344,14 +344,6 @@ describe('searchLegislation validation', () => {
   }
 
   // Messages name the tool parameters (query, article_number, code, page_size…).
-  it('rejects a page size above 100', () =>
-    invalid(
-      { ...base, text: 'x', pageSize: 101 },
-      '"page_size" must be a whole number from 1 to 100.',
-    ));
-  it('rejects a page size of 0', () => invalid({ ...base, text: 'x', pageSize: 0 }));
-  it('rejects a page below 1', () =>
-    invalid({ ...base, text: 'x', page: 0 }, '"page" must be a whole number from 1.'));
   it('rejects a query with no criterion', () =>
     invalid(
       { ...base, codeTitle: 'Code civil' },
