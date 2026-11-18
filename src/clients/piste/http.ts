@@ -183,9 +183,19 @@ export function createPisteHttp(opts: {
           headers,
           signal,
           // PISTE does not redirect; following one would send the request elsewhere.
-          redirect: 'error',
+          redirect: 'manual',
           ...(hasBody && { body: JSON.stringify(req.body) }),
         });
+        if (res.status >= 300 && res.status < 400) {
+          await res.body?.cancel();
+          const moved = fail(
+            'unexpected_response',
+            `redirected (HTTP ${res.status}), not followed.`,
+            res.status,
+          );
+          final.add(moved);
+          throw moved;
+        }
         const text = await readText(res, maxBodyBytes);
         if (text === null) {
           const big = fail(

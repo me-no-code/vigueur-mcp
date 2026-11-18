@@ -31,7 +31,7 @@ describe('createTokenProvider', () => {
     expect(req.method).toBe('POST');
     expect(req.url).toBe(TOKEN_URL);
     // A redirect would resend the form body, client secret included, to another address.
-    expect(req.redirect).toBe('error');
+    expect(req.redirect).toBe('manual');
     expect(req.headers.get('content-type')).toBe('application/x-www-form-urlencoded');
     expect(Object.fromEntries(new URLSearchParams(await req.text()))).toEqual({
       grant_type: 'client_credentials',

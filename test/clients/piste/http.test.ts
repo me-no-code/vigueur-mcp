@@ -50,7 +50,7 @@ describe('createPisteHttp', () => {
     expect(out).toEqual({ pageNumber: 1 });
     const req = calls[0] as Request;
     expect(req.url).toBe('https://x.test/base/list/code');
-    expect(req.redirect).toBe('error');
+    expect(req.redirect).toBe('manual');
     expect(req.headers.get('authorization')).toBe('Bearer tok-1');
     expect(req.headers.get('content-type')).toBe('application/json');
     expect(req.headers.get('accept')).toBe('application/json');
@@ -162,6 +162,16 @@ describe('createPisteHttp', () => {
     const err = await failure(http.request({ method: 'GET', path: '/a' }, opts));
     expect(err.kind).toBe('upstream_unavailable');
     expect(err.message).toContain('timed out');
+  });
+
+  it('does not follow a redirect: an unexpected response that names it, not retried', async () => {
+    const { http, calls } = setup(
+      () => new Response(null, { status: 307, headers: { location: 'https://elsewhere.test/' } }),
+    );
+    const err = await failure(http.request({ method: 'GET', path: '/a' }));
+    expect(err).toMatchObject({ kind: 'unexpected_response' });
+    expect(err.message).toBe('Légifrance: redirected (HTTP 307), not followed.');
+    expect(calls).toHaveLength(1);
   });
 
   it('retries a request that timed out', async () => {
