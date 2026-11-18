@@ -39,7 +39,7 @@
     "test:live": "vitest run test/live --mode live",
     "bundle": "node scripts/bundle.mjs",
     "test:bundle": "vitest run test/bundle/ --mode bundle",
-    "lint": "biome check .",
+    "lint": "biome check --error-on-warnings .",
     "format": "biome format --write .",
     "dev": "npm run build && node --env-file=.env dist/index.js",
     "inspect": "npm run build && npx @modelcontextprotocol/inspector@2.16.0 node --env-file=.env dist/index.js"
