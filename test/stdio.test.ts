@@ -29,6 +29,8 @@ interface InitializeExchange {
   stdoutLines: string[];
   stderr: string;
   response: { id?: unknown; result?: { serverInfo?: { name?: string } } };
+  /** How the process ended, and how long after its stdin was closed. */
+  exit: { code: number | null; signal: NodeJS.Signals | null; afterStdinEndMs: number };
 }
 
 /** Sends one raw `initialize` line, waits for the `id: 1` response, then closes stdin. */
@@ -43,6 +45,7 @@ function initializeOverStdio(
     let stdout = '';
     let stderr = '';
     let response: InitializeExchange['response'] | undefined;
+    let stdinEndedAt = 0;
 
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
@@ -58,6 +61,7 @@ function initializeOverStdio(
           const message = JSON.parse(line) as InitializeExchange['response'];
           if (message.id === 1) {
             response = message;
+            stdinEndedAt = performance.now();
             child.stdin.end(); // the server exits when its stdin closes
           }
         } catch {
@@ -79,7 +83,12 @@ function initializeOverStdio(
         );
         return;
       }
-      resolve({ stdoutLines: stdout.split('\n').filter((l) => l.trim() !== ''), stderr, response });
+      resolve({
+        stdoutLines: stdout.split('\n').filter((l) => l.trim() !== ''),
+        stderr,
+        response,
+        exit: { code, signal, afterStdinEndMs: performance.now() - stdinEndedAt },
+      });
     });
 
     child.stdin.write(
@@ -120,6 +129,17 @@ describe('stdio entry point', () => {
       expect(response.result?.serverInfo?.name).toBe('vigueur');
       expect(stderr).toContain('ready on stdio');
       expect(stderr).toContain('PISTE not configured');
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'exits with code 0, promptly, when its stdin closes',
+    async () => {
+      const { exit } = await initializeOverStdio(envWithoutPiste());
+      expect(exit.code).toBe(0);
+      expect(exit.signal).toBeNull();
+      expect(exit.afterStdinEndMs).toBeLessThan(5_000);
     },
     TEST_TIMEOUT_MS,
   );
