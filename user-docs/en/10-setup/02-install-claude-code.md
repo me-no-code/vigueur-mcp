@@ -3,7 +3,7 @@ title: Install in Claude Code
 level: start
 tags: [install, claude-code, setup]
 summary: Install Vigueur in Claude Code from a local build, enter your PISTE credentials and check that Légifrance and Judilibre answer.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Install in Claude Code
@@ -20,8 +20,7 @@ credentials, and check that it works. Allow about ten minutes once you have your
 - [Claude Code](https://claude.com/claude-code), already working.
 - Node.js 20 or later, and git.
 - A PISTE account and application, with the client ID and client secret in hand. If you do not have
-  them yet, see [Create your PISTE account](01-piste-account.md), or install first and ask Claude
-  for the steps (see the note after step 3).
+  them yet, see [Create your PISTE account](01-piste-account.md).
 
 ## Steps
 
@@ -70,9 +69,10 @@ The environment must match the application. See
 [Sandbox or production](01-piste-account.md#sandbox-or-production).
 
 > **No PISTE account yet?**
-> Enable the plugin with the credentials left empty, then ask Claude to run `vigueur_status`. It
-> answers with `"outcome": "not_configured"` and lists the steps to create the account. Until
-> you enter credentials, `vigueur_status` is the only tool Vigueur offers.
+> You can enable the plugin with the credentials left empty. Until you enter credentials, Vigueur
+> offers only `vigueur_status`, which answers `"outcome": "not_configured"`. Create your account
+> with [Create your PISTE account](01-piste-account.md), then run
+> `/plugin configure vigueur@vigueur`.
 
 ### 4. Check that it works
 
@@ -85,7 +85,6 @@ wire; it is indented here). You want both sources to show `"state": "ok"`:
   "outcome": "results",
   "warnings": [],
   "environment": "sandbox",
-  "config_problems": [],
   "checks": [
     {
       "source": "Légifrance",
@@ -109,8 +108,7 @@ wire; it is indented here). You want both sources to show `"state": "ok"`:
 }
 ```
 
-If a source shows another state, the answer says what to fix. The common causes are in
-[Troubleshooting and FAQ](../00-intro/05-troubleshooting.md). If Claude still reports the old state
+If a source shows another state, see [Troubleshooting and FAQ](../00-intro/05-troubleshooting.md). If Claude still reports the old state
 after you changed the credentials, run `/mcp`, select **vigueur**, then choose **Reconnect**.
 
 ## Your first question
@@ -121,6 +119,7 @@ Try: "What does article 1240 of the Code civil say, and is it in force?" Then se
 ## Related
 
 - [Create your PISTE account](01-piste-account.md)
+- [Install in Claude Desktop](03-install-claude-desktop.md)
 - [Update Vigueur](04-updating.md)
 - [Uninstall Vigueur](05-uninstalling.md)
 - [Privacy and your data](../00-intro/04-privacy-and-your-data.md)

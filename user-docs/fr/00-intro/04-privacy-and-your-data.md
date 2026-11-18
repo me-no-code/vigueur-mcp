@@ -3,7 +3,7 @@ title: "Confidentialité et données"
 level: guide
 tags: [privacy, credentials, logs]
 summary: "Sachez ce que Vigueur stocke et où, ce qui quitte votre ordinateur, ce que contiennent les journaux et ce que la désinstallation supprime."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Confidentialité et données
@@ -13,8 +13,8 @@ passerelle d'API du gouvernement français. Il n'a ni serveur, ni système de co
 propre. Cette page indique ce qui est stocké, à quel endroit, et ce que vous pouvez y faire.
 
 > **Testé sur macOS uniquement**
-> Les emplacements ci-dessous ont été vérifiés sur macOS. Sous Windows et Linux, le coffre
-> d'identifiants et les dossiers de journaux sont ailleurs.
+> Les emplacements ci-dessous ont été vérifiés sur macOS, en novembre 2026. Sous Windows et Linux,
+> le coffre d'identifiants et les dossiers de journaux sont ailleurs.
 
 ## Ce qui quitte votre ordinateur
 
@@ -28,8 +28,8 @@ API. Ses propres conditions d'utilisation et sa politique de confidentialité s'
 consultez-les sur piste.gouv.fr.
 
 Votre conversation avec Claude est un sujet distinct. Ce que vous écrivez à Claude, et ce que
-les outils de Vigueur lui renvoient, sont traités par Claude Code et Anthropic selon leurs propres
-conditions, pas par Vigueur.
+les outils de Vigueur lui renvoient, sont traités par l'application Claude que vous utilisez et par
+Anthropic selon leurs propres conditions, pas par Vigueur.
 
 ## Ce que Vigueur stocke
 
@@ -41,8 +41,20 @@ Judilibre accepte. Tout disparaît quand le serveur s'arrête.
 
 ## Où sont conservés vos identifiants
 
-Claude Code demande trois réglages quand vous activez le plugin. Voir
-[Installer dans Claude Code](../10-setup/02-install-claude-code.md).
+L'application qui exécute Vigueur demande les réglages et les conserve. Vigueur les lit au
+démarrage. Il ne les écrit pas dans ses journaux.
+
+**Dans Claude Desktop** (voir [Installer dans Claude Desktop](../10-setup/03-install-claude-desktop.md)),
+les trois réglages sont dans un même fichier,
+`~/Library/Application Support/Claude/Claude Extensions Settings/local.mcpb.vigueur-contributors.vigueur.json` :
+
+| Réglage | Comment il est stocké |
+|---|---|
+| Secret client PISTE (*client secret*) | Chiffré par Claude Desktop |
+| Identifiant client PISTE (*client ID*) | Tel que saisi |
+| Production application | Tel que saisi (activé ou désactivé) |
+
+**Dans Claude Code** (voir [Installer dans Claude Code](../10-setup/02-install-claude-code.md)) :
 
 | Réglage | Où il est stocké |
 |---|---|
@@ -50,46 +62,50 @@ Claude Code demande trois réglages quand vous activez le plugin. Voir
 | Identifiant client PISTE (*client ID*) | Les réglages utilisateur de Claude Code, `~/.claude/settings.json` |
 | Environnement PISTE (`production` ou `sandbox`) | Les réglages utilisateur de Claude Code, `~/.claude/settings.json` |
 
-Vigueur les lit au démarrage. Il ne les écrit pas dans ses journaux.
-
 > **Gardez les fichiers privés hors du dossier d'où vous installez**
 > Claude Code copie tout le dossier d'où vous installez Vigueur dans
 > `~/.claude/plugins/cache/vigueur/`. Ne mettez pas de fichier `.env` ni de document privé dans ce
-> dossier.
+> dossier. Le fichier groupé de Claude Desktop ne contient que Vigueur et les bibliothèques dont il
+> a besoin.
 
 ## Journaux
 
-Claude Code tient un journal de connexion pour chaque projet où Vigueur a fonctionné. Sur macOS, ils se
-trouvent dans `~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-plugin-vigueur-vigueur/`. Un
-journal enregistre :
+Les journaux des deux applications ne contiennent ni arguments d'outil, ni résultats, ni
+identifiants, ni vos questions.
+
+**Claude Desktop** conserve ses journaux dans `~/Library/Logs/Claude/` :
+
+- `mcp-server-Vigueur.log` : quand Vigueur démarre et s'arrête, et la liste de ses outils ;
+- `mcp.log`, le journal de Claude Desktop pour tous ses serveurs MCP : les mêmes lignes pour
+  Vigueur ;
+- `main.log`, le journal propre de Claude Desktop : parmi ses autres messages, la ligne de
+  démarrage de Vigueur, qui indique sa version et l'environnement PISTE utilisé.
+
+Ils n'enregistrent pas les outils que Claude a appelés.
+
+**Claude Code** tient un journal de connexion pour chaque projet où Vigueur a fonctionné. Sur macOS,
+ils se trouvent dans `~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-plugin-vigueur-vigueur/`.
+Un journal enregistre :
 
 - les événements de connexion ;
 - la ligne de démarrage de Vigueur, qui indique l'environnement PISTE utilisé ;
 - les noms des outils appelés, avec leur durée ;
 - les traces d'erreur.
 
-Un journal ne contient ni arguments d'outil, ni résultats, ni identifiants. Il ne contient pas vos
-questions.
-
 ## Votre historique de conversation
 
-Claude Code conserve vos conversations, y compris ce que les outils de Vigueur ont renvoyé, dans
-`~/.claude/projects/`, comme pour toute conversation. Cet historique relève de Claude Code, tout
-comme les réglages qui s'y appliquent. Vigueur ne le lit pas et n'y écrit pas.
+L'application Claude conserve vos conversations, y compris ce que les outils de Vigueur ont renvoyé,
+comme pour toute conversation : Claude Desktop dans votre compte Claude, Claude Code dans
+`~/.claude/projects/`. Cet historique relève de l'application, tout comme les réglages qui s'y
+appliquent. Vigueur ne le lit pas et n'y écrit pas.
 
 ## Ce que la désinstallation supprime et laisse
 
-| | Supprimé | Laissé en place |
-|---|---|---|
-| Enregistrement du plugin | Oui | |
-| Identifiant client et environnement | Oui | |
-| Secret client | Oui, supprimé du coffre d'identifiants | |
-| Copie du plugin dans `~/.claude/plugins/cache/vigueur/` | | Oui, marquée orpheline. Claude Code supprime plus tard de lui-même les copies orphelines ; vous pouvez supprimer le dossier vous-même |
-| Journaux de connexion | | Oui, un dossier par projet |
-| Historique des conversations | | Oui, il relève de Claude Code |
-| Le dossier que vous avez cloné | | Oui, supprimez-le vous-même |
-
-Les étapes sont dans [Désinstaller Vigueur](../10-setup/05-uninstalling.md).
+La désinstallation supprime les réglages de Vigueur, secret client compris, dans les deux
+applications. Les journaux et votre historique de conversation restent ; Claude Code laisse aussi sa
+copie du plugin dans `~/.claude/plugins/cache/vigueur/` jusqu'à ce qu'il la supprime de lui-même. Le
+dossier que vous avez cloné et le fichier groupé restent là où vous les avez mis. Les étapes et la
+liste complète sont dans [Désinstaller Vigueur](../10-setup/05-uninstalling.md).
 
 ## Votre compte PISTE
 

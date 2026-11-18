@@ -3,7 +3,7 @@ title: "Bienvenue dans Vigueur"
 level: intro
 tags: [intro, overview]
 summary: "Découvrez ce que Vigueur permet à Claude de faire avec le droit français, ce qu'il ne fait pas, et quelle page lire ensuite."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Bienvenue dans Vigueur
@@ -62,7 +62,8 @@ Voir [PISTE](../40-sources/03-piste.md).
 1. [Comment fonctionne Vigueur](02-how-it-works.md) : un aperçu de ce qui se passe quand vous
    posez une question.
 2. [Créer votre compte PISTE](../10-setup/01-piste-account.md) : gratuit, quelques minutes.
-3. [Installer dans Claude Code](../10-setup/02-install-claude-code.md) : les étapes d'installation.
+3. [Installer dans Claude Desktop](../10-setup/03-install-claude-desktop.md) ou
+   [dans Claude Code](../10-setup/02-install-claude-code.md) : les étapes d'installation.
 4. [Prise en main : vos premières questions](../20-using/01-quickstart.md) : ce qu'il faut saisir en premier.
 
 Les mots que vous ne connaissez pas sont dans le [glossaire](03-glossary.md). En cas de problème,

@@ -3,14 +3,14 @@ title: "Comment fonctionne Vigueur"
 level: intro
 tags: [intro, architecture, privacy]
 summary: "Comprenez ce qui s'exécute, et où, quand vous posez une question à Claude, et ce que les réponses contiennent ou non."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Comment fonctionne Vigueur
 
-Vigueur est un petit programme qui fonctionne sur votre ordinateur, à côté de Claude Code. Claude
-s'en sert pour lire les sources officielles du droit français. Cette page montre ce qui se passe
-entre votre question et la réponse.
+Vigueur est un petit programme qui fonctionne sur votre ordinateur, à côté de Claude Desktop ou de
+Claude Code. Claude s'en sert pour lire les sources officielles du droit français. Cette page montre
+ce qui se passe entre votre question et la réponse.
 
 ## Votre question va de Claude à la source, puis en revient
 

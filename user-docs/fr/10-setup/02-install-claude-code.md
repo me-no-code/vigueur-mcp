@@ -3,7 +3,7 @@ title: "Installer dans Claude Code"
 level: start
 tags: [install, claude-code, setup]
 summary: "Installez Vigueur dans Claude Code à partir d'une compilation locale, saisissez vos identifiants PISTE et vérifiez que Légifrance et Judilibre répondent."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Installer dans Claude Code
@@ -21,8 +21,7 @@ compte PISTE obtenu.
 - [Claude Code](https://claude.com/claude-code), qui fonctionne déjà.
 - Node.js 20 ou plus récent, et git.
 - Un compte et une application PISTE, avec l'identifiant client et le secret client sous la main.
-  Si vous ne les avez pas encore, consultez [Créer votre compte PISTE](01-piste-account.md), ou
-  installez d'abord Vigueur et demandez les étapes à Claude (voir l'encadré après l'étape 3).
+  Si vous ne les avez pas encore, consultez [Créer votre compte PISTE](01-piste-account.md).
 
 ## Étapes
 
@@ -71,10 +70,10 @@ L'environnement doit correspondre à l'application. Voir
 [Bac à sable ou production](01-piste-account.md#bac-à-sable-ou-production).
 
 > **Pas encore de compte PISTE ?**
-> Activez le plugin en laissant les identifiants vides, puis demandez à Claude de lancer
-> `vigueur_status`. Il répond avec `"outcome": "not_configured"` et liste les étapes pour créer le
-> compte. Tant que vous n'avez pas saisi d'identifiants, `vigueur_status` est le seul outil que
-> Vigueur propose.
+> Vous pouvez activer le plugin en laissant les identifiants vides. Tant que vous n'avez pas saisi
+> d'identifiants, Vigueur ne propose que `vigueur_status`, qui répond `"outcome": "not_configured"`.
+> Créez votre compte avec [Créer votre compte PISTE](01-piste-account.md), puis exécutez
+> `/plugin configure vigueur@vigueur`.
 
 ### 4. Vérifier que tout fonctionne
 
@@ -87,7 +86,6 @@ seule ligne de JSON ; indenté ici). Les deux sources doivent afficher `"state":
   "outcome": "results",
   "warnings": [],
   "environment": "sandbox",
-  "config_problems": [],
   "checks": [
     {
       "source": "Légifrance",
@@ -111,8 +109,7 @@ seule ligne de JSON ; indenté ici). Les deux sources doivent afficher `"state":
 }
 ```
 
-Si une source affiche un autre état, la réponse indique ce qu'il faut corriger. Les causes courantes sont dans
-[Dépannage et FAQ](../00-intro/05-troubleshooting.md). Si Claude signale encore l'ancien état après
+Si une source affiche un autre état, voir [Dépannage et FAQ](../00-intro/05-troubleshooting.md). Si Claude signale encore l'ancien état après
 que vous avez changé les identifiants, exécutez `/mcp`, sélectionnez **vigueur**, puis choisissez
 **Reconnect**.
 
@@ -124,6 +121,7 @@ Essayez : « Que dit l'article 1240 du Code civil, et est-il en vigueur ? » Voi
 ## Voir aussi
 
 - [Créer votre compte PISTE](01-piste-account.md)
+- [Installer dans Claude Desktop](03-install-claude-desktop.md)
 - [Mettre à jour Vigueur](04-updating.md)
 - [Désinstaller Vigueur](05-uninstalling.md)
 - [Confidentialité et données](../00-intro/04-privacy-and-your-data.md)

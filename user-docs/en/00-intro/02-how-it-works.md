@@ -3,14 +3,14 @@ title: How Vigueur works
 level: intro
 tags: [intro, architecture, privacy]
 summary: Understand what runs where when you ask Claude a question, and what the answers do and do not contain.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # How Vigueur works
 
-Vigueur is a small program that runs on your computer, next to Claude Code. Claude uses it to read
-the official sources of French law. This page shows what happens between your question and the
-answer.
+Vigueur is a small program that runs on your computer, next to Claude Desktop or Claude Code.
+Claude uses it to read the official sources of French law. This page shows what happens between
+your question and the answer.
 
 ## Your question goes from Claude to the source and back
 

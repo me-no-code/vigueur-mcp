@@ -3,7 +3,7 @@ title: "PISTE"
 level: reference
 tags: [sources, piste, quota, sandbox, production]
 summary: "Comprenez ce qu'est PISTE, en quoi le bac à sable et la production diffèrent, pourquoi une seule application sert les deux sources, comment se comporte le quota partagé, et comment Vigueur gère les nouvelles tentatives et les délais."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # PISTE
@@ -35,11 +35,11 @@ PISTE a deux environnements, chacun avec ses propres adresses et ses propres app
 | | Bac à sable (*sandbox*) | Production |
 |---|---|---|
 | Application | PISTE en crée une pour vous automatiquement (nommée SANDBOX) | Toute application que vous créez vous-même |
-| Réglage de Vigueur | Environnement PISTE `sandbox` | Environnement PISTE `production` (valeur par défaut) |
+| Réglage de Vigueur | Claude Desktop : **Production application** désactivé. Claude Code : **PISTE environment** `sandbox` | Claude Desktop : **Production application** activé. Claude Code : **PISTE environment** `production`. Les deux sont la valeur par défaut |
 
 > **L'environnement doit correspondre aux identifiants**
-> Les identifiants du bac à sable ne fonctionnent qu'avec le réglage `sandbox`, ceux de production
-> qu'avec `production`. Une discordance est signalée comme un rejet des identifiants, exactement comme
+> Les identifiants du bac à sable ne fonctionnent qu'en bac à sable, ceux de production qu'en
+> production. Une discordance est signalée comme un rejet des identifiants, exactement comme
 > un secret erroné, et `vigueur_status` ne peut pas distinguer les deux. La ligne de démarrage de Vigueur,
 > dans ses journaux, indique l'environnement utilisé.
 

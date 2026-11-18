@@ -3,7 +3,7 @@ title: Privacy and your data
 level: guide
 tags: [privacy, credentials, logs]
 summary: Know what Vigueur stores and where, what leaves your computer, what the logs hold, and what uninstalling removes.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Privacy and your data
@@ -13,8 +13,8 @@ gateway. It has no server, no account system and no analytics of its own. This p
 stored where, and what you can do about it.
 
 > **Tested on macOS only**
-> The locations below were checked on macOS. On Windows and Linux, the credential store and the log
-> folders are elsewhere.
+> The locations below were checked on macOS, in November 2026. On Windows and Linux, the credential
+> store and the log folders are elsewhere.
 
 ## What leaves your computer
 
@@ -27,7 +27,8 @@ PISTE sees the requests made with your application, as it would for any develope
 Its own terms and privacy notice apply to that; read them on piste.gouv.fr.
 
 Your conversation with Claude is a separate matter. What you type to Claude, and what Vigueur's tools
-return to it, are handled by Claude Code and Anthropic under their own terms, not by Vigueur.
+return to it, are handled by the Claude app you use and by Anthropic under their own terms, not by
+Vigueur.
 
 ## What Vigueur stores
 
@@ -39,8 +40,20 @@ stops.
 
 ## Where your credentials are kept
 
-Claude Code asks for three settings when you enable the plugin. See
-[Install in Claude Code](../10-setup/02-install-claude-code.md).
+The app that runs Vigueur asks for the settings and keeps them. Vigueur reads them when it starts.
+It does not write them to its logs.
+
+**In Claude Desktop** (see [Install in Claude Desktop](../10-setup/03-install-claude-desktop.md)),
+all three are in one settings file,
+`~/Library/Application Support/Claude/Claude Extensions Settings/local.mcpb.vigueur-contributors.vigueur.json`:
+
+| Setting | How it is stored |
+|---|---|
+| PISTE client secret | Encrypted by Claude Desktop |
+| PISTE client ID | As typed |
+| Production application | As typed (on or off) |
+
+**In Claude Code** (see [Install in Claude Code](../10-setup/02-install-claude-code.md)):
 
 | Setting | Where it is stored |
 |---|---|
@@ -48,16 +61,25 @@ Claude Code asks for three settings when you enable the plugin. See
 | PISTE client ID | Claude Code's user settings, `~/.claude/settings.json` |
 | PISTE environment (`production` or `sandbox`) | Claude Code's user settings, `~/.claude/settings.json` |
 
-Vigueur reads them when it starts. It does not write them to its logs.
-
 > **Keep private files out of the folder you install from**
 > Claude Code copies the whole folder you install Vigueur from into
 > `~/.claude/plugins/cache/vigueur/`. Do not put a `.env` file or any private document in that
-> folder.
+> folder. The Claude Desktop bundle holds only Vigueur and the libraries it runs on.
 
 ## Logs
 
-Claude Code keeps a connection log for each project where Vigueur ran. On macOS they are in
+Neither app's logs hold tool arguments, results, credentials or your questions.
+
+**Claude Desktop** keeps its logs in `~/Library/Logs/Claude/`:
+
+- `mcp-server-Vigueur.log`: when Vigueur starts and stops, and the list of its tools;
+- `mcp.log`, Claude Desktop's log for all its MCP servers: the same lines for Vigueur;
+- `main.log`, Claude Desktop's own log: among its other messages, Vigueur's startup line, which
+  states its version and the PISTE environment in use.
+
+They do not record which tools Claude called.
+
+**Claude Code** keeps a connection log for each project where Vigueur ran. On macOS they are in
 `~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-plugin-vigueur-vigueur/`. A log records:
 
 - connection events;
@@ -65,27 +87,19 @@ Claude Code keeps a connection log for each project where Vigueur ran. On macOS 
 - the names of the tools that were called, with their timing;
 - error traces.
 
-A log holds no tool arguments, no results and no credentials. It does not hold your questions.
-
 ## Your conversation history
 
-Claude Code keeps your conversations, including what Vigueur's tools returned, in
-`~/.claude/projects/`, like any conversation. That belongs to Claude Code, and so do the controls
-over it. Vigueur does not read or write it.
+The Claude app keeps your conversations, including what Vigueur's tools returned, like any
+conversation: Claude Desktop in your Claude account, Claude Code in `~/.claude/projects/`. That
+belongs to the app, and so do the controls over it. Vigueur does not read or write it.
 
 ## What uninstalling removes and leaves
 
-| | Removed | Left behind |
-|---|---|---|
-| Plugin registration | Yes | |
-| Client ID and environment | Yes | |
-| Client secret | Yes, removed from the credential store | |
-| Plugin copy in `~/.claude/plugins/cache/vigueur/` | | Yes, marked orphaned. Claude Code clears orphaned copies later on its own; you can delete the folder yourself |
-| Connection logs | | Yes, one folder per project |
-| Conversation history | | Yes, it belongs to Claude Code |
-| The folder you cloned | | Yes, delete it yourself |
-
-The steps are in [Uninstall Vigueur](../10-setup/05-uninstalling.md).
+Uninstalling removes Vigueur's settings, the client secret included, in both apps. The logs and your
+conversation history stay; Claude Code also leaves its copy of the plugin in
+`~/.claude/plugins/cache/vigueur/` until it clears it later on its own. The folder you cloned and
+the bundle file stay where you put them. The steps and the full list are in
+[Uninstall Vigueur](../10-setup/05-uninstalling.md).
 
 ## Your PISTE account
 

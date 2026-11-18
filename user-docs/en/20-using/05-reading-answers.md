@@ -3,7 +3,7 @@ title: Reading Vigueur's answers
 level: guide
 tags: [answers, envelope, status, links, pagination, errors]
 summary: "Understand the parts every Vigueur answer shares: the envelope fields, the kind of answer, the in-force status, warnings, paging, cached content and errors."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Reading Vigueur's answers
@@ -66,7 +66,7 @@ written in lowercase with underscores; values keep the source's spelling, accent
 | `not_found` | What you asked for does not exist at the source. This is an answer, not an error. | Reading tools |
 | `several_matches` | Your citation fits more than one thing; the answer lists them and picks none. | `legifrance_get_article`, `legifrance_get_article_history`, `legifrance_get_text` |
 | `not_in_force` | The article or text exists, but nothing applied on the date. The answer lists the versions on record. | `legifrance_get_article`, `legifrance_get_text` |
-| `not_configured` | PISTE access is not set up; the answer carries the setup steps. | `vigueur_status` |
+| `not_configured` | PISTE access is not set up; `config_problems` lists any problem with the settings. | `vigueur_status` |
 | `error` | The call failed: see [When something goes wrong](#when-something-goes-wrong). | Any tool |
 
 ## "In force on a date" is computed from dates
@@ -237,7 +237,7 @@ treats it as a failure:
   "outcome": "error",
   "error": {
     "kind": "forbidden",
-    "message": "Légifrance: access refused (HTTP 403) PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application."
+    "message": "Légifrance: access refused (HTTP 403)"
   },
   "request": {
     "tool": "legifrance_get_article",
@@ -258,7 +258,7 @@ treats it as a failure:
 | `source` | The source that failed (`PISTE` for `vigueur_status`). |
 | `outcome` | `error`. |
 | `error.kind` | The family of failure. See the table below. |
-| `error.message` | What happened, then what to do. |
+| `error.message` | What happened; for some kinds, then when to try again or when to report it. |
 | `request` | The call that failed. |
 | `retrieved` | Present only when a source answered (for example with an HTTP refusal). |
 | `vigueur_version` | The version of Vigueur that answered. |
@@ -267,8 +267,8 @@ An error has no `warnings` and no `cached`. The `kind` values:
 
 | `kind` | Situation | What the message tells you |
 |---|---|---|
-| `credentials_invalid` | Credentials rejected | `PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration. Call vigueur_status to diagnose.` |
-| `forbidden` | Access refused (HTTP 403) | `PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application.` |
+| `credentials_invalid` | Credentials rejected | The message alone, for example `PISTE rejected the credentials (HTTP 401).` |
+| `forbidden` | Access refused (HTTP 403) | The message alone: `<source>: access refused (HTTP 403)` |
 | `quota_exceeded` | Quota reached | `PISTE quota reached. Retry in about N s.` (or `Wait a moment and try again.`) |
 | `upstream_unavailable` | PISTE down or slow | `PISTE is unavailable or timed out. Wait a moment and try again…` |
 | `unexpected_response` | Unexpected response | The source returned something Vigueur does not understand, possibly an API change |
@@ -278,8 +278,9 @@ An error has no `warnings` and no `cached`. The `kind` values:
 | `cancelled` | The call was stopped | Nothing is wrong |
 | `unexpected` | Anything else | `Unexpected error: … Call vigueur_status to check the setup.` |
 
-Ask Claude to run `vigueur_status` first: it checks both sources and gives the fix. See
-[`vigueur_status`](../30-tools/vigueur_status.md).
+Ask Claude to run `vigueur_status` first: it checks your settings and both sources. See
+[`vigueur_status`](../30-tools/vigueur_status.md), and
+[Troubleshooting and FAQ](../00-intro/05-troubleshooting.md) for what to do.
 
 ## Related
 

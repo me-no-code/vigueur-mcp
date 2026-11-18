@@ -3,14 +3,15 @@ title: "Quickstart: your first questions"
 level: start
 tags: [quickstart, legislation, case-law]
 summary: "Run a first session end to end: check that Vigueur has access, read an article, see what applied on a past date and find a decision."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Quickstart: your first questions
 
 This page walks you through a first session. You type requests to Claude in plain language, in French
 or in English. Claude calls Vigueur's tools and shows you what the official sources say. You need
-Vigueur [installed](../10-setup/02-install-claude-code.md) with your PISTE credentials set.
+Vigueur installed, [in Claude Desktop](../10-setup/03-install-claude-desktop.md) or
+[in Claude Code](../10-setup/02-install-claude-code.md), with your PISTE credentials set.
 
 ## 1. Check that Vigueur can reach the sources
 
@@ -27,7 +28,6 @@ indented so you can read it. When everything works, the answer reads:
   "outcome": "results",
   "warnings": [],
   "environment": "sandbox",
-  "config_problems": [],
   "checks": [
     {
       "source": "Légifrance",
@@ -52,9 +52,9 @@ indented so you can read it. When everything works, the answer reads:
 ```
 
 A source whose `state` is not `ok` has a problem (for example `not_enabled` or
-`credentials_invalid`), and the answer adds the steps to fix it. With no credentials at all, the
-answer has `"outcome": "not_configured"` and a `setup_guide` with the setup steps. See
-[`vigueur_status`](../30-tools/vigueur_status.md).
+`credentials_invalid`). With no credentials at all, the answer has `"outcome": "not_configured"`.
+See [`vigueur_status`](../30-tools/vigueur_status.md) for what each state means, and
+[Troubleshooting and FAQ](../00-intro/05-troubleshooting.md) for what to do.
 
 ## 2. Read an article
 

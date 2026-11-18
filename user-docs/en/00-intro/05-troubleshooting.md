@@ -3,7 +3,7 @@ title: Troubleshooting and FAQ
 level: guide
 tags: [troubleshooting, errors, faq, vigueur_status]
 summary: Find the message Vigueur gave you, learn what it means and what to do, and check your setup with vigueur_status.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Troubleshooting and FAQ
@@ -26,7 +26,6 @@ here). A healthy answer looks like this:
   "outcome": "results",
   "warnings": [],
   "environment": "sandbox",
-  "config_problems": [],
   "checks": [
     {
       "source": "Légifrance",
@@ -50,8 +49,8 @@ here). A healthy answer looks like this:
 }
 ```
 
-A problem shows as a `state` other than `ok` in the entry of the source under `checks`, with the
-steps to fix it in `warnings`. The states are:
+A problem shows as a `state` other than `ok` in the entry of the source under `checks`. The states
+are:
 
 | State | Meaning | Go to |
 |---|---|---|
@@ -67,27 +66,31 @@ The check asks each source once and waits up to 8 seconds for it.
 ### Claude says it only has `vigueur_status`, or cannot find the other Vigueur tools
 
 Vigueur offers its legal tools only when both a client ID and a client secret are set and the
-environment setting is valid. Otherwise the only tool available is `vigueur_status`, and it says
-what is missing. Fill in the credentials with `/plugin configure vigueur@vigueur`, then run `/mcp`,
-select **vigueur** and choose **Reconnect**. See
-[Install in Claude Code](../10-setup/02-install-claude-code.md#3-enter-your-credentials).
+environment setting is valid. Otherwise the only tool available is `vigueur_status`, and its answer
+lists any problem with the settings in `config_problems`. Fill in the credentials:
+
+- in Claude Desktop, in **Settings**, **Extensions**, **Vigueur**, then click **Save**. See
+  [Install in Claude Desktop](../10-setup/03-install-claude-desktop.md#3-enter-your-credentials);
+- in Claude Code, with `/plugin configure vigueur@vigueur`, then run `/mcp`, select **vigueur** and
+  choose **Reconnect**. See
+  [Install in Claude Code](../10-setup/02-install-claude-code.md#3-enter-your-credentials).
 
 ## Setup messages
 
-### `PISTE access is not configured yet.`
+### `"outcome": "not_configured"`
 
-Vigueur has no usable credentials: none were entered, or one of the problems below stopped it. A
-problem, when there is one, is listed in `config_problems`; the setup steps are in `setup_guide`.
-Create your account with [Create your PISTE account](../10-setup/01-piste-account.md), then enter
-the credentials with `/plugin configure vigueur@vigueur`. The steps in the answer name the settings
-by the variables behind them: `PISTE_CLIENT_ID` is the **PISTE client ID** setting,
-`PISTE_CLIENT_SECRET` the **PISTE client secret** and `PISTE_ENV` the **PISTE environment**.
+Vigueur has no usable credentials: none were entered, or a setting holds a problem. A problem, when
+there is one, is listed in `config_problems`; the messages are below. Create your account with
+[Create your PISTE account](../10-setup/01-piste-account.md), then enter the credentials in your
+app. The messages name the settings by the variables behind them: `PISTE_CLIENT_ID` is the
+**PISTE client ID** setting, `PISTE_CLIENT_SECRET` the **PISTE client secret**, `PISTE_ENV` Claude
+Code's **PISTE environment** and `PISTE_PRODUCTION` Claude Desktop's **Production application**.
 
 ### `PISTE_CLIENT_ID is missing (PISTE_CLIENT_SECRET is set)`
 
 You entered the secret but not the client ID. Vigueur gives the matching message
 `PISTE_CLIENT_SECRET is missing (PISTE_CLIENT_ID is set)` when the secret is the missing one. Enter
-both with `/plugin configure vigueur@vigueur`.
+both in your app's settings.
 
 ### `PISTE_ENV must be "production" or "sandbox" (got …)`
 
@@ -96,29 +99,33 @@ The **PISTE environment** setting holds something else. Set it to `production` o
 the value only when it is short and made of letters; otherwise it says `an unrecognised value`, in
 case a secret was pasted there by mistake.
 
+### `PISTE_PRODUCTION must be "true" or "false" (got …)`
+
+Vigueur reads the environment from `PISTE_ENV` (`production` or `sandbox`) or from
+`PISTE_PRODUCTION` (`true` for production, `false` for the sandbox). This message, and
+`PISTE_ENV is "…" but PISTE_PRODUCTION is "…": set only one`, come from an app configuration that
+sets them by hand. Set one of the two, with one of its values.
+
 ### PISTE rejected my credentials
 
-Vigueur's message:
-
-```
-PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration. Call vigueur_status to diagnose.
-```
-
-It follows one of `PISTE rejected the credentials (HTTP 400).`, `PISTE rejected the credentials
-(HTTP 401).` or `Légifrance: credentials rejected (HTTP 401)` (or `Judilibre:`). They mean the same
-thing; `vigueur_status` shows it as `credentials_invalid`. Check, in this order:
+Vigueur's message is one of `PISTE rejected the credentials (HTTP 400).`,
+`PISTE rejected the credentials (HTTP 401).` or `Légifrance: credentials rejected (HTTP 401)` (or
+`Judilibre:`). They mean the same thing; `vigueur_status` shows it as `credentials_invalid`. Check,
+in this order:
 
 1. The client ID and secret were copied whole, with no extra space.
-2. The environment setting matches the application: `sandbox` for the application PISTE created
-   for you, `production` for one you created yourself.
+2. The environment setting matches the application: sandbox for the application PISTE created
+   for you, production for one you created yourself. In Claude Desktop, that is the
+   **Production application** switch; in Claude Code, the **PISTE environment** setting.
 
-Then run `/plugin configure vigueur@vigueur`, enter the values again, and restart the server (see
+Then enter the values again. In Claude Desktop, in **Settings**, **Extensions**, **Vigueur**, then
+click **Save**: Claude Desktop restarts Vigueur. In Claude Code, run
+`/plugin configure vigueur@vigueur`, then restart the server (see
 [the server is still the old one](#after-an-update-claude-still-behaves-as-before)).
 
 ### A source shows `not_enabled`
 
-Your credentials work, but the application is not subscribed to that API. The status answer gives
-the steps; in short, on piste.gouv.fr:
+Your credentials work, but the application is not subscribed to that API. On piste.gouv.fr:
 
 1. Open the consent page ("Cliquez ici pour accéder à la page de consentement"), tick **Légifrance**
    and **JUDILIBRE**, then click **Validate my ToS choices**.
@@ -127,16 +134,15 @@ the steps; in short, on piste.gouv.fr:
    APIs** table.
 
 A search or reading that PISTE refuses answers with an error (`"outcome": "error"`, `"kind": "forbidden"`).
-Its `message` reads `Légifrance: access refused (HTTP 403) PISTE refused this request (HTTP 403).
-Call vigueur_status to check that the API is enabled on your PISTE application.` (or `Judilibre:`
-first). The cause is the same.
+Its `message` reads `Légifrance: access refused (HTTP 403)` (or `Judilibre:` first). The cause is
+the same.
 
 ## Messages while Claude reads the law
 
 When a search or a reading fails, the answer is a JSON object with `"outcome": "error"`. Its
 `error` holds a `kind` (the family of failure, such as `quota_exceeded`) and a `message`, the text
-quoted in the sections below. A message has two parts: a first sentence about what happened, then a
-sentence about what to do. See [Reading Vigueur's answers](../20-using/05-reading-answers.md#when-something-goes-wrong).
+quoted in the sections below. A message says what happened; for some kinds, a sentence follows
+about when to try again. See [Reading Vigueur's answers](../20-using/05-reading-answers.md#when-something-goes-wrong).
 
 ### PISTE says the quota is reached
 
@@ -259,11 +265,16 @@ again by itself. Examples:
 
 ### After an update, Claude still behaves as before
 
-Each open Claude Code session keeps running the old server until you reconnect it. `/reload-plugins`
-alone is not enough. Run `/mcp`, select **vigueur**, then choose **Reconnect**. A new session starts
-the new build. See [Update Vigueur](../10-setup/04-updating.md).
+In Claude Code, each open session keeps running the old server until you reconnect it.
+`/reload-plugins` alone is not enough. Run `/mcp`, select **vigueur**, then choose **Reconnect**. A
+new session starts the new build.
+
+In Claude Desktop, a bundle file replaces the installed Vigueur only when its version is newer.
+`vigueur_version`, in the answer of `vigueur_status`, says which version runs. See
+[Update Vigueur](../10-setup/04-updating.md).
 
 ## Still stuck
 
-Run `vigueur_status` and keep its answer, with the exact message you saw. Never paste your client
-secret anywhere.
+Run `vigueur_status` and keep its answer, with the exact message you saw. If Vigueur does not start
+at all, its startup line, or the error that stopped it, is in the app's logs: see
+[Logs](04-privacy-and-your-data.md#logs). Never paste your client secret anywhere.

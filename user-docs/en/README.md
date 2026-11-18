@@ -28,7 +28,7 @@ Writing or updating a page? Read [CONTRIBUTING.md](../CONTRIBUTING.md) first.
 |---|---|---|---|
 | 01 | [Create your PISTE account](10-setup/01-piste-account.md) | Start | Written |
 | 02 | [Install in Claude Code](10-setup/02-install-claude-code.md) | Start | Written |
-| 03 | [Install in Claude Desktop](10-setup/03-install-claude-desktop.md) | Start | Planned |
+| 03 | [Install in Claude Desktop](10-setup/03-install-claude-desktop.md) | Start | Written |
 | 04 | [Update Vigueur](10-setup/04-updating.md) | Guide | Written |
 | 05 | [Uninstall Vigueur](10-setup/05-uninstalling.md) | Guide | Written |
 

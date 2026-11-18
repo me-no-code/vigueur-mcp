@@ -3,7 +3,7 @@ title: PISTE
 level: reference
 tags: [sources, piste, quota, sandbox, production]
 summary: Understand what PISTE is, how sandbox and production differ, why one application serves both sources, how the shared quota behaves, and how Vigueur retries and times out.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # PISTE
@@ -25,10 +25,10 @@ PISTE has two environments, each with its own addresses and its own applications
 | | Sandbox | Production |
 |---|---|---|
 | Application | PISTE creates one for you automatically (named SANDBOX) | Every application you create yourself |
-| Vigueur's setting | PISTE environment `sandbox` | PISTE environment `production` (the default) |
+| Vigueur's setting | Claude Desktop: **Production application** off. Claude Code: **PISTE environment** `sandbox` | Claude Desktop: **Production application** on. Claude Code: **PISTE environment** `production`. Both are the default |
 
 > **The environment must match the credentials**
-> Sandbox credentials work only with the `sandbox` setting, production credentials only with `production`. A mismatch is reported as rejected credentials, the same as a wrong secret, and `vigueur_status` cannot tell the two apart. Vigueur's start-up line, in its logs, names the environment in use.
+> Sandbox credentials work only with the sandbox setting, production credentials only with production. A mismatch is reported as rejected credentials, the same as a wrong secret, and `vigueur_status` cannot tell the two apart. Vigueur's start-up line, in its logs, names the environment in use.
 
 ## The shared quota
 

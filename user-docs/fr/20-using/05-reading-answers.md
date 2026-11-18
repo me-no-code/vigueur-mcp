@@ -3,7 +3,7 @@ title: "Lire les réponses de Vigueur"
 level: guide
 tags: [answers, envelope, status, links, pagination, errors]
 summary: "Comprenez les parties communes à toutes les réponses de Vigueur : les champs de l'enveloppe, le type de réponse, l'état de vigueur, les avertissements, la pagination, le contenu en cache et les erreurs."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Lire les réponses de Vigueur
@@ -68,7 +68,7 @@ source, accents compris. Les dates sont au format `YYYY-MM-DD`.
 | `not_found` | Ce que vous avez demandé n'existe pas dans la source. C'est une réponse, non une erreur. | Outils de lecture |
 | `several_matches` | Votre citation correspond à plusieurs éléments ; la réponse les liste et n'en choisit aucune. | `legifrance_get_article`, `legifrance_get_article_history`, `legifrance_get_text` |
 | `not_in_force` | L'article ou le texte existe, mais rien ne s'appliquait à la date. La réponse liste les versions enregistrées. | `legifrance_get_article`, `legifrance_get_text` |
-| `not_configured` | L'accès à PISTE n'est pas configuré ; la réponse contient les étapes de configuration. | `vigueur_status` |
+| `not_configured` | L'accès à PISTE n'est pas configuré ; `config_problems` indique tout problème de réglage. | `vigueur_status` |
 | `error` | L'appel a échoué : voir [Quand quelque chose ne va pas](#quand-quelque-chose-ne-va-pas). | N'importe quel outil |
 
 ## « En vigueur à une date » se calcule à partir de dates
@@ -243,7 +243,7 @@ si bien que Claude le traite comme un échec :
   "outcome": "error",
   "error": {
     "kind": "forbidden",
-    "message": "Légifrance: access refused (HTTP 403) PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application."
+    "message": "Légifrance: access refused (HTTP 403)"
   },
   "request": {
     "tool": "legifrance_get_article",
@@ -264,7 +264,7 @@ si bien que Claude le traite comme un échec :
 | `source` | La source qui a échoué (`PISTE` pour `vigueur_status`). |
 | `outcome` | `error`. |
 | `error.kind` | La famille d'échec. Voir le tableau ci-dessous. |
-| `error.message` | Ce qui s'est passé, puis ce qu'il faut faire. |
+| `error.message` | Ce qui s'est passé ; pour certains types, ensuite, quand réessayer ou quand le signaler. |
 | `request` | L'appel qui a échoué. |
 | `retrieved` | Présent seulement quand une source a répondu (par exemple par un refus HTTP). |
 | `vigueur_version` | La version de Vigueur qui a répondu. |
@@ -273,8 +273,8 @@ Une erreur n'a ni `warnings` ni `cached`. Les valeurs de `kind` :
 
 | `kind` | Situation | Ce que dit le message |
 |---|---|---|
-| `credentials_invalid` | Identifiants rejetés | `PISTE rejected the credentials. Check PISTE_CLIENT_ID and PISTE_CLIENT_SECRET, and PISTE_ENV (sandbox credentials only work with PISTE_ENV=sandbox). In Claude Code with the Vigueur plugin, they are the plugin settings: change them with /plugin configure vigueur@vigueur, then reconnect with /mcp. In another MCP client, they are environment variables in its configuration. Call vigueur_status to diagnose.` |
-| `forbidden` | Accès refusé (HTTP 403) | `PISTE refused this request (HTTP 403). Call vigueur_status to check that the API is enabled on your PISTE application.` |
+| `credentials_invalid` | Identifiants rejetés | Le message seul, par exemple `PISTE rejected the credentials (HTTP 401).` |
+| `forbidden` | Accès refusé (HTTP 403) | Le message seul : `<source>: access refused (HTTP 403)` |
 | `quota_exceeded` | Quota atteint | `PISTE quota reached. Retry in about N s.` (ou `Wait a moment and try again.`) |
 | `upstream_unavailable` | PISTE en panne ou lent | `PISTE is unavailable or timed out. Wait a moment and try again…` |
 | `unexpected_response` | Réponse inattendue | La source a renvoyé quelque chose que Vigueur ne comprend pas, peut-être un changement d'API |
@@ -284,8 +284,9 @@ Une erreur n'a ni `warnings` ni `cached`. Les valeurs de `kind` :
 | `cancelled` | L'appel a été arrêté | Il n'y a pas de problème |
 | `unexpected` | Tout le reste | `Unexpected error: … Call vigueur_status to check the setup.` |
 
-Demandez d'abord à Claude de lancer `vigueur_status` : il vérifie les deux sources et indique
-comment corriger. Voir [`vigueur_status`](../30-tools/vigueur_status.md).
+Demandez d'abord à Claude de lancer `vigueur_status` : il vérifie vos réglages et les deux sources.
+Voir [`vigueur_status`](../30-tools/vigueur_status.md), et
+[Dépannage et FAQ](../00-intro/05-troubleshooting.md) pour savoir que faire.
 
 ## Voir aussi
 

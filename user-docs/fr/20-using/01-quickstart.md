@@ -3,15 +3,16 @@ title: "Prise en main : vos premières questions"
 level: start
 tags: [quickstart, legislation, case-law]
 summary: "Menez une première session de bout en bout : vérifier que Vigueur a accès aux sources, lire un article, voir ce qui s'appliquait à une date passée et trouver une décision."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Prise en main : vos premières questions
 
 Cette page vous guide dans une première session. Vous écrivez vos demandes à Claude en langage
 courant, en français ou en anglais. Claude appelle les outils de Vigueur et vous montre ce que disent
-les sources officielles. Vigueur doit être [installé](../10-setup/02-install-claude-code.md), avec vos
-identifiants PISTE renseignés.
+les sources officielles. Vigueur doit être installé,
+[dans Claude Desktop](../10-setup/03-install-claude-desktop.md) ou
+[dans Claude Code](../10-setup/02-install-claude-code.md), avec vos identifiants PISTE renseignés.
 
 ## 1. Vérifier que Vigueur accède aux sources
 
@@ -28,7 +29,6 @@ ici, la réponse est indentée pour être lisible. Quand tout fonctionne, la ré
   "outcome": "results",
   "warnings": [],
   "environment": "sandbox",
-  "config_problems": [],
   "checks": [
     {
       "source": "Légifrance",
@@ -53,9 +53,9 @@ ici, la réponse est indentée pour être lisible. Quand tout fonctionne, la ré
 ```
 
 Une source dont le `state` n'est pas `ok` pose problème (par exemple `not_enabled` ou
-`credentials_invalid`), et la réponse ajoute les étapes pour le corriger. Sans aucun identifiant, la
-réponse contient `"outcome": "not_configured"` et un `setup_guide` avec les étapes de configuration.
-Voir [`vigueur_status`](../30-tools/vigueur_status.md).
+`credentials_invalid`). Sans aucun identifiant, la réponse contient `"outcome": "not_configured"`.
+Voir [`vigueur_status`](../30-tools/vigueur_status.md) pour le sens de chaque état, et
+[Dépannage et FAQ](../00-intro/05-troubleshooting.md) pour savoir que faire.
 
 ## 2. Lire un article
 

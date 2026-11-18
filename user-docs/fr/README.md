@@ -28,7 +28,7 @@ Vous écrivez ou mettez à jour une page ? Lisez d'abord [CONTRIBUTING.md](../CO
 |---|---|---|---|
 | 01 | [Créer votre compte PISTE](10-setup/01-piste-account.md) | Démarrage | Rédigée |
 | 02 | [Installer dans Claude Code](10-setup/02-install-claude-code.md) | Démarrage | Rédigée |
-| 03 | [Installer dans Claude Desktop](10-setup/03-install-claude-desktop.md) | Démarrage | Prévue |
+| 03 | [Installer dans Claude Desktop](10-setup/03-install-claude-desktop.md) | Démarrage | Rédigée |
 | 04 | [Mettre à jour Vigueur](10-setup/04-updating.md) | Guide | Rédigée |
 | 05 | [Désinstaller Vigueur](10-setup/05-uninstalling.md) | Guide | Rédigée |
 

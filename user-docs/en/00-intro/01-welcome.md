@@ -3,7 +3,7 @@ title: Welcome to Vigueur
 level: intro
 tags: [intro, overview]
 summary: Know what Vigueur lets Claude do with French law, what it does not do, and which page to read next.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Welcome to Vigueur
@@ -57,7 +57,8 @@ Both are reached through [PISTE](03-glossary.md#piste), the government's API gat
 
 1. [How Vigueur works](02-how-it-works.md): a short picture of what happens when you ask.
 2. [Create your PISTE account](../10-setup/01-piste-account.md): free, a few minutes.
-3. [Install in Claude Code](../10-setup/02-install-claude-code.md): the install steps.
+3. [Install in Claude Desktop](../10-setup/03-install-claude-desktop.md) or
+   [in Claude Code](../10-setup/02-install-claude-code.md): the install steps.
 4. [Quickstart: your first questions](../20-using/01-quickstart.md): what to type first.
 
 Words you do not know are in the [glossary](03-glossary.md). If something goes wrong, see
