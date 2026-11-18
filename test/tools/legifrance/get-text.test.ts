@@ -19,8 +19,8 @@ import { MAX_TOOL_TEXT, sliceForJson } from '../../../src/tools/format.js';
 import {
   buildGetTextAnswer,
   type GetTextAnswerOptions,
-  getTextOutput,
-} from '../../../src/tools/legifrance/get-text.js';
+} from '../../../src/tools/legifrance/get-text-answer.js';
+import { getTextOutput } from '../../../src/tools/legifrance/get-text-output.js';
 import {
   createLegifranceSource,
   type LegifranceServices,
