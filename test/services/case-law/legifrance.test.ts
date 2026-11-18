@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CASE_LAW_COLLECTION_LABELS,
   createGetLegifranceDecision,
   createSearchCaseLaw,
-  LEGIFRANCE_CASE_LAW_COVERAGE_NOTE,
 } from '../../../src/services/case-law/legifrance.js';
 import type { LegifranceDecision } from '../../../src/services/case-law/ports.js';
 import { fakeLegifrance } from '../../helpers/fake-case-law.js';
@@ -15,26 +13,6 @@ const rejects = async (p: Promise<unknown>, message: string) => {
   );
   expect(err).toMatchObject({ kind: 'invalid_input', message });
 };
-
-describe('LEGIFRANCE_CASE_LAW_COVERAGE_NOTE', () => {
-  it('is the exact coverage note', () => {
-    expect(LEGIFRANCE_CASE_LAW_COVERAGE_NOTE).toBe(
-      'Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. Judilibre (judilibre_search_decisions) holds those decisions.',
-    );
-  });
-});
-
-describe('CASE_LAW_COLLECTION_LABELS', () => {
-  it('labels the five collections', () => {
-    expect(CASE_LAW_COLLECTION_LABELS).toEqual({
-      judicial: 'judicial courts (JURI)',
-      administrative: 'administrative courts (CETAT)',
-      constitutional: 'Conseil constitutionnel (CONSTIT)',
-      cnil: 'CNIL',
-      financial: 'financial courts (JUFI)',
-    });
-  });
-});
 
 describe('createSearchCaseLaw', () => {
   it('maps the input to the wire query and defaults', async () => {

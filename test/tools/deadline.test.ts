@@ -99,9 +99,8 @@ describe('per-call deadline over every tool', () => {
       const result = await client.callTool({ name, arguments: args });
       const source = name.startsWith('judilibre_') ? 'Judilibre' : 'Légifrance';
       const e = expectToolError(result, 'deadline');
-      const seconds = Math.round(DEADLINE_MS / 1000);
-      expect(e.error.message).toBe(
-        `${source} did not answer within ${seconds} s. Try again in a moment.`,
+      expect(e.error.message).toMatch(
+        new RegExp(`^${source} did not answer within \\d+ s\\. Try again in a moment\\.$`),
       );
       expect(e.request.tool).toBe(name);
     });

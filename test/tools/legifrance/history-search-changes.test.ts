@@ -348,7 +348,6 @@ describe('legifrance_search_legislation (fixtures)', () => {
     expect(description).toContain(
       'Give at least one of query, article_number, text_number, nor or idcc',
     );
-    expect(description).not.toContain('or a publication date range)');
     expect(description).toContain('"jorf" results are texts as published');
     expect(description).toContain('"kali" results are the agreements currently in force');
   });

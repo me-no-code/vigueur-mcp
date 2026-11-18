@@ -217,6 +217,20 @@ describe('format: JSON budgets', () => {
 });
 
 describe('toolError', () => {
+  it('toolError: a deadline in seconds is rounded to the nearest second', async () => {
+    const signal = callSignal(undefined, 1);
+    await new Promise((r) => setTimeout(r, 10));
+    const r = toolError(new DOMException('t', 'TimeoutError'), {
+      source: 'legifrance',
+      request: { tool: 't' },
+      signal,
+      deadlineMs: 1_500,
+    });
+    expect(expectToolError(r, 'deadline').error.message).toBe(
+      'Légifrance did not answer within 2 s. Try again in a moment.',
+    );
+  });
+
   it('toolError: deadline, one sentence, seconds from the deadline', async () => {
     const signal = callSignal(undefined, 1);
     await new Promise((r) => setTimeout(r, 10));

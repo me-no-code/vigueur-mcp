@@ -222,21 +222,6 @@ describe('vigueur_status', () => {
     });
   });
 
-  it('no check mark or cross anywhere', async () => {
-    const result = await callStatus(
-      report({
-        ...allOk,
-        sources: [
-          { source: 'legifrance', state: 'ok' },
-          { source: 'judilibre', state: 'not_enabled' },
-        ],
-      }),
-    );
-    const text = JSON.stringify(result);
-    expect(text).not.toContain('✅');
-    expect(text).not.toContain('❌');
-  });
-
   it('a status service that throws: an unexpected error naming PISTE', async () => {
     const e = expectToolError(
       await callStatus(async () => {

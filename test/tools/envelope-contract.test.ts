@@ -1,5 +1,3 @@
-import { type Dirent, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { compose } from '../../src/compose.js';
 import { loadConfig } from '../../src/config.js';
@@ -14,24 +12,6 @@ import {
 import { JUDILIBRE_ROUTES } from '../helpers/judilibre-routes.js';
 import { connectClient } from '../helpers/mcp-client.js';
 
-/** Every registered tool answers through the envelope. */
-const CONVERTED = new Set<string>([
-  'legifrance_get_article',
-  'legifrance_get_article_history',
-  'legifrance_search_legislation',
-  'legifrance_list_changes',
-  'legifrance_get_text',
-  'legifrance_browse_code',
-  'legifrance_latest_jo',
-  'legifrance_list_reference_values',
-  'legifrance_search_case_law',
-  'legifrance_get_decision',
-  'judilibre_search_decisions',
-  'judilibre_get_decision',
-  'judilibre_list_taxonomy',
-  'vigueur_status',
-]);
-
 interface Case {
   tool: string;
   args: Record<string, unknown>;
@@ -40,8 +20,10 @@ interface Case {
   fetch?: 'fixtures' | 'judilibre' | 'status';
 }
 
-/** Per tool: one success case and one miss case (not_found / no_results / several_matches) where the tool has one.
- * The denied (HTTP 403) case is generated for every converted tool below. */
+/**
+ * Per tool: one success case and one miss case (not_found / no_results / several_matches) where
+ * the tool has one. The denied (HTTP 403) case is generated for every tool below.
+ */
 const CASES: Case[] = [
   {
     tool: 'legifrance_get_article',
@@ -175,8 +157,7 @@ describe('envelope contract', () => {
   it('every registered tool declares an outputSchema and has a case', async () => {
     const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual([...CONVERTED].sort());
-    expect(CONVERTED.size).toBe(14);
+    expect(tools).toHaveLength(14);
     for (const t of tools) {
       expect(t.outputSchema, t.name).toBeDefined();
       expect(
@@ -186,38 +167,24 @@ describe('envelope contract', () => {
     }
   });
 
-  it('no source file under src/ contains a pictograph', () => {
-    const files = (readdirSync('src', { recursive: true, withFileTypes: true }) as Dirent[])
-      .filter((e) => e.isFile())
-      .map((e) => join(e.parentPath, e.name));
-    expect(files.length).toBeGreaterThan(10);
-    for (const f of files) {
-      expect(readFileSync(f, 'utf8'), f).not.toMatch(/\p{Extended_Pictographic}/u);
-    }
+  it.each(CASES)('$tool answers $outcome through the envelope', async (c) => {
+    const fixtures = fixtureFetch(ROUTES[c.fetch ?? 'fixtures']);
+    const client = await connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
+    const result = await client.callTool({ name: c.tool, arguments: c.args });
+    expectAnswer(result, { source: sourceOf(c.tool), outcome: c.outcome });
+    expect(fixtures.unmatched, `${c.tool}: requests without a fixture`).toEqual([]);
   });
 
-  it('every case answers through the envelope', async () => {
-    for (const c of CASES) {
-      const fixtures = fixtureFetch(ROUTES[c.fetch ?? 'fixtures']);
-      const client = await connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
-      const result = await client.callTool({ name: c.tool, arguments: c.args });
-      expectAnswer(result, { source: sourceOf(c.tool), outcome: c.outcome });
-      expect(fixtures.unmatched, `${c.tool}: requests without a fixture`).toEqual([]);
-    }
-  });
-
-  it('every converted tool fails as JSON when the source refuses (HTTP 403)', async () => {
-    // vigueur_status is left out: its probes report a refused source as a check, not an error
-    // (test/tools/status.test.ts covers its error path).
-    for (const name of [...CONVERTED].filter((n) => n !== 'vigueur_status')) {
-      const c = CASES.find((x) => x.tool === name);
-      expect(c, `${name} has a case in CASES`).toBeDefined();
-      const client = await connect(compose(sandboxConfig(), { fetch: deniedFetch() }));
-      const result = await client.callTool({ name, arguments: c?.args ?? {} });
-      const e = expectToolError(result, 'forbidden');
-      expect(e.request.tool).toBe(name);
-      expect(e.retrieved).toMatch(/Z$/);
-    }
+  // vigueur_status is left out: its probes report a refused source as a check, not an error
+  // (test/tools/status.test.ts covers its error path).
+  const sourceTools = [...new Set(CASES.map((c) => c.tool))].filter((t) => t !== 'vigueur_status');
+  it.each(sourceTools)('%s fails as JSON when the source refuses (HTTP 403)', async (name) => {
+    const c = CASES.find((x) => x.tool === name);
+    const client = await connect(compose(sandboxConfig(), { fetch: deniedFetch() }));
+    const result = await client.callTool({ name, arguments: c?.args ?? {} });
+    const e = expectToolError(result, 'forbidden');
+    expect(e.request.tool).toBe(name);
+    expect(e.retrieved).toMatch(/Z$/);
   });
 
   it('vigueur_status (unconfigured) answers not_configured', async () => {

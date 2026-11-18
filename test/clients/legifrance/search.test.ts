@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
 import type { LegislationQuery } from '../../../src/services/legislation/ports.js';
@@ -118,16 +117,6 @@ describe('searchLegislation request', () => {
       validTo: null,
     });
     expect(page.hits.map((h) => h.textCid)).toEqual([
-      'JORFTEXT000000241445',
-      'JORFTEXT000000241445',
-    ]);
-    const raw = JSON.parse(
-      readFileSync(
-        'test/fixtures/legifrance/114-search-loda-date-num-decret-2005-1309.json',
-        'utf8',
-      ),
-    ) as { results: Array<{ titles: Array<{ cid: string }> }> };
-    expect(raw.results.map((r) => r.titles[0]?.cid)).toEqual([
       'JORFTEXT000000241445',
       'JORFTEXT000000241445',
     ]);

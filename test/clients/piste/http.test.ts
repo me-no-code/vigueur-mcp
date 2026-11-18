@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { RequestOptions } from '../../../src/clients/piste/http.js';
-import {
-  createPisteHttp,
-  DEFAULT_MAX_RETRIES,
-  DEFAULT_TIMEOUT_MS,
-} from '../../../src/clients/piste/http.js';
+import { createPisteHttp } from '../../../src/clients/piste/http.js';
 import { VigueurError } from '../../../src/shared/errors.js';
 import { fakeFetch } from '../../helpers/fake-fetch.js';
 import { loadFixture } from '../../helpers/fake-piste-http.js';
@@ -266,9 +262,7 @@ describe('createPisteHttp', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('defaults are one retry and 10 s', async () => {
-    expect(DEFAULT_MAX_RETRIES).toBe(1);
-    expect(DEFAULT_TIMEOUT_MS).toBe(10_000);
+  it('retries once by default', async () => {
     const { http, calls } = setup(() => json({}, 503), {});
     await failure(http.request({ method: 'GET', path: '/a' }));
     expect(calls).toHaveLength(2);

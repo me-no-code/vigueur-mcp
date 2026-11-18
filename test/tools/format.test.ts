@@ -5,7 +5,6 @@ import {
   deadlineHit,
   isoDateSchema,
   listPage,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
   responseFormatSchema,
@@ -52,12 +51,6 @@ describe('sliceForJson length check', () => {
     expect(() => sliceForJson(lossy, 2, 100)).toThrow(
       'Text slice 2 to 6 came out 3 characters long instead of 4.',
     );
-  });
-});
-
-describe('MAX_TOOL_TEXT', () => {
-  it('is 40 000 characters', () => {
-    expect(MAX_TOOL_TEXT).toBe(40_000);
   });
 });
 

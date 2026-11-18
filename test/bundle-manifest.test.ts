@@ -19,6 +19,7 @@ const manifest = existsSync(new URL(`../${MANIFEST_PATH}`, import.meta.url))
   : {};
 const plugin = readJson('.claude-plugin/plugin.json');
 const pkg = readJson('package.json');
+const lock = readJson('package-lock.json');
 
 const REPO = 'https://github.com/me-no-code/vigueur-mcp';
 
@@ -28,6 +29,8 @@ describe('Claude Desktop bundle manifest', () => {
     expect(manifest.name).toBe('vigueur');
     expect(manifest.display_name).toBe('Vigueur');
     expect(manifest.version).toBe(pkg.version);
+    expect(lock.version).toBe(pkg.version);
+    expect(lock.packages[''].version).toBe(pkg.version);
     expect(manifest.version).toBe(plugin.version);
     expect(manifest.version).toBe(VERSION);
     expect(manifest.description).toBe(plugin.description);
