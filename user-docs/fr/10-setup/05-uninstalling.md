@@ -53,7 +53,9 @@ ainsi que le secret client : sa valeur est retirée du coffre d'identifiants de 
 
 Les journaux enregistrent les événements de connexion et la ligne de démarrage de Vigueur. Ceux de
 Claude Code enregistrent aussi les noms des outils appelés avec leur durée, et les traces d'erreur.
-Ils ne contiennent ni arguments d'outil, ni résultats, ni identifiants. Voir
+Les messages de Vigueur lui-même ne nomment un outil que dans deux cas : une réponse qui dépasse la
+taille maximale, et une erreur inattendue (sa trace d'erreur). Les journaux ne contiennent ni
+arguments d'outil, ni résultats, ni identifiants. Voir
 [Confidentialité et données](../00-intro/04-privacy-and-your-data.md#journaux).
 
 ## Réinstaller plus tard

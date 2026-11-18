@@ -28,12 +28,12 @@ Node.js it ships with. Allow about five minutes once you have your PISTE account
 
 The file is named after its version, for example `vigueur-0.1.0.mcpb`. Each release of Vigueur will
 publish it on the project's GitHub Releases page. There is no release yet: until then, build the
-file yourself. This needs Node.js 20 or later and git. In a terminal:
+file yourself. This needs Node.js 22 or later and git. In a terminal:
 
 ```
 git clone https://github.com/me-no-code/vigueur-mcp.git
 cd vigueur-mcp
-npm install
+npm ci
 npm run bundle
 ```
 

@@ -3,7 +3,7 @@ title: judilibre_list_taxonomy
 level: reference
 tags: [tool, judilibre, taxonomy, filters]
 summary: List the values Judilibre uses to classify decisions (chambers, formations, outcomes, courts, themes) so you can filter a search with the right key.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # judilibre_list_taxonomy
@@ -83,7 +83,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 
 | Field | What it holds |
 |---|---|
-| `list`, `jurisdiction`, `contains` | The list asked for, the jurisdiction it is for, and the words you filtered by (`null` when none). |
+| `list`, `jurisdiction`, `contains` | The list asked for, the jurisdiction it is for, and the words you filtered by (`null` when none, and in a free-text answer). |
 | `results`, `total` | The number of values after the filter, and the number of values in the whole list. |
 | `free_text` | `true` when Judilibre records this list as free text for this jurisdiction, so there is no list. |
 | `page`, `next` | This page and the number of pages, and the next page (`{ "page": 2 }`, or `null`). A long list is split into pages of up to 200 values. |
@@ -91,7 +91,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 
 Each value holds `key` (what the filters of `judilibre_search_decisions` take; `null` for a value without a key, such as a theme), `label` (the value as Judilibre labels it) and `group`. A list that Judilibre groups, such as the themes of the courts of appeal, gives the group heading in `group`; it is `null` when there is none. With `contains`, the labels (and the group headings) are filtered by your words. The list comes from the memory of Vigueur, and `cached` says when it was fetched.
 
-**Free text.** For the other courts, chambers, formations, publications and outcomes are not lists. `free_text` is `true`, `items` is empty, the outcome is `no_results`, and a warning says so:
+**Free text.** For the other courts, chambers, formations, publications and outcomes are not lists. `free_text` is `true`, `items` is empty, `contains` is `null` even when you gave words, the outcome is `no_results`, and a warning says so:
 
 ```
 {

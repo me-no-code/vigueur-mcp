@@ -3,7 +3,7 @@ title: judilibre_get_decision
 level: reference
 tags: [tool, judilibre, case-law, read]
 summary: Read one Judilibre decision, whole or by part (zone), with its summary, visa and attacked decision, page by page.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # judilibre_get_decision
@@ -38,7 +38,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
   "source": "Judilibre",
   "outcome": "found",
   "warnings": [
-    "Same decision on Légifrance (when it holds it, usually weeks later)."
+    "other_source searches Légifrance for this decision's ECLI."
   ],
   "id": "6a0e9ff1cdc6046d47668703",
   "ecli": "ECLI:FR:CCASS:2026:C210500",
@@ -102,12 +102,12 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 | `decided`, `numbers`, `source_updated` | The decision date, the decision numbers, and the date Judilibre last updated the decision (`null` when not given). |
 | `formation`, `publication`, `solution` | The formation, how the Cour de cassation published the decision (a list, empty when it is not published in the Bulletin) and the outcome. |
 | `attacked` | The decision attacked: its `title`, `number`, `decided` date, and `read_with`, the call that reads it when Judilibre holds it (otherwise `null`). `null` when the source does not state it. |
-| `summary`, `titles`, `visa`, `rapprochements`, `files` | The summary (*sommaire*), its titles, the *visa*, the *rapprochements* and the attached files (`name`, `type`, `link`). They are given on the first page only: on every later page the summary is `null` and the lists are empty. |
+| `summary`, `titles`, `visa`, `rapprochements`, `files` | The summary (*sommaire*), its titles, the *visa*, the *rapprochements* and the attached files (`name`, `type`, `link`; `link` is `null` when the source's link is not an https link to Judilibre's file store or site). They are given on the first page only: on every later page the summary is `null` and the lists are empty. |
 | `zones` | The zones the source marks in the text; empty when none. |
 | `zone` | The zone the text shown is limited to; `null` for the whole decision. |
 | `part`, `next` | `null` when the text is whole. See "Long texts" below. |
 | `text` | The text of the decision, verbatim. Names are pseudonymised by the source. |
-| `other_source` | On the last page of a Cour de cassation decision with an ECLI, the call that finds the same decision on Légifrance; otherwise `null`. A warning says the same: `Same decision on Légifrance (when it holds it, usually weeks later).` |
+| `other_source` | On the last page of a Cour de cassation decision with an ECLI, the call that searches Légifrance for this decision's ECLI; otherwise `null`. A warning says the same: `other_source searches Légifrance for this decision's ECLI.` The search may find nothing. |
 
 **Zones.** The source marks up the Cour de cassation's decisions in parts: `introduction`, `expose`, `moyens`, `motivations`, `dispositif` and sometimes `annexes`. Ask for one with `zone`; `zone` in the answer then names it and `text` holds that part. When a part appears in several places of the text, the pieces are joined by a line holding `[…]`.
 
@@ -116,7 +116,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
   …
   "outcome": "found",
   "warnings": [
-    "Same decision on Légifrance (when it holds it, usually weeks later)."
+    "other_source searches Légifrance for this decision's ECLI."
   ],
   …
   "zones": [
@@ -144,7 +144,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 
 Without `zone`, a decision with no markup says `This decision has no zone markup; showing the full text.`
 
-**Long texts.** A page holds at most 40,000 characters. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the text) and `next` gives `{ "offset": <number> }`, where the rest starts. When nothing is left, `next` is `null`. Ask Claude to continue, and it passes that offset. Paging works inside a zone too. Long lists on the first page (visa, rapprochements, files) show up to 30 items and then a warning such as `Files: (+3 more)`; when the head of the page would crowd out the text, Vigueur shortens the lists and the summary first.
+**Long texts.** A page holds at most 40,000 characters. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the text) and `next` gives `{ "offset": <number> }`, where the rest starts. When nothing is left, `next` is `null`. Ask Claude to continue, and it passes that offset. Paging works inside a zone too. Long lists on the first page (titles, visa, rapprochements, files) show up to 30 items, each cut at 500 characters, and then a warning such as `Titles: (+2 more)` or `Files: (+3 more)`; when the head of the page would crowd out the text, Vigueur shortens the lists and the summary first.
 
 **Not found.** This is a normal answer, not an error. The outcome is `not_found`, `id` repeats the id, and `warnings` says what to do:
 

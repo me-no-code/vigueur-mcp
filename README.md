@@ -34,7 +34,7 @@ Open Vigueur's bundle file, `vigueur-<version>.mcpb`, and confirm the install di
 the three settings in **Settings**, **Extensions**, **Vigueur**, and click **Save**.
 
 The bundle will be published with each release. Until then, build it (Node.js 22 or later, and
-git): clone the repository, then run `npm install` and `npm run bundle`; the file is in `build/`.
+git): clone the repository, then run `npm ci` and `npm run bundle`; the file is in `build/`.
 Details: [Install in Claude Desktop](user-docs/en/10-setup/03-install-claude-desktop.md).
 
 ### Claude Code
@@ -44,11 +44,11 @@ Details: [Install in Claude Desktop](user-docs/en/10-setup/03-install-claude-des
    ```sh
    git clone https://github.com/me-no-code/vigueur-mcp.git
    cd vigueur-mcp
-   npm install
+   npm ci
    npm run build
    ```
 
-   `npm install` may warn about `fsevents` install scripts. That package is only used by the
+   `npm ci` may warn about `fsevents` install scripts. That package is only used by the
    developer tools; you can ignore the warning.
 
 2. In Claude Code, add the folder as a plugin source and install the plugin (use the folder's

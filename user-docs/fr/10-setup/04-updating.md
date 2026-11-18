@@ -32,7 +32,7 @@ nouveau code, vous le compilez, et vous reconnectez le serveur.
    ```
    cd /absolute/path/to/vigueur-mcp
    git pull
-   npm install
+   npm ci
    npm run build
    ```
 

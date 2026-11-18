@@ -3,7 +3,7 @@ title: "judilibre_list_taxonomy"
 level: reference
 tags: [tool, judilibre, taxonomy, filters]
 summary: "Lister les valeurs que Judilibre utilise pour classer les décisions (chambres, formations, solutions, juridictions, thèmes) afin de filtrer une recherche avec la bonne clé."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # judilibre_list_taxonomy
@@ -83,7 +83,7 @@ Le type de réponse (`outcome`) vaut `results`, ou `no_results` quand la liste n
 
 | Champ | Ce qu'il contient |
 |---|---|
-| `list`, `jurisdiction`, `contains` | La liste demandée, la juridiction pour laquelle elle est demandée, et les mots par lesquels vous avez filtré (`null` s'il n'y en a pas). |
+| `list`, `jurisdiction`, `contains` | La liste demandée, la juridiction pour laquelle elle est demandée, et les mots par lesquels vous avez filtré (`null` s'il n'y en a pas, et dans une réponse en texte libre). |
 | `results`, `total` | Le nombre de valeurs après le filtre, et le nombre de valeurs de la liste entière. |
 | `free_text` | `true` quand Judilibre enregistre cette liste en texte libre pour cette juridiction : il n'y a donc pas de liste. |
 | `page`, `next` | Cette page et le nombre de pages, et la page suivante (`{ "page": 2 }`, ou `null`). Une longue liste est découpée en pages de 200 valeurs au plus. |
@@ -91,7 +91,7 @@ Le type de réponse (`outcome`) vaut `results`, ou `no_results` quand la liste n
 
 Chaque valeur contient `key` (ce que prennent les filtres de `judilibre_search_decisions` ; `null` pour une valeur sans clé, comme un thème), `label` (la valeur telle que Judilibre la libelle) et `group`. Une liste que Judilibre groupe, comme les thèmes des cours d'appel, donne l'intitulé du groupe dans `group` ; il vaut `null` quand il n'y en a pas. Avec `contains`, les libellés (et les intitulés de groupe) sont filtrés par vos mots. La liste vient de la mémoire de Vigueur, et `cached` indique quand elle a été récupérée.
 
-**Texte libre.** Pour les autres juridictions, les chambres, formations, publications et solutions ne sont pas des listes. `free_text` vaut `true`, `items` est vide, le type de réponse est `no_results`, et un avertissement le dit :
+**Texte libre.** Pour les autres juridictions, les chambres, formations, publications et solutions ne sont pas des listes. `free_text` vaut `true`, `items` est vide, `contains` vaut `null` même si vous avez donné des mots, le type de réponse est `no_results`, et un avertissement le dit :
 
 ```
 {

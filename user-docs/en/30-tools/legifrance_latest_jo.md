@@ -3,7 +3,7 @@ title: legifrance_latest_jo
 level: reference
 tags: [tool, legifrance, journal-officiel, jorf]
 summary: Read the latest issues of the Journal officiel, or the issues of one publication date, with the table of contents of each.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_latest_jo
@@ -98,7 +98,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 | `filter` | The filters applied: `nature` and `emitter` (`null` when not used), and `matched_emitters`, the spellings the `emitter` filter matched (ministries' names change with governments, so several spellings can match). |
 | `items` | The issues of this page, in the order Légifrance gives them. |
 
-An issue holds its `id`, `number`, `title`, `published` (its publication date, not an entry-into-force date), its official `link`, and `toc_available`, which is `false` when Légifrance gives no table of contents for it (`groups` is then empty). `groups` lists its texts grouped by their place in the table of contents: the `path` of titles from the outermost down, and the `texts`. A text holds its `id` (`JORFTEXT…`), `title`, `nature`, `emitter` (the ministry, else the emitter; each `null` when not given) and `link`.
+An issue holds its `id`, `number`, `title`, `published` (its publication date, not an entry-into-force date), its official `link` (`number`, `published` and `link` are each `null` when Légifrance gives none), and `toc_available`, which is `false` when Légifrance gives no table of contents for it (`groups` is then empty). `groups` lists its texts grouped by their place in the table of contents: the `path` of titles from the outermost down, and the `texts`. A text holds its `id` (`JORFTEXT…`), `title`, `nature`, `emitter` (the ministry, else the emitter; each `null` when not given) and `link`.
 
 ### When nothing matches (`no_results`)
 

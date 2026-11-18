@@ -67,13 +67,15 @@ exactes.
 | HTTP 401 (jeton rejeté) | Écarte le jeton, en obtient un nouveau et réessaie une fois. S'il est rejeté de nouveau, vous recevez la réponse d'identifiants rejetés. |
 | HTTP 403 | Pas de nouvel essai. Signalé comme un accès refusé : vérifiez que l'application est abonnée à l'API. |
 | HTTP 404 | Pas de nouvel essai. Signalé comme introuvable. |
-| Autres erreurs client | Pas de nouvel essai. Signalé comme une requête rejetée. |
-| Réponse qui n'est pas du JSON valide, ou de forme inattendue | Pas de nouvel essai. Signalé comme une réponse que Vigueur ne comprend pas. |
+| Autres erreurs client | Pas de nouvel essai. Signalé comme une requête rejetée, avec le message propre à la source quand elle en donne un. |
+| Réponse qui n'est pas du JSON valide, de forme inattendue, ou de plus de 64 Mo (non lue) | Pas de nouvel essai. Signalé comme une réponse que Vigueur ne comprend pas. |
 
-**Délais.** Une requête à PISTE attend jusqu'à 10 secondes. Un appel d'outil entier, nouvelle tentative
-comprise, abandonne au bout de 45 secondes et dit que la source « did not answer within 45 s ».
-L'obtention d'un jeton attend aussi jusqu'à 10 secondes. Les vérifications de `vigueur_status` attendent
-jusqu'à 8 secondes chacune et ne sont pas relancées.
+**Délais.** Une requête à PISTE attend jusqu'à 10 secondes. Une requête qui lit un texte entier, la
+table des matières d'un code ou un journal des modifications attend jusqu'à 30 secondes, car ces
+réponses peuvent être volumineuses. Un appel d'outil entier, nouvelle tentative comprise, abandonne
+au bout de 45 secondes et dit que la source « did not answer within 45 s ». L'obtention d'un jeton
+attend aussi jusqu'à 10 secondes. Les vérifications de `vigueur_status` attendent jusqu'à 8 secondes
+chacune et ne sont pas relancées, sauf une fois avec un nouveau jeton après un HTTP 401.
 
 **Rapidité.** Observé en novembre 2026 : Judilibre répondait en général en un dixième de seconde environ
 et Légifrance en moins d'une seconde ; lire la table des matières d'un grand code prenait quelques

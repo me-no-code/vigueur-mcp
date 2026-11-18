@@ -62,16 +62,25 @@ A version number lives in four files, bumped together: `package.json` (and its l
 
 ## Architecture
 
+- `src/shared/`: what every layer uses: the error type and its kinds, the source ids and labels,
+  and the fetch type.
 - `src/domain/`: pure logic (article numbers, versions, statuses on a date, wording, links).
 - `src/services/`: use cases, written against ports (`services/*/ports.ts`).
 - `src/clients/`: the PISTE, Légifrance and Judilibre clients that implement those ports.
 - `src/tools/`: MCP tool definitions, their output schemas and the answer builders.
-- `src/compose.ts` and `src/index.ts` wire clients into services and tools.
+- `src/config.ts`: reads the PISTE settings from the environment and lists any problem with them.
+- `src/sources.ts`: the interface of a legal source's tool module, which registers that source's
+  tools.
+- `src/server.ts`: builds the MCP server and registers the tools: `vigueur_status` always, the
+  sources' tools only when PISTE is configured.
+- `src/compose.ts` wires clients, services and tools for a configuration; `src/index.ts` reads the
+  configuration and starts the server on stdio.
 - `.claude-plugin/plugin.json` (the Claude Code plugin) and `mcpb/manifest.json` (the Claude Desktop
   bundle) both start the same `dist/index.js`, with the PISTE settings as environment variables.
 
-`test/architecture.test.ts` enforces the dependency rule: services never import clients or tools,
-clients never import tools.
+`test/architecture.test.ts` enforces the dependency rules: services never import clients or tools;
+clients never import tools; tools never import clients; `src/domain` imports only from `src/domain`;
+and `src/shared`, `src/domain` and `src/services` never import the MCP SDK.
 
 Every tool returns one JSON object, as `structuredContent` and as the same JSON in its text block;
 its shape is declared in the tool's `outputSchema`. An answer is at most 40 000 characters, within a
@@ -88,5 +97,6 @@ its shape is declared in the tool's `outputSchema`. An answer is at most 40 000 
   manifest or the bundle manifest.
 - **Never log or record HTTP response headers.** Some PISTE error answers echo the request's
   headers, the access token included.
-- **Test fixtures** in `test/fixtures/` are verbatim production response bodies, never headers.
+- **Test fixtures** in `test/fixtures/` are verbatim production response bodies, or trimmed with a
+  `_note` saying how; never headers.
 - **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/).

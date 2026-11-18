@@ -125,8 +125,9 @@ neighbouring article that could not be read, a concordance lookup that failed), 
 source does not hold, or the sentences of a `not_found` or `no_results` answer saying what was looked
 up. The rest of the answer stands. The list is empty when there is nothing to say.
 
-Statements that come from Légifrance's concordance say so: `per Légifrance concordance`. A statement
-Vigueur derived itself says so: `inferred from text comparison`. See
+Statements that come from Légifrance's concordance say so: `per Légifrance concordance`. Without a
+concordance, an article answer says only whether the next version has the same words:
+`… has the same wording.` or `… has a different wording.` See
 [Codes, laws and decrees](02-legislation.md).
 
 ## Each hit says how to read it in full
@@ -139,8 +140,9 @@ A hit in a search carries a `read_with` field naming the call that reads it:
 
 A search shows an excerpt only; the full text takes a second request, which Claude makes for you when
 you ask to read it. A hit that no tool reads, such as an article published in the Journal officiel,
-has `"read_with": null` and only its `link`. A decision that exists in the other source says so in
-`other_source`.
+has `"read_with": null` and only its `link`. On its last page, a judicial decision with an ECLI
+gives in `other_source` the call that searches the other source for that ECLI (from Judilibre, for a
+Cour de cassation decision only).
 
 Links (`link`) point to the official page. Vigueur builds them from the source's ids.
 
@@ -271,7 +273,7 @@ An error has no `warnings` and no `cached`. The `kind` values:
 | `forbidden` | Access refused (HTTP 403) | The message alone: `<source>: access refused (HTTP 403)` |
 | `quota_exceeded` | Quota reached | `PISTE quota reached. Retry in about N s.` (or `Wait a moment and try again.`) |
 | `upstream_unavailable` | PISTE down or slow | `PISTE is unavailable or timed out. Wait a moment and try again…` |
-| `unexpected_response` | Unexpected response | The source returned something Vigueur does not understand, possibly an API change |
+| `unexpected_response` | Unexpected response, or one over 64 MB | The source returned something Vigueur does not understand, possibly an API change |
 | `not_found` | The source answered that the thing asked for does not exist (HTTP 404) | The message alone: `<source>: not found (HTTP 404)` |
 | `deadline` | No answer within 45 seconds | `Légifrance did not answer within 45 s. Try again in a moment.` |
 | `invalid_input` | A request the tool refuses | The message alone, for example `"date_from" must not be after "date_to".` |

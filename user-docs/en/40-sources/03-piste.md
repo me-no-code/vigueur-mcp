@@ -48,10 +48,10 @@ PISTE limits how many requests an application can make. Observed in November 202
 | HTTP 401 (token rejected) | Discards the token, gets a new one and retries once. If rejected again, you get the rejected-credentials answer. |
 | HTTP 403 | No retry. Reported as access refused: check that the API is subscribed. |
 | HTTP 404 | No retry. Reported as not found. |
-| Other client errors | No retry. Reported as a request rejected. |
-| Answer that is not valid JSON, or has an unexpected shape | No retry. Reported as a response Vigueur does not understand. |
+| Other client errors | No retry. Reported as a request rejected, with the source's own message when it gives one. |
+| Answer that is not valid JSON, has an unexpected shape, or is over 64 MB (not read) | No retry. Reported as a response Vigueur does not understand. |
 
-**Timeouts.** One request to PISTE waits up to 10 seconds. A whole tool call, retry included, gives up after 45 seconds and says the source "did not answer within 45 s". Getting a token also waits up to 10 seconds. The checks of `vigueur_status` wait up to 8 seconds each and are not retried.
+**Timeouts.** One request to PISTE waits up to 10 seconds. A request that reads a whole text, a code's table of contents or a change log waits up to 30 seconds, because these answers can be large. A whole tool call, retry included, gives up after 45 seconds and says the source "did not answer within 45 s". Getting a token also waits up to 10 seconds. The checks of `vigueur_status` wait up to 8 seconds each and are not retried, except once with a new token after an HTTP 401.
 
 **Speed.** Observed in November 2026: Judilibre usually answered in about a tenth of a second and Légifrance in under a second; reading a large code's table of contents took a few seconds.
 

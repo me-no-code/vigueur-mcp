@@ -3,7 +3,7 @@ title: Codes, laws and decrees
 level: guide
 tags: [legislation, codes, articles, history, collective-agreements]
 summary: Read an article, a whole text or a code's table of contents, on any date, and find the texts that amended it.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Codes, laws and decrees
@@ -83,10 +83,11 @@ article gives the same links in `concordance`: `moved` says where a version's co
 `"came_from": ["Code civil - art. 1353 (M)"]` in the history of article 1382.
 
 > **When there is no concordance**
-> Without a concordance, Vigueur compares the texts of the two versions and says only what changed:
-> `The content of this article was amended on 2020-01-01 (inferred from text comparison).` The
-> wording `inferred from text comparison` marks a comparison made by Vigueur, not a fact recorded by
-> Légifrance. The words used are *unchanged*, *amended* or *replaced*.
+> Without a concordance, Vigueur compares the words of the version you read with those of the next
+> version, and says only whether they are the same:
+> `The next version (in force from 2020-01-01, id LEGIARTI000000000002) has a different wording.`
+> or `… has the same wording.` The comparison ignores case, accents and punctuation. It says nothing
+> about where the content went. With no next version to compare, `relocation` is `null`.
 
 ## Read a whole law, ordinance, decree or order
 

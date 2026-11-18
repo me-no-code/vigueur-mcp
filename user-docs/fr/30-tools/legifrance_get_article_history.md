@@ -3,7 +3,7 @@ title: "legifrance_get_article_history"
 level: reference
 tags: [tool, legifrance, article, history]
 summary: "Lister toutes les versions d'un article de code, avec leurs dates et les textes qui l'ont créé, modifié ou abrogé."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_get_article_history
@@ -24,7 +24,7 @@ Donnez soit un code et un numéro d'article, soit un identifiant Légifrance. Un
 |---|---|---|---|---|
 | `code` | Non | Le code dans lequel chercher. | Le titre du code, comme `Code civil` ou `Code du travail`. | Tous les codes |
 | `number` | Oui, sauf si vous donnez `id` | Le numéro de l'article tel qu'on le cite. | `1240`, `L1234-1`, `L. 1234-1`. Pas en même temps que `id`. | Aucun |
-| `id` | Oui, sauf si vous donnez `number` | L'identifiant Légifrance d'une version de l'article. | `LEGIARTI` suivi de 12 chiffres. Pas en même temps que `number`. | Aucun |
+| `id` | Oui, sauf si vous donnez `number` | L'identifiant Légifrance d'une version de l'article. | `LEGIARTI` (un article de code ou de loi) ou `KALIARTI` (un article de convention collective), suivi de 12 chiffres. Pas en même temps que `number`. | Aucun |
 | `page` | Non | La page de la liste des événements à afficher. La réponse indique s'il y a une page suivante. | Un nombre entier, 1 ou plus | 1 |
 | `response_format` | Non | Le niveau de détail. | `concise`, ou `detailed` (ajoute l'identifiant de chaque article modificatif) | `concise` |
 

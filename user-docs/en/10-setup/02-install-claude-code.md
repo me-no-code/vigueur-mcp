@@ -18,7 +18,7 @@ credentials, and check that it works. Allow about ten minutes once you have your
 ## Before you start
 
 - [Claude Code](https://claude.com/claude-code), already working.
-- Node.js 20 or later, and git.
+- Node.js 22 or later, and git.
 - A PISTE account and application, with the client ID and client secret in hand. If you do not have
   them yet, see [Create your PISTE account](01-piste-account.md).
 
@@ -31,14 +31,14 @@ In a terminal, in a folder where you keep projects:
 ```
 git clone https://github.com/me-no-code/vigueur-mcp.git
 cd vigueur-mcp
-npm install
+npm ci
 npm run build
 pwd
 ```
 
 `pwd` prints the absolute path of the folder. Keep it for the next step.
 
-`npm install` may print a warning about `fsevents` and "allow-scripts". It is harmless: that package
+`npm ci` may print a warning about `fsevents` and "allow-scripts". It is harmless: that package
 is only for developers, and Vigueur does not need it.
 
 > **Keep the folder clean**

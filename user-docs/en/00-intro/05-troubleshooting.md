@@ -61,7 +61,9 @@ are:
 | `unexpected_response` | PISTE answered, but not as Vigueur expects | [A source shows `unexpected_response`](#a-source-shows-unexpected_response) |
 | `unavailable` | PISTE did not answer in time, could not be reached, or answered with a server error | [PISTE is unavailable](#piste-is-unavailable-or-timed-out) |
 
-The check asks each source once and waits up to 8 seconds for it.
+When Vigueur holds no valid token, the check first signs in to PISTE (up to 10 seconds). It then
+asks each source once and waits up to 8 seconds for it. A source that rejects the token (HTTP 401)
+is asked once more with a new token.
 
 ### Claude says it only has `vigueur_status`, or cannot find the other Vigueur tools
 
@@ -163,23 +165,25 @@ The messages you may see (`kind` `upstream_unavailable`), each followed by
 `PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.`:
 
 - `Légifrance: service error (HTTP 503)` (or another 5xx number, or `Judilibre:` instead)
-- `Légifrance: request timed out after 10000 ms`
+- `Légifrance: request timed out after 10000 ms` (or `30000 ms`)
 - `Légifrance: network error while contacting the service`
 - `PISTE authentication timed out.` or `PISTE authentication failed: network error.`
 - `PISTE authentication is unavailable (HTTP …).` or `PISTE authentication returned an unexpected
   response.`
 
-Vigueur waits up to 10 seconds for each request to PISTE. A request to Légifrance or Judilibre that
-fails this way is tried a second time before Vigueur gives up; a failed sign-in to PISTE (the
-`PISTE authentication` messages) is not. Check your internet connection, wait a moment, and ask
-again. If it keeps failing, check piste.gouv.fr for incidents.
+Vigueur waits up to 10 seconds for each request to PISTE, and up to 30 seconds for a request that
+reads a whole text, a code's table of contents or a change log. A request to Légifrance or
+Judilibre that fails this way is tried a second time before Vigueur gives up; a failed sign-in to
+PISTE (the `PISTE authentication` messages) is not. Check your internet connection, wait a moment,
+and ask again. If it keeps failing, check piste.gouv.fr for incidents.
 
 ### A source shows `unexpected_response`
 
-PISTE answered the check, but not the way Vigueur expects: an HTTP 400 or 404, or an answer Vigueur
-cannot read. `detail` gives what PISTE answered, for example `not found (HTTP 404)`. This usually
-means PISTE changed something on its side, not that your setup is wrong. Try again later; if it
-keeps happening, report it with the `detail`.
+PISTE answered the check, but not the way Vigueur expects: an HTTP 4xx other than 401, 403 and 429
+(such as 400 or 404), or an answer Vigueur cannot read or that is over 64 MB. `detail` gives what
+PISTE answered, for example `not found (HTTP 404)`. This usually means PISTE changed something on
+its side, not that your setup is wrong. Try again later; if it keeps happening, report it with the
+`detail`.
 
 ### `Légifrance did not answer within 45 s`
 
@@ -206,8 +210,10 @@ such as a shorter date range.
 ```
 
 The message starts with the source's own error, such as `Légifrance: unexpected response (not valid
-JSON)`. The source answered in a shape Vigueur did not expect. Try again later. If it persists,
-report it to the Vigueur project.
+JSON)`. The source answered in a shape Vigueur did not expect. The same error comes when an answer is
+over 64 MB, which Vigueur does not read (`Légifrance: response larger than 64 MB, not read.`), and
+when Légifrance lists an article or a text but does not return it, gives an article no start date,
+or places an article in no text. Try again later. If it persists, report it to the Vigueur project.
 
 ### `Unexpected error: …`
 
@@ -235,10 +241,10 @@ you to choose one.
 
 ### `No Légifrance decision with id …` or `No Judilibre decision with id …`
 
-The id is wrong, or the decision is in the other source. The message points you to
-`legifrance_search_case_law` or `judilibre_search_decisions`. Légifrance does not hold every Cour de
-cassation decision; for a recent one, an appeal-court one or a *rejet non spécialement motivé*, use
-Judilibre. See [RNSM/NA](03-glossary.md#rnsmna).
+The id is wrong, or the decision is in the other source. The next warning names the search of the
+same source: `legifrance_search_case_law` or `judilibre_search_decisions`. Légifrance does not hold
+every Cour de cassation decision; for a recent one, an appeal-court one or a *rejet non spécialement
+motivé*, use Judilibre. See [RNSM/NA](03-glossary.md#rnsmna).
 
 ### An empty `items` and `"outcome": "no_results"`
 
@@ -258,8 +264,9 @@ again by itself. Examples:
   LEGITEXT or JORFTEXT id.)
 - `"until" (…) is before "since" (…).` or `"date_from" must not be after "date_to".`
 - `"…" matches several texts: … Use the LEGITEXT id or the NOR.`
-- `Légifrance: request rejected (HTTP 400): …` (or another 4xx number), followed by the start of
-  the source's own explanation.
+- `Légifrance: request rejected (HTTP 400): …` (or another 4xx number), where `…` is the source's
+  own message, for example `Légifrance: request rejected (HTTP 400): L'expression à valider est fausse.`
+  When the source gives no message, it reads `Légifrance: request rejected (HTTP 400).`
 
 ## After an update
 

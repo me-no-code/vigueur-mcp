@@ -3,7 +3,7 @@ title: "Jurisprudence"
 level: guide
 tags: [case-law, judilibre, legifrance, decisions]
 summary: "Choisissez entre Légifrance et Judilibre, trouvez une décision par son numéro, son ECLI ou des mots, et lisez-la en entier ou par zone."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Jurisprudence
@@ -31,7 +31,7 @@ choisit. Connaître la différence vous aide à lire la réponse.
 Vigueur le rappelle à chaque recherche dans le fonds judiciaire de Légifrance, par une phrase dans `warnings` :
 
 ```
-"Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. For a recent, unreasoned or appeal-court decision, use judilibre_search_decisions."
+"Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. Judilibre (judilibre_search_decisions) holds those decisions."
 ```
 
 En clair : pour une décision récente, une décision non spécialement motivée
@@ -97,9 +97,9 @@ avertissement le signale quand une recherche est plus large, et la restreindre p
 les autres.
 
 Quand rien ne correspond, la réponse contient `"outcome": "no_results"` et ses avertissements répètent
-vos critères. Sur Judilibre, elle suggère aussi des pistes : n'importe quel mot au lieu de tous,
-moins de filtres, une autre juridiction, ou Légifrance. Sur le fonds judiciaire de Légifrance, elle
-répète la note de couverture ci-dessus.
+vos critères. Sur le fonds judiciaire de Légifrance, ils répètent aussi la note de couverture
+ci-dessus. Pour élargir une recherche, vous pouvez demander à Claude n'importe quel mot au lieu de
+tous (sur Judilibre), moins de filtres, une autre juridiction, ou l'autre source.
 
 ## Lire une décision
 
@@ -153,9 +153,10 @@ Claude continue à partir de là. Voir [Lire les réponses de Vigueur](05-readin
 ### Recouper avec l'autre source
 
 Une décision de la Cour de cassation qui a un ECLI porte, sur sa dernière page, un champ `other_source`
-qui contient la recherche permettant de la trouver dans l'autre source : sur Légifrance, la recherche
-Judilibre (où elle figure en général plus tôt, avec ses zones) ; sur Judilibre, la recherche Légifrance (quand
-Légifrance la détient, en général des semaines plus tard).
+qui contient l'appel cherchant cet ECLI dans l'autre source : sur Légifrance, une recherche Judilibre
+(Légifrance la donne pour toute décision judiciaire dotée d'un ECLI) ; sur Judilibre, une recherche
+Légifrance. La recherche peut ne rien trouver. Judilibre a en général la décision plus tôt, avec ses
+zones ; Légifrance, quand il la détient, des semaines plus tard.
 
 ## Voir aussi
 

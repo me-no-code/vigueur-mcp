@@ -61,7 +61,9 @@ Un problème apparaît comme un `state` autre que `ok` dans l'entrée de la sour
 | `unexpected_response` | PISTE a répondu, mais pas comme Vigueur s'y attend | [Une source affiche `unexpected_response`](#une-source-affiche-unexpected_response) |
 | `unavailable` | PISTE n'a pas répondu à temps, n'a pas pu être joint, ou a répondu par une erreur de serveur | [PISTE est indisponible](#piste-est-indisponible-ou-a-dépassé-le-délai) |
 
-La vérification interroge chaque source une fois et attend sa réponse jusqu'à 8 secondes.
+Quand Vigueur n'a pas de jeton valide, la vérification se connecte d'abord à PISTE (jusqu'à
+10 secondes). Elle interroge ensuite chaque source une fois et attend sa réponse jusqu'à 8 secondes.
+Une source qui rejette le jeton (HTTP 401) est interrogée une seconde fois avec un nouveau jeton.
 
 ### Claude dit n'avoir que `vigueur_status`, ou ne trouve pas les autres outils de Vigueur
 
@@ -169,24 +171,26 @@ Les messages que vous pouvez voir (`kind` `upstream_unavailable`), chacun suivi 
 `PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.` :
 
 - `Légifrance: service error (HTTP 503)` (ou un autre numéro 5xx, ou `Judilibre:` à la place)
-- `Légifrance: request timed out after 10000 ms`
+- `Légifrance: request timed out after 10000 ms` (ou `30000 ms`)
 - `Légifrance: network error while contacting the service`
 - `PISTE authentication timed out.` ou `PISTE authentication failed: network error.`
 - `PISTE authentication is unavailable (HTTP …).` ou `PISTE authentication returned an unexpected
   response.`
 
-Vigueur attend jusqu'à 10 secondes la réponse à chaque requête envoyée à PISTE. Une requête vers
-Légifrance ou Judilibre qui échoue ainsi est tentée une seconde fois avant que Vigueur abandonne ; une
-connexion à PISTE qui échoue (les messages `PISTE authentication`) ne l'est pas. Vérifiez votre
-connexion internet, attendez un moment et reposez la question. Si l'échec persiste, vérifiez sur
-piste.gouv.fr s'il y a un incident en cours.
+Vigueur attend jusqu'à 10 secondes la réponse à chaque requête envoyée à PISTE, et jusqu'à
+30 secondes pour une requête qui lit un texte entier, la table des matières d'un code ou un journal
+des modifications. Une requête vers Légifrance ou Judilibre qui échoue ainsi est tentée une seconde
+fois avant que Vigueur abandonne ; une connexion à PISTE qui échoue (les messages
+`PISTE authentication`) ne l'est pas. Vérifiez votre connexion internet, attendez un moment et
+reposez la question. Si l'échec persiste, vérifiez sur piste.gouv.fr s'il y a un incident en cours.
 
 ### Une source affiche `unexpected_response`
 
-PISTE a répondu à la vérification, mais pas comme Vigueur s'y attend : un HTTP 400 ou 404, ou une
-réponse que Vigueur ne peut pas lire. `detail` donne ce que PISTE a répondu, par exemple `not found (HTTP 404)`. Cela signifie en général que PISTE a changé quelque chose de son côté, pas que
-votre installation est en cause. Réessayez plus tard ; si cela persiste, signalez-le avec le
-`detail`.
+PISTE a répondu à la vérification, mais pas comme Vigueur s'y attend : un HTTP 4xx autre que 401,
+403 et 429 (comme 400 ou 404), ou une réponse que Vigueur ne peut pas lire ou qui dépasse 64 Mo.
+`detail` donne ce que PISTE a répondu, par exemple `not found (HTTP 404)`. Cela signifie en général
+que PISTE a changé quelque chose de son côté, pas que votre installation est en cause. Réessayez
+plus tard ; si cela persiste, signalez-le avec le `detail`.
 
 ### `Légifrance did not answer within 45 s`
 
@@ -213,8 +217,11 @@ restreinte, par exemple sur une période plus courte.
 ```
 
 Le message commence par l'erreur propre à la source, comme `Légifrance: unexpected response (not valid
-JSON)`. La source a répondu sous une forme que Vigueur n'attendait pas. Réessayez plus
-tard. Si cela persiste, signalez-le au projet Vigueur.
+JSON)`. La source a répondu sous une forme que Vigueur n'attendait pas. La même erreur survient
+quand une réponse dépasse 64 Mo, que Vigueur ne lit pas (`Légifrance: response larger than 64 MB, not read.`),
+et quand Légifrance liste un article ou un texte sans le renvoyer, ne donne pas de date de début à un
+article, ou ne rattache un article à aucun texte. Réessayez plus tard. Si cela persiste, signalez-le
+au projet Vigueur.
 
 ### `Unexpected error: …`
 
@@ -242,8 +249,8 @@ candidats et vous demande d'en choisir un.
 
 ### `No Légifrance decision with id …` ou `No Judilibre decision with id …`
 
-L'identifiant est erroné, ou la décision est dans l'autre source. Le message vous renvoie à
-`legifrance_search_case_law` ou `judilibre_search_decisions`. Légifrance ne détient pas toutes les
+L'identifiant est erroné, ou la décision est dans l'autre source. L'avertissement suivant nomme la
+recherche de la même source : `legifrance_search_case_law` ou `judilibre_search_decisions`. Légifrance ne détient pas toutes les
 décisions de la Cour de cassation ; pour une décision récente, une décision de cour d'appel ou un
 rejet non spécialement motivé, utilisez Judilibre. Voir [RNSM/NA](03-glossary.md#rnsmna).
 
@@ -266,8 +273,9 @@ de lui-même. Exemples :
   l'identifiant LEGITEXT ou JORFTEXT.)
 - `"until" (…) is before "since" (…).` ou `"date_from" must not be after "date_to".`
 - `"…" matches several texts: … Use the LEGITEXT id or the NOR.`
-- `Légifrance: request rejected (HTTP 400): …` (ou un autre numéro 4xx), suivi du début de
-  l'explication propre à la source.
+- `Légifrance: request rejected (HTTP 400): …` (ou un autre numéro 4xx), où `…` est le message
+  propre à la source, par exemple `Légifrance: request rejected (HTTP 400): L'expression à valider est fausse.`
+  Quand la source ne donne pas de message, il se lit `Légifrance: request rejected (HTTP 400).`
 
 ## Après une mise à jour
 

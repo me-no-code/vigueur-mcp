@@ -3,7 +3,7 @@ title: "Codes, lois et décrets"
 level: guide
 tags: [legislation, codes, articles, history, collective-agreements]
 summary: "Lisez un article, un texte entier ou la table des matières d'un code, à n'importe quelle date, et trouvez les textes qui l'ont modifié."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Codes, lois et décrets
@@ -88,10 +88,12 @@ contenu d'une version, et `came_from` liste les articles dont le contenu se trou
 numéro, par exemple `"came_from": ["Code civil - art. 1353 (M)"]` dans l'historique de l'article 1382.
 
 > **Quand il n'y a pas de concordance**
-> Sans concordance, Vigueur compare les textes des deux versions et dit seulement ce qui a changé :
-> `The content of this article was amended on 2020-01-01 (inferred from text comparison).` La
-> formule `inferred from text comparison` signale une comparaison faite par Vigueur, non un fait
-> enregistré par Légifrance. Les mots employés sont *unchanged*, *amended* ou *replaced*.
+> Sans concordance, Vigueur compare les mots de la version lue à ceux de la version suivante, et dit
+> seulement s'ils sont identiques :
+> `The next version (in force from 2020-01-01, id LEGIARTI000000000002) has a different wording.`
+> ou `… has the same wording.` La comparaison ne tient compte ni de la casse, ni des accents, ni de la
+> ponctuation. Elle ne dit rien de l'endroit où le contenu est allé. Sans version suivante à comparer,
+> `relocation` vaut `null`.
 
 ## Lire une loi, une ordonnance, un décret ou un arrêté en entier
 

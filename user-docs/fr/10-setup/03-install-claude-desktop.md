@@ -29,13 +29,13 @@ compte PISTE obtenu.
 
 Le fichier porte le numéro de sa version, par exemple `vigueur-0.1.0.mcpb`. Chaque version de
 Vigueur le publiera sur la page GitHub Releases du projet. Aucune version n'est encore publiée :
-d'ici là, compilez le fichier vous-même. Il vous faut Node.js 20 ou plus récent, et git. Dans un
+d'ici là, compilez le fichier vous-même. Il vous faut Node.js 22 ou plus récent, et git. Dans un
 terminal :
 
 ```
 git clone https://github.com/me-no-code/vigueur-mcp.git
 cd vigueur-mcp
-npm install
+npm ci
 npm run bundle
 ```
 

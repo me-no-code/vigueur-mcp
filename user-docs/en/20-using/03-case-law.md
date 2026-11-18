@@ -3,7 +3,7 @@ title: Case law
 level: guide
 tags: [case-law, judilibre, legifrance, decisions]
 summary: Choose between Légifrance and Judilibre, find a decision by number, ECLI or words, and read it whole or by zone.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # Case law
@@ -31,7 +31,7 @@ read the answer.
 Vigueur states this each time it searches the judicial collection on Légifrance, as a sentence in `warnings`:
 
 ```
-"Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. For a recent, unreasoned or appeal-court decision, use judilibre_search_decisions."
+"Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. Judilibre (judilibre_search_decisions) holds those decisions."
 ```
 
 In plain words: for a recent decision, an unreasoned one
@@ -91,9 +91,10 @@ page you are on (`page`) and the sort order (`order`). On Légifrance you can so
 Judilibre also oldest first. Judilibre pages through its first 10,000 results only; a warning says
 so when a search is larger, and narrowing it shows the others.
 
-When nothing matches, the answer has `"outcome": "no_results"` and its warnings repeat your criteria. On Judilibre it also suggests what to try:
-any word instead of all, fewer filters, another jurisdiction, or Légifrance. On Légifrance's
-judicial collection it repeats the coverage note above.
+When nothing matches, the answer has `"outcome": "no_results"` and its warnings repeat your
+criteria. On Légifrance's judicial collection they also repeat the coverage note above. To widen a
+search, you can ask Claude for any word instead of all (on Judilibre), fewer filters, another
+jurisdiction, or the other source.
 
 ## Read a decision
 
@@ -143,8 +144,10 @@ characters are shown and `next` gives the `offset` to continue from, and Claude 
 ### Cross-checking the other source
 
 A Cour de cassation decision with an ECLI has, on its last page, an `other_source` field holding the
-search that finds it in the other source: on Légifrance, the Judilibre search (usually earlier, with zones); on Judilibre,
-the Légifrance search (when Légifrance holds it, usually weeks later).
+call that searches the other source for that ECLI: on Légifrance, a Judilibre search (Légifrance
+gives it for any judicial decision with an ECLI); on Judilibre, a Légifrance search. The search may
+find nothing. Judilibre usually has the decision earlier, with zones; Légifrance, when it holds it,
+weeks later.
 
 ## Related
 

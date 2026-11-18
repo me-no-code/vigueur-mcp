@@ -3,7 +3,7 @@ title: "legifrance_get_decision"
 level: reference
 tags: [tool, legifrance, case-law, read]
 summary: "Lire une décision de Légifrance à partir de son identifiant, avec son identité, son lien officiel et son texte intégral, page par page."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_get_decision
@@ -36,7 +36,7 @@ Le type de réponse (`outcome`) vaut `found` ou `not_found`.
   "source": "Légifrance",
   "outcome": "found",
   "warnings": [
-    "Same decision on Judilibre (usually earlier, with zones)."
+    "other_source searches Judilibre for this decision's ECLI."
   ],
   "id": "JURITEXT000053197030",
   "ecli": "ECLI:FR:CCASS:2025:SO01200",
@@ -91,7 +91,7 @@ Le type de réponse (`outcome`) vaut `found` ou `not_found`.
 | `summary` | Le [sommaire](../00-intro/03-glossary.md), coupé s'il est long ; `null` quand il n'y en a pas et sur chaque page après la première. |
 | `part`, `next` | `null` quand le texte est entier. Voir « Textes longs » ci-dessous. |
 | `text` | Le texte de la décision, mot pour mot. Les noms sont pseudonymisés par la source. |
-| `other_source` | Sur la dernière page d'une décision judiciaire ayant un ECLI, l'appel qui trouve la même décision sur Judilibre ; `null` sinon. Un avertissement dit la même chose : `Same decision on Judilibre (usually earlier, with zones).` |
+| `other_source` | Sur la dernière page d'une décision judiciaire ayant un ECLI, l'appel qui cherche l'ECLI de cette décision sur Judilibre ; `null` sinon. Un avertissement dit la même chose : `other_source searches Judilibre for this decision's ECLI.` La recherche peut ne rien trouver. |
 
 Une décision du Conseil constitutionnel remplit ses propres champs :
 

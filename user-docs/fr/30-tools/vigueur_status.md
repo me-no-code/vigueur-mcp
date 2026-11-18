@@ -108,10 +108,10 @@ Chaque vérification contient la `source` sondée, son `state`, un `detail` (la 
 | `not_enabled` | PISTE a refusé la requête (HTTP 403) : votre application n'est pas abonnée à l'API. | [Créer votre compte PISTE](../10-setup/01-piste-account.md), étapes 3 et 4 |
 | `credentials_invalid` | PISTE a rejeté l'identifiant client et le secret. | [PISTE a rejeté mes identifiants](../00-intro/05-troubleshooting.md#piste-a-rejeté-mes-identifiants) |
 | `quota_exceeded` | La limite de débit de PISTE est atteinte. `retry_after_seconds` donne le délai indiqué par PISTE, quand il en indique un. | [Quota](../00-intro/05-troubleshooting.md#piste-indique-que-le-quota-est-atteint) |
-| `unexpected_response` | PISTE a répondu, mais pas comme Vigueur s'y attend : un HTTP 400 ou 404, ou un corps que Vigueur ne peut pas lire. Peut-être un changement d'API ; `detail` donne la réponse. | [Une source affiche `unexpected_response`](../00-intro/05-troubleshooting.md#une-source-affiche-unexpected_response) |
-| `unavailable` | PISTE ou la source n'a pas répondu à temps, n'a pas pu être jointe, ou a répondu par une erreur serveur. | [PISTE est indisponible](../00-intro/05-troubleshooting.md#piste-est-indisponible-ou-a-dépassé-le-délai) |
+| `unexpected_response` | PISTE a répondu, mais pas comme Vigueur s'y attend : un HTTP 4xx autre que 401, 403 et 429, ou un corps que Vigueur ne peut pas lire ou de plus de 64 Mo. Peut-être un changement d'API ; `detail` donne la réponse. | [Une source affiche `unexpected_response`](../00-intro/05-troubleshooting.md#une-source-affiche-unexpected_response) |
+| `unavailable` | PISTE ou la source n'a pas répondu à temps, n'a pas pu être jointe, ou a répondu par une erreur serveur. Une réponse du service de jetons de PISTE que Vigueur ne peut pas lire apparaît aussi ici. | [PISTE est indisponible](../00-intro/05-troubleshooting.md#piste-est-indisponible-ou-a-dépassé-le-délai) |
 
-Comment chaque source est vérifiée : Légifrance en demandant la liste des codes (une entrée), Judilibre par son test de disponibilité. Les deux sont vérifiées en même temps. Une vérification attend jusqu'à 8 secondes et n'est pas retentée. Une source qui refuse la vérification est signalée dans le résultat de la vérification, pas comme une erreur.
+Comment chaque source est vérifiée : Légifrance en demandant la liste des codes (une entrée), Judilibre par son test de disponibilité. Quand Vigueur n'a pas de jeton valide, il se connecte d'abord à PISTE (jusqu'à 10 secondes). Les deux sources sont ensuite vérifiées en même temps. Une vérification attend jusqu'à 8 secondes et n'est pas retentée, sauf une fois avec un nouveau jeton après un HTTP 401. Une source qui refuse la vérification est signalée dans le résultat de la vérification, pas comme une erreur.
 
 ## Réponses d'erreur que tout outil Vigueur peut donner
 
@@ -147,7 +147,7 @@ Quand un outil échoue, la réponse est marquée comme une erreur et c'est un ob
 | Accès refusé (HTTP 403) | `forbidden` | Le message seul : `Légifrance: access refused (HTTP 403)` (ou `Judilibre:`) |
 | Quota atteint (HTTP 429, après une nouvelle tentative) | `quota_exceeded` | Se termine par `PISTE quota reached. Retry in about {n} s.` ou `PISTE quota reached. Wait a moment and try again.` |
 | PISTE ou la source indisponible, délai dépassé ou injoignable (après une nouvelle tentative ; une connexion PISTE échouée n'est pas retentée) | `upstream_unavailable` | Se termine par `PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.` |
-| Une réponse que Vigueur ne comprend pas | `unexpected_response` | Se termine par `{Source} returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.` |
+| Une réponse que Vigueur ne comprend pas, ou de plus de 64 Mo | `unexpected_response` | Se termine par `{Source} returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.` |
 | Pas de réponse en 45 secondes | `deadline` | Le message entier : `{Source} did not answer within 45 s. Try again in a moment.` |
 | Une requête que Vigueur ou la source juge invalide | `invalid_input` | Le message seul, par exemple `"date_from" must not be after "date_to".` |
 | Toute autre situation | `unexpected` | Le message entier : `Unexpected error: {message}. Call vigueur_status to check the setup.` |

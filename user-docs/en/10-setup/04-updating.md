@@ -32,7 +32,7 @@ and reconnect the server.
    ```
    cd /absolute/path/to/vigueur-mcp
    git pull
-   npm install
+   npm ci
    npm run build
    ```
 

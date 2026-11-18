@@ -3,7 +3,7 @@ title: legifrance_get_article
 level: reference
 tags: [tool, legifrance, article, code]
 summary: Read one article of a French code on a given date, and see whether it was in force then and where its content moved.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_get_article
@@ -25,7 +25,7 @@ Give either a code and an article number, or a Légifrance id. Everything else i
 |---|---|---|---|---|
 | `code` | No | The code to look in. Ignored when you give an `id`. | The code's title, such as `Code civil` or `Code du travail`. Common abbreviations work, for example `C. trav.`, `C. civ.`, `CGI`, `CPC`. | Every code |
 | `number` | Yes, unless you give `id` | The article number as people cite it. | `1240`, `L1234-1`, `L. 1234-1`, `199 undecies B`. A leading "article" or "art." is dropped. Not together with `id`. | None |
-| `id` | Yes, unless you give `number` | The Légifrance id of one article version. | `LEGIARTI` followed by 12 digits (a code article), or `KALIARTI` followed by 12 digits (a collective agreement article). Not together with `number`. | None |
+| `id` | Yes, unless you give `number` | The Légifrance id of one article version. | `LEGIARTI` (a code or law article) or `KALIARTI` (a collective agreement article), followed by 12 digits. Not together with `number`. | None |
 | `at_date` | No | The date at which to read the article. It can be in the past or in the future. | A real date as `YYYY-MM-DD` | Today (date in Paris) |
 | `response_format` | No | How much to show. | `concise` or `detailed` (adds every version, the amending texts and the number of texts citing the article) | `concise` |
 | `offset` | No | Continues a long article text from a character position. The answer gives the value to use. | A whole number, 0 or more | 0 |
@@ -93,7 +93,7 @@ The `outcome` says which kind of answer you got: `found`, `not_in_force`, `sever
 | `code`, `code_id`, `number` | The code's title and id, and the article number. |
 | `section`, `section_id` | The titles from the code's outermost part down to the section holding the article, and that section's id. |
 | `note` | Légifrance's note on the article, or `null`. |
-| `relocation` | A sentence saying where the content moved or whether it changed (see below), or `null`. |
+| `relocation` | Where the content of this version went per Légifrance concordance, or whether the next version has the same wording (see below); `null` when neither is recorded. |
 | `neighbours` | `null` unless you asked for them: see below. |
 | `versions`, `modifications`, `cited_by` | `null` in a `concise` answer; filled in a `detailed` one: see below. |
 | `part`, `next` | `null` when the text is whole. See "A long article" below. |
@@ -110,13 +110,13 @@ The `outcome` says which kind of answer you got: `found`, `not_in_force`, `sever
 
 `from` is the version's first day and `until` the day it ends, not included (the first day it no longer applies), each `null` when Légifrance gives none. `until_undetermined` is `true` when Légifrance records an end (a repeal) whose date it has not set. `on` is the date you asked for, today by default.
 
-When a later version of the article exists, or the version shown has ended, `relocation` says whether its content was amended or moved. When Légifrance records a move, the answer reports it:
+`relocation` says what followed the version shown. When Légifrance records that its content moved (a concordance), the answer reports it:
 
 ```
 "relocation": "Content moved — per Légifrance concordance, the text of art. 1382 as of 2015-01-01 is now at Code civil - art. 1240 (V) (since 2016-10-01)."
 ```
 
-When the move is in the future it reads `Content will move — per Légifrance concordance, … will be at … from <date>.` When Légifrance records no move, Vigueur compares the texts and says so: `The content of this article was amended on 2020-01-01 (inferred from text comparison).` The words after "was" or "will be" are `amended` or `replaced`, and a text that did not change reads `stayed unchanged in the next version` (future: `will stay unchanged`). This sentence is an inference from the two texts, not a fact stated by Légifrance, and the answer says so.
+When the move is in the future it reads `Content will move — per Légifrance concordance, … will be at … from <date>.` When Légifrance records no move and a next version exists, the sentence says only whether that version has the same wording: `The next version (in force from 2020-01-01, id LEGIARTI000000000002) has a different wording.` or `… has the same wording.` Vigueur compares the two texts as they are, setting aside typography alone (quote and dash styles, spacing): a change of case, accent or punctuation is a different wording. Otherwise `relocation` is `null`.
 
 With `include_neighbours`, `neighbours` gives the previous and next article of the section. A neighbour that does not exist, or could not be read, is `null` (a warning then says why):
 
@@ -340,6 +340,7 @@ The article exists but nothing applied on the day. `periods` lists the versions 
     }
   ],
   "relocation": null,
+  "incomplete": false,
   "request": {
     "tool": "legifrance_get_article",
     "code": "Code du travail",
@@ -356,6 +357,8 @@ The article exists but nothing applied on the day. `periods` lists the versions 
 ```
 
 `relocation` may give the move of the content (`Content moved — per Légifrance concordance, the text of art. R4217-2 (version 2008-05-01 → 2026-10-01) is now at …`). When a listed period's dates cover the day although Légifrance's dated search found nothing, the answer does not say "was not in force". It says `Légifrance's dated search found no version in force on <date>. Versions on record.` and adds a warning naming the period.
+
+`incomplete` is `true` when Légifrance returned a full page of versions, so more versions may exist. The warnings then include `Légifrance returned a full page of versions: more versions may exist.`, and `relocation` is `null`.
 
 ### Not found (`not_found`)
 
@@ -385,9 +388,9 @@ Other errors (missing credentials, quota, source unavailable, no answer within 4
 > **The verdict comes from dates.** "In force" is computed from the validity dates Légifrance gives for the version. Vigueur reports it and any disagreement with Légifrance's label; it does not say what the article means for your case.
 
 - One article version per answer. To see every version and the texts that amended them, use [`legifrance_get_article_history`](legifrance_get_article_history.md).
-- It reads code articles, and collective agreement articles by their id. It does not read whole laws or decrees: use [`legifrance_get_text`](legifrance_get_text.md).
+- It reads code articles by their number, and code, law and collective agreement articles by their id. It does not read whole laws or decrees: use [`legifrance_get_text`](legifrance_get_text.md).
 - It finds an article by its number, not by its words: to find articles on a subject, use [`legifrance_search_legislation`](legifrance_search_legislation.md).
-- Where content moved, the answer relies on Légifrance's own record of concordances. When there is none, the "inferred from text comparison" sentence is an inference.
+- Where content moved, the answer relies on Légifrance's own record of concordances. Without one, it says only whether the next version has the same wording, not where the content went.
 
 ## Related
 

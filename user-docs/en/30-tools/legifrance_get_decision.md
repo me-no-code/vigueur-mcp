@@ -3,7 +3,7 @@ title: legifrance_get_decision
 level: reference
 tags: [tool, legifrance, case-law, read]
 summary: Read one decision from Légifrance by its id, with its identity, official link and full text, page by page.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_get_decision
@@ -36,7 +36,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
   "source": "Légifrance",
   "outcome": "found",
   "warnings": [
-    "Same decision on Judilibre (usually earlier, with zones)."
+    "other_source searches Judilibre for this decision's ECLI."
   ],
   "id": "JURITEXT000053197030",
   "ecli": "ECLI:FR:CCASS:2025:SO01200",
@@ -91,7 +91,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 | `summary` | The summary ([*sommaire*](../00-intro/03-glossary.md)), cut when long; `null` when there is none and on every page after the first. |
 | `part`, `next` | `null` when the text is whole. See "Long texts" below. |
 | `text` | The text of the decision, verbatim. Names are pseudonymised by the source. |
-| `other_source` | On the last page of a judicial decision with an ECLI, the call that finds the same decision on Judilibre; otherwise `null`. A warning says the same: `Same decision on Judilibre (usually earlier, with zones).` |
+| `other_source` | On the last page of a judicial decision with an ECLI, the call that searches Judilibre for this decision's ECLI; otherwise `null`. A warning says the same: `other_source searches Judilibre for this decision's ECLI.` The search may find nothing. |
 
 A Conseil constitutionnel decision fills its own fields:
 

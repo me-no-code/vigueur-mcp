@@ -51,8 +51,9 @@ client secret: its value is removed from your system's credential store.
 ## What the logs hold
 
 The logs record connection events and Vigueur's startup line. Claude Code's logs also record the
-names of the tools called with their timing, and error traces. They hold no tool arguments, no
-results and no credentials. See [Privacy and your data](../00-intro/04-privacy-and-your-data.md#logs).
+names of the tools called with their timing, and error traces. Vigueur's own messages name a tool
+in two cases only: an answer over the size cap, and an unexpected error (its stack trace). The logs
+hold no tool arguments, no results and no credentials. See [Privacy and your data](../00-intro/04-privacy-and-your-data.md#logs).
 
 ## Reinstall later
 

@@ -81,7 +81,10 @@ identifiants, ni vos questions.
 - `main.log`, le journal propre de Claude Desktop : parmi ses autres messages, la ligne de
   démarrage de Vigueur, qui indique sa version et l'environnement PISTE utilisé.
 
-Ils n'enregistrent pas les outils que Claude a appelés.
+Ils ne nomment un outil appelé par Claude que dans deux cas, par des messages de Vigueur lui-même
+écrits dans `main.log` : une réponse qui dépasse la taille maximale
+(`<tool> answer (<source>, <outcome>) is N characters, over the 40000-character cap.`) et une
+erreur inattendue (sa trace d'erreur).
 
 **Claude Code** tient un journal de connexion pour chaque projet où Vigueur a fonctionné. Sur macOS,
 ils se trouvent dans `~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-plugin-vigueur-vigueur/`.

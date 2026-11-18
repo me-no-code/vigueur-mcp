@@ -77,7 +77,9 @@ Neither app's logs hold tool arguments, results, credentials or your questions.
 - `main.log`, Claude Desktop's own log: among its other messages, Vigueur's startup line, which
   states its version and the PISTE environment in use.
 
-They do not record which tools Claude called.
+They name a tool Claude called in two cases only, both in Vigueur's own messages in `main.log`:
+an answer over the size cap (`<tool> answer (<source>, <outcome>) is N characters, over the 40000-character cap.`)
+and an unexpected error (its stack trace).
 
 **Claude Code** keeps a connection log for each project where Vigueur ran. On macOS they are in
 `~/Library/Caches/claude-cli-nodejs/<project>/mcp-logs-plugin-vigueur-vigueur/`. A log records:

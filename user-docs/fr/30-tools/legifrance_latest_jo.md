@@ -3,7 +3,7 @@ title: "legifrance_latest_jo"
 level: reference
 tags: [tool, legifrance, journal-officiel, jorf]
 summary: "Lire les derniers numéros du Journal officiel, ou ceux d'une date de publication, avec la table des matières de chacun."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_latest_jo
@@ -98,7 +98,7 @@ Le type de réponse (`outcome`) vaut `results`, ou `no_results` quand rien ne co
 | `filter` | Les filtres appliqués : `nature` et `emitter` (`null` s'ils ne sont pas utilisés), et `matched_emitters`, les graphies que le filtre `emitter` a trouvées (les noms de ministères changent avec les gouvernements, donc plusieurs graphies peuvent correspondre). |
 | `items` | Les numéros de cette page, dans l'ordre où Légifrance les donne. |
 
-Un numéro contient son `id`, son `number`, son `title`, `published` (sa date de publication, pas une date d'entrée en vigueur), son `link` officiel, et `toc_available`, qui vaut `false` quand Légifrance ne donne aucune table des matières pour lui (`groups` est alors vide). `groups` liste ses textes regroupés selon leur place dans la table des matières : le `path` des titres, du plus englobant au plus précis, et les `texts`. Un texte contient son `id` (`JORFTEXT…`), son `title`, sa `nature`, son `emitter` (le ministère, sinon l'émetteur ; chacun vaut `null` s'il n'est pas donné) et son `link`.
+Un numéro contient son `id`, son `number`, son `title`, `published` (sa date de publication, pas une date d'entrée en vigueur), son `link` officiel (`number`, `published` et `link` valent chacun `null` quand Légifrance n'en donne pas), et `toc_available`, qui vaut `false` quand Légifrance ne donne aucune table des matières pour lui (`groups` est alors vide). `groups` liste ses textes regroupés selon leur place dans la table des matières : le `path` des titres, du plus englobant au plus précis, et les `texts`. Un texte contient son `id` (`JORFTEXT…`), son `title`, sa `nature`, son `emitter` (le ministère, sinon l'émetteur ; chacun vaut `null` s'il n'est pas donné) et son `link`.
 
 ### Quand rien ne correspond (`no_results`)
 

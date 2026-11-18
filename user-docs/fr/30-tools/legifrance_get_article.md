@@ -3,7 +3,7 @@ title: "legifrance_get_article"
 level: reference
 tags: [tool, legifrance, article, code]
 summary: "Lire un article d'un code français à une date donnée, et voir s'il était en vigueur à cette date et où son contenu a été déplacé."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_get_article
@@ -25,7 +25,7 @@ Donnez soit un code et un numéro d'article, soit un identifiant Légifrance. To
 |---|---|---|---|---|
 | `code` | Non | Le code dans lequel chercher. Ignoré si vous donnez un `id`. | Le titre du code, comme `Code civil` ou `Code du travail`. Les abréviations courantes fonctionnent, par exemple `C. trav.`, `C. civ.`, `CGI`, `CPC`. | Tous les codes |
 | `number` | Oui, sauf si vous donnez `id` | Le numéro de l'article tel qu'on le cite. | `1240`, `L1234-1`, `L. 1234-1`, `199 undecies B`. Un « article » ou « art. » en tête est ignoré. Pas en même temps que `id`. | Aucun |
-| `id` | Oui, sauf si vous donnez `number` | L'identifiant Légifrance d'une version d'un article. | `LEGIARTI` suivi de 12 chiffres (un article de code), ou `KALIARTI` suivi de 12 chiffres (un article de convention collective). Pas en même temps que `number`. | Aucun |
+| `id` | Oui, sauf si vous donnez `number` | L'identifiant Légifrance d'une version d'un article. | `LEGIARTI` (un article de code ou de loi) ou `KALIARTI` (un article de convention collective), suivi de 12 chiffres. Pas en même temps que `number`. | Aucun |
 | `at_date` | Non | La date à laquelle lire l'article. Elle peut être passée ou future. | Une date valide au format `YYYY-MM-DD` | Aujourd'hui (heure de Paris) |
 | `response_format` | Non | Le niveau de détail. | `concise` ou `detailed` (ajoute toutes les versions, les textes modificatifs et le nombre de textes qui citent l'article) | `concise` |
 | `offset` | Non | Poursuit le texte d'un long article à partir d'une position en caractères. La réponse donne la valeur à utiliser. | Un nombre entier, 0 ou plus | 0 |
@@ -93,7 +93,7 @@ Le champ `outcome` indique le type de réponse obtenu : `found`, `not_in_force`,
 | `code`, `code_id`, `number` | Le titre et l'identifiant du code, et le numéro de l'article. |
 | `section`, `section_id` | Les intitulés, de la partie la plus large du code jusqu'à la section qui contient l'article, et l'identifiant de cette section. |
 | `note` | La note de Légifrance sur l'article, ou `null`. |
-| `relocation` | Une phrase qui dit où le contenu a été déplacé ou s'il a changé (voir plus bas), ou `null`. |
+| `relocation` | Où le contenu de cette version est allé selon la concordance de Légifrance, ou si la version suivante a la même rédaction (voir plus bas) ; `null` quand rien de cela n'est enregistré. |
 | `neighbours` | `null` sauf si vous les avez demandés : voir plus bas. |
 | `versions`, `modifications`, `cited_by` | `null` dans une réponse `concise` ; remplis dans une réponse `detailed` : voir plus bas. |
 | `part`, `next` | `null` quand le texte est entier. Voir « Un long article, découpé en pages » plus bas. |
@@ -110,13 +110,13 @@ Le champ `outcome` indique le type de réponse obtenu : `found`, `not_in_force`,
 
 `from` est le premier jour de la version et `until` le jour où elle prend fin, non compris (le premier jour où elle ne s'applique plus), chacun `null` quand Légifrance n'en donne pas. `until_undetermined` vaut `true` quand Légifrance enregistre une fin (une abrogation) dont il n'a pas fixé la date. `on` est la date que vous avez demandée, aujourd'hui par défaut.
 
-Quand il existe une version ultérieure de l'article, ou que la version affichée a pris fin, `relocation` dit si son contenu a été modifié ou déplacé. Quand Légifrance enregistre un déplacement, la réponse le signale :
+`relocation` dit ce qui a suivi la version affichée. Quand Légifrance enregistre que son contenu a été déplacé (une concordance), la réponse le signale :
 
 ```
 "relocation": "Content moved — per Légifrance concordance, the text of art. 1382 as of 2015-01-01 is now at Code civil - art. 1240 (V) (since 2016-10-01)."
 ```
 
-Quand le déplacement est à venir, la phrase est `Content will move — per Légifrance concordance, … will be at … from <date>.` Quand Légifrance n'enregistre aucun déplacement, Vigueur compare les textes et le dit : `The content of this article was amended on 2020-01-01 (inferred from text comparison).` Les mots qui suivent « was » ou « will be » sont `amended` ou `replaced`, et, pour un texte qui n'a pas changé, la phrase dit `stayed unchanged in the next version` (au futur : `will stay unchanged`). Cette phrase est une déduction tirée de la comparaison des deux textes, et non un fait énoncé par Légifrance ; la réponse le précise.
+Quand le déplacement est à venir, la phrase est `Content will move — per Légifrance concordance, … will be at … from <date>.` Quand Légifrance n'enregistre aucun déplacement et qu'une version suivante existe, la phrase dit seulement si cette version a la même rédaction : `The next version (in force from 2020-01-01, id LEGIARTI000000000002) has a different wording.` ou `… has the same wording.` Vigueur compare les deux textes tels quels, en ne laissant de côté que la typographie (forme des apostrophes et des tirets, espaces) : un changement de majuscule, d'accent ou de ponctuation est une rédaction différente. Sinon, `relocation` vaut `null`.
 
 Avec `include_neighbours`, `neighbours` donne l'article précédent et l'article suivant de la section. Un voisin qui n'existe pas, ou qui n'a pas pu être lu, vaut `null` (un avertissement en donne alors la raison) :
 
@@ -340,6 +340,7 @@ L'article existe, mais rien ne s'appliquait ce jour-là. `periods` liste les ver
     }
   ],
   "relocation": null,
+  "incomplete": false,
   "request": {
     "tool": "legifrance_get_article",
     "code": "Code du travail",
@@ -356,6 +357,8 @@ L'article existe, mais rien ne s'appliquait ce jour-là. `periods` liste les ver
 ```
 
 `relocation` peut donner le déplacement du contenu (`Content moved — per Légifrance concordance, the text of art. R4217-2 (version 2008-05-01 → 2026-10-01) is now at …`). Quand les dates d'une période listée couvrent le jour alors que la recherche datée de Légifrance n'a rien trouvé, la réponse ne dit pas « was not in force ». Elle dit `Légifrance's dated search found no version in force on <date>. Versions on record.` et ajoute un avertissement qui nomme la période.
+
+`incomplete` vaut `true` quand Légifrance a renvoyé une page complète de versions : d'autres versions peuvent donc exister. Les avertissements comprennent alors `Légifrance returned a full page of versions: more versions may exist.`, et `relocation` vaut `null`.
 
 ### Introuvable (`not_found`)
 
@@ -385,9 +388,9 @@ Les autres erreurs (identifiants manquants, quota, source indisponible, aucune r
 > **Le verdict vient des dates.** « En vigueur » est calculé à partir des dates de vigueur que Légifrance donne pour la version. Vigueur le rapporte, ainsi que tout désaccord avec le libellé de Légifrance ; il ne dit pas ce que l'article signifie pour votre cas.
 
 - Une seule version d'article par réponse. Pour voir toutes les versions et les textes qui les ont modifiées, utilisez [`legifrance_get_article_history`](legifrance_get_article_history.md).
-- L'outil lit les articles de codes, et les articles de conventions collectives par leur identifiant. Il ne lit pas les lois ou décrets entiers : utilisez [`legifrance_get_text`](legifrance_get_text.md).
+- L'outil lit les articles de codes par leur numéro, et les articles de codes, de lois et de conventions collectives par leur identifiant. Il ne lit pas les lois ou décrets entiers : utilisez [`legifrance_get_text`](legifrance_get_text.md).
 - Il trouve un article par son numéro, non par ses mots : pour trouver des articles sur un sujet, utilisez [`legifrance_search_legislation`](legifrance_search_legislation.md).
-- Quand un contenu a été déplacé, la réponse s'appuie sur les concordances que Légifrance a lui-même enregistrées. Quand il n'y en a pas, la phrase « inferred from text comparison » est une déduction.
+- Quand un contenu a été déplacé, la réponse s'appuie sur les concordances que Légifrance a lui-même enregistrées. Sans concordance, elle dit seulement si la version suivante a la même rédaction, et non où le contenu est allé.
 
 ## Voir aussi
 

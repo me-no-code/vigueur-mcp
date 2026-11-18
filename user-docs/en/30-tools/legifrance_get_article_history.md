@@ -3,7 +3,7 @@ title: legifrance_get_article_history
 level: reference
 tags: [tool, legifrance, article, history]
 summary: List every version of a code article with its dates and the texts that created, amended or repealed it.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_get_article_history
@@ -24,7 +24,7 @@ Give either a code and an article number, or a Légifrance id. A blank value cou
 |---|---|---|---|---|
 | `code` | No | The code to look in. | The code's title, such as `Code civil` or `Code du travail`. | Every code |
 | `number` | Yes, unless you give `id` | The article number as people cite it. | `1240`, `L1234-1`, `L. 1234-1`. Not together with `id`. | None |
-| `id` | Yes, unless you give `number` | The Légifrance id of one version of the article. | `LEGIARTI` followed by 12 digits. Not together with `number`. | None |
+| `id` | Yes, unless you give `number` | The Légifrance id of one version of the article. | `LEGIARTI` (a code or law article) or `KALIARTI` (a collective agreement article), followed by 12 digits. Not together with `number`. | None |
 | `page` | No | Which page of the events list to show. The answer says when there is a next page. | A whole number, 1 or more | 1 |
 | `response_format` | No | How much to show. | `concise`, or `detailed` (adds the id of each amending article) | `concise` |
 

@@ -19,7 +19,7 @@ compte PISTE obtenu.
 ## Avant de commencer
 
 - [Claude Code](https://claude.com/claude-code), qui fonctionne déjà.
-- Node.js 20 ou plus récent, et git.
+- Node.js 22 ou plus récent, et git.
 - Un compte et une application PISTE, avec l'identifiant client et le secret client sous la main.
   Si vous ne les avez pas encore, consultez [Créer votre compte PISTE](01-piste-account.md).
 
@@ -32,14 +32,14 @@ Dans un terminal, dans un dossier où vous rangez vos projets :
 ```
 git clone https://github.com/me-no-code/vigueur-mcp.git
 cd vigueur-mcp
-npm install
+npm ci
 npm run build
 pwd
 ```
 
 `pwd` affiche le chemin absolu du dossier. Notez-le pour l'étape suivante.
 
-`npm install` peut afficher un avertissement sur `fsevents` et « allow-scripts ». Il est sans
+`npm ci` peut afficher un avertissement sur `fsevents` et « allow-scripts ». Il est sans
 conséquence : ce paquet ne sert qu'aux développeurs, et Vigueur n'en a pas besoin.
 
 > **Gardez le dossier propre**

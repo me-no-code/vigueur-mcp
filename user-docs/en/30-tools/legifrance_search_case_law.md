@@ -3,7 +3,7 @@ title: legifrance_search_case_law
 level: reference
 tags: [tool, legifrance, case-law, search]
 summary: Search the decisions held by Légifrance (judicial, administrative, constitutional, CNIL and financial courts) and know what each answer shows and leaves out.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_search_case_law
@@ -109,12 +109,12 @@ A decision holds:
 | `court`, `chamber`, `nature` | The court, the chamber or formation and the nature of the decision, as the source states them; each `null` when not given. |
 | `decided`, `numbers` | The decision date and the decision numbers (several for joined cases). |
 | `publication`, `solution` | How the source records the publication and the outcome; `null` when it gives none. A decision without publication information shows `null`: Vigueur never writes "unpublished" for it. |
-| `excerpt` | The matching passage when Légifrance gives one, cut at 700 characters; otherwise `null`. |
+| `excerpt` | The matching passage when Légifrance gives one, cut at 300 characters; otherwise `null`. |
 | `read_with` | The call that returns the full decision. |
 
 For the judicial collection, `warnings` carries the coverage note shown above.
 
-- The number you searched is echoed in `request`, after rewriting: a number typed as `2416924` appears as `24-16.924`.
+- `request` repeats the number as you typed it, for example `2416924`; `numbers` in each decision gives the official form, `24-16.924`.
 - A page too long for one answer shows the first decisions that fit, and a warning says `(Only the first {n} of {m} hits of this page fit — use a smaller "page_size".)`.
 
 **No result.** `items` is empty and `warnings` names the collection and the criteria. For the judicial collection it repeats the coverage note. For example, `No Conseil constitutionnel (CONSTIT) decision on Légifrance matches these criteria: n° 2026-1217.` followed, for a Conseil constitutionnel number without a `/`, by `Joined decisions carry a combined number such as "2026-1217/1218"; give the full number, or search by words with "query".`
@@ -144,13 +144,14 @@ For the judicial collection, `warnings` carries the coverage note shown above.
 **Input errors.** Some combinations are refused with an error and no search is made:
 
 - `"ecli" works for the judicial and administrative collections. For the Conseil constitutionnel, use "number" (e.g. "2026-1217/1218").`
+- `"<input>" is not an ECLI (e.g. ECLI:FR:CCASS:2025:SO01200).` (the value given is not shaped like an ECLI)
 - `"court" and "chamber" apply to the judicial collection only.`
 - `"chamber" applies to Cour de cassation decisions (court "cassation").`
 - `"publication" is not available for the Conseil constitutionnel (CONSTIT) collection.` (same wording for `cnil`)
 - `"date_from" must not be after "date_to".`
 - A value that is not a real date, or a `page_size` above 20, is refused too.
 
-**Source errors.** When PISTE or Légifrance cannot answer, you get an error answer (`outcome: "error"`, with a `kind` and a `message`; see [Reading Vigueur's answers](../20-using/05-reading-answers.md#when-something-goes-wrong)): credentials rejected, access refused (HTTP 403, for example when the API is not subscribed on your PISTE application), quota reached, service unavailable, or no answer within 45 seconds. Each says what to do, and most point to [`vigueur_status`](vigueur_status.md).
+**Source errors.** When PISTE or Légifrance cannot answer, you get an error answer (`outcome: "error"`, with a `kind` and a `message`; see [Reading Vigueur's answers](../20-using/05-reading-answers.md#when-something-goes-wrong)): credentials rejected, access refused (HTTP 403, for example when the API is not subscribed on your PISTE application), quota reached, service unavailable, or no answer within 45 seconds. Some add when to try again; an unavailable service also points to [`vigueur_status`](vigueur_status.md).
 
 ## Limits
 

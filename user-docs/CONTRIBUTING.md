@@ -54,7 +54,7 @@ Every page in `30-tools/` follows the same outline:
 3. **What it takes**: a table of parameters (name, required or not, what it means, accepted
    values, default), in plain words.
 4. **What the answer shows**: the parts of the answer, in order, with a short excerpt in a code
-   block copied from a real answer (a test fixture or the renderer's fixed wording).
+   block copied from a real answer (a recorded answer, or a test fixture run through the tool).
 5. **Limits**: what the tool does not do, and what the source does not hold.
 6. **Related**: links to the neighbouring tools and guides.
 

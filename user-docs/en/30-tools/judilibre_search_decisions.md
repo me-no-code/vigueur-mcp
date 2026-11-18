@@ -3,7 +3,7 @@ title: judilibre_search_decisions
 level: reference
 tags: [tool, judilibre, case-law, search]
 summary: Search Judilibre for Cour de cassation and lower-court decisions, choose how the words combine, and read what each answer shows.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # judilibre_search_decisions
@@ -119,7 +119,7 @@ A decision holds:
 | `decided`, `numbers` | The decision date and the decision numbers. |
 | `formation`, `publication`, `solution` | The formation, how the Cour de cassation published the decision, and the outcome. `publication` is a list, empty when the decision is not published in the Bulletin. |
 | `summary` | The Cour de cassation's summary, cut at 600 characters; `null` when none. |
-| `excerpt` | The matching passages joined with ` … `, the matched words between `**`, cut at 700 characters; `null` when none. |
+| `excerpt` | Up to two matching passages, joined with ` … `, the matched words between `**`, cut at 700 characters; `null` when none. |
 | `read_with` | The call that returns the full decision, for [`judilibre_get_decision`](judilibre_get_decision.md). |
 
 An unreasoned rejection keeps the source's wording in `formation` and `solution`: `"formation": "Formation restreinte RNSM/NA (rejet non spécialement motivé ou non-admission)"`, `"solution": "Rejet"`.
@@ -130,7 +130,7 @@ Warnings you can meet:
 - `Only the first 10 000 are reachable by paging; narrow the search to see the others.` (above 10 000 results)
 - `(Only the first {n} of {m} hits of this page fit — use a smaller "page_size".)` (a page too long for one answer shows the first decisions that fit)
 
-**No result.** `items` is empty and `warnings` names the criteria and suggests what to loosen: `No Judilibre decision matches "licenciement" with these criteria: all words, Cour de cassation.` then `Try "match": "any_word", fewer filters, another jurisdiction or legifrance_search_case_law (Conseil d'État, Conseil constitutionnel, CNIL, financial courts, older Cour de cassation decisions).`
+**No result.** `items` is empty and `warnings` holds one sentence naming your words and criteria: `No Judilibre decision matches "licenciement" with these criteria: all words, Cour de cassation.` It does not suggest another search.
 
 **Page past the end.** The outcome is `no_results`, `items` is empty and `page` says which page you asked for and how many there are:
 

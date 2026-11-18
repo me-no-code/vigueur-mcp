@@ -3,7 +3,7 @@ title: legifrance_browse_code
 level: reference
 tags: [tool, legifrance, code, table-of-contents]
 summary: Walk a code's table of contents one level at a time, as it stood on a date.
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_browse_code
@@ -31,6 +31,8 @@ Shows one level of a French code's table of contents on Légifrance (parts, book
 The answer is one JSON object. On the wire it is a single line of JSON; the excerpts here are indented, and `…` marks fields or items left out. The fields every answer shares (`source`, `outcome`, `warnings`, `request`, `retrieved`, `cached`, `vigueur_version`) are explained in [Reading Vigueur's answers](../20-using/05-reading-answers.md).
 
 `outcome` is `results`, or `no_results` when nothing at that level is in force on the date, or when you ask for a page past the last one.
+
+The excerpts on this page come from a shortened recording of the Code du travail's table of contents, which keeps a single path through the code. Above the chapter shown, a live answer lists more items at each level, and its counts are larger.
 
 The top level lists the code's parts. The `cached` field says the table of contents came from the memory of Vigueur, and when it was fetched:
 
@@ -146,7 +148,7 @@ A section item holds its `title`, its `section_id` and a `status` (the same fiel
 - **The count.** What was hidden is counted in `hidden_not_in_force` and in a warning: `(<n> items not in force on <date> hidden — include_repealed: true to show them)`, or `(1 item not in force on <date> hidden — …)` for one.
 - **Nothing to list.** When nothing at that level is in force on the date, the outcome is `no_results` and a warning says `Nothing in force here on <date>.`
 
-For example, on 2005-01-01 the Code du travail's current legislative part was not yet in force: it is hidden and counted (`no_results`, `"hidden_not_in_force": 1`), and with `include_repealed` it appears as an item whose `status` says it starts later:
+For example, on 2005-01-01 the Code du travail's current legislative part was not yet in force: in the shortened recording, it is hidden and counted (`no_results`, `"hidden_not_in_force": 1`), and with `include_repealed` it appears as an item whose `status` says it starts later:
 
 ```
 {

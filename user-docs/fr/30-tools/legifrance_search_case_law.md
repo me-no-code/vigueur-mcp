@@ -3,7 +3,7 @@ title: "legifrance_search_case_law"
 level: reference
 tags: [tool, legifrance, case-law, search]
 summary: "Chercher parmi les décisions détenues par Légifrance (juridictions judiciaires, administratives, constitutionnelle, CNIL et financières) et savoir ce que chaque réponse montre et omet."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_search_case_law
@@ -109,12 +109,12 @@ Une décision contient :
 | `court`, `chamber`, `nature` | La juridiction, la chambre ou la formation et la nature de la décision, tels que la source les indique ; chacun vaut `null` s'il n'est pas donné. |
 | `decided`, `numbers` | La date de la décision et les numéros de la décision (plusieurs pour des affaires jointes). |
 | `publication`, `solution` | Comment la source enregistre la publication et la solution ; `null` quand elle n'en donne aucune. Une décision sans information de publication affiche `null` : Vigueur n'écrit jamais « unpublished » à sa place. |
-| `excerpt` | Le passage correspondant quand Légifrance en donne un, coupé à 700 caractères ; sinon `null`. |
+| `excerpt` | Le passage correspondant quand Légifrance en donne un, coupé à 300 caractères ; sinon `null`. |
 | `read_with` | L'appel qui renvoie la décision complète. |
 
 Pour le fonds judiciaire, `warnings` porte la note sur la couverture montrée ci-dessus.
 
-- Le numéro que vous avez cherché est repris dans `request`, après réécriture : un numéro saisi sous la forme `2416924` apparaît sous la forme `24-16.924`.
+- `request` reprend le numéro tel que vous l'avez saisi, par exemple `2416924` ; `numbers`, dans chaque décision, donne la forme officielle, `24-16.924`.
 - Une page trop longue pour une seule réponse montre les premières décisions qui tiennent, et un avertissement dit `(Only the first {n} of {m} hits of this page fit — use a smaller "page_size".)`.
 
 **Aucun résultat.** `items` est vide et `warnings` nomme le fonds et les critères. Pour le fonds judiciaire, il répète la note sur la couverture. Par exemple, `No Conseil constitutionnel (CONSTIT) decision on Légifrance matches these criteria: n° 2026-1217.` suivi, pour un numéro du Conseil constitutionnel sans `/`, de `Joined decisions carry a combined number such as "2026-1217/1218"; give the full number, or search by words with "query".`
@@ -144,13 +144,14 @@ Pour le fonds judiciaire, `warnings` porte la note sur la couverture montrée ci
 **Erreurs de saisie.** Certaines combinaisons sont refusées avec une erreur, et aucune recherche n'est faite :
 
 - `"ecli" works for the judicial and administrative collections. For the Conseil constitutionnel, use "number" (e.g. "2026-1217/1218").`
+- `"<input>" is not an ECLI (e.g. ECLI:FR:CCASS:2025:SO01200).` (la valeur donnée n'a pas la forme d'un ECLI)
 - `"court" and "chamber" apply to the judicial collection only.`
 - `"chamber" applies to Cour de cassation decisions (court "cassation").`
 - `"publication" is not available for the Conseil constitutionnel (CONSTIT) collection.` (même formulation pour `cnil`)
 - `"date_from" must not be after "date_to".`
 - Une valeur qui n'est pas une date valide, ou un `page_size` supérieur à 20, est également refusé.
 
-**Erreurs de la source.** Quand PISTE ou Légifrance ne peut pas répondre, vous obtenez une réponse d'erreur (`outcome: "error"`, avec un `kind` et un `message` ; voir [Lire les réponses de Vigueur](../20-using/05-reading-answers.md#quand-quelque-chose-ne-va-pas)) : identifiants rejetés, accès refusé (HTTP 403, par exemple quand votre application PISTE n'est pas abonnée à l'API), quota atteint, service indisponible, ou pas de réponse en 45 secondes. Chacune dit quoi faire, et la plupart renvoient vers [`vigueur_status`](vigueur_status.md).
+**Erreurs de la source.** Quand PISTE ou Légifrance ne peut pas répondre, vous obtenez une réponse d'erreur (`outcome: "error"`, avec un `kind` et un `message` ; voir [Lire les réponses de Vigueur](../20-using/05-reading-answers.md#quand-quelque-chose-ne-va-pas)) : identifiants rejetés, accès refusé (HTTP 403, par exemple quand votre application PISTE n'est pas abonnée à l'API), quota atteint, service indisponible, ou pas de réponse en 45 secondes. Certaines indiquent quand réessayer ; un service indisponible renvoie aussi vers [`vigueur_status`](vigueur_status.md).
 
 ## Limites
 

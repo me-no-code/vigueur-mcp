@@ -3,7 +3,7 @@ title: "legifrance_browse_code"
 level: reference
 tags: [tool, legifrance, code, table-of-contents]
 summary: "Parcourir la table des matières d'un code, un niveau à la fois, telle qu'elle était à une date donnée."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # legifrance_browse_code
@@ -31,6 +31,8 @@ Montre un niveau de la table des matières d'un code français sur Légifrance (
 La réponse est un objet JSON. Elle est transmise sur une seule ligne ; les extraits ci-dessous sont indentés, et `…` marque les champs ou les éléments omis. Les champs communs à toutes les réponses (`source`, `outcome`, `warnings`, `request`, `retrieved`, `cached`, `vigueur_version`) sont expliqués dans [Lire les réponses de Vigueur](../20-using/05-reading-answers.md).
 
 Le type de réponse (`outcome`) vaut `results`, ou `no_results` quand rien à ce niveau n'est en vigueur à la date, ou quand vous demandez une page au-delà de la dernière.
+
+Les extraits de cette page viennent d'un enregistrement raccourci de la table des matières du Code du travail, qui ne garde qu'un seul chemin dans le code. Au-dessus du chapitre montré, une réponse réelle liste plus d'éléments à chaque niveau, et ses comptes sont plus élevés.
 
 Le niveau supérieur liste les parties du code. Le champ `cached` indique que la table des matières vient de la mémoire de Vigueur, et à quel moment elle a été récupérée :
 
@@ -146,7 +148,7 @@ Un élément de type section contient son `title`, son `section_id` et un `statu
 - **Le compte.** Ce qui a été masqué est compté dans `hidden_not_in_force` et dans un avertissement : `(<n> items not in force on <date> hidden — include_repealed: true to show them)`, ou `(1 item not in force on <date> hidden — …)` pour un seul.
 - **Rien à lister.** Quand rien à ce niveau n'est en vigueur à la date, le type de réponse est `no_results` et un avertissement dit `Nothing in force here on <date>.`
 
-Par exemple, au 1er janvier 2005, la partie législative actuelle du Code du travail n'était pas encore en vigueur : elle est masquée et comptée (`no_results`, `"hidden_not_in_force": 1`), et avec `include_repealed` elle apparaît comme un élément dont le `status` dit qu'elle commence plus tard :
+Par exemple, au 1er janvier 2005, la partie législative actuelle du Code du travail n'était pas encore en vigueur : dans l'enregistrement raccourci, elle est masquée et comptée (`no_results`, `"hidden_not_in_force": 1`), et avec `include_repealed` elle apparaît comme un élément dont le `status` dit qu'elle commence plus tard :
 
 ```
 {

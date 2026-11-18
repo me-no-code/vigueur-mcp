@@ -128,8 +128,9 @@ concordance qui a échoué), une note sur ce que la source ne détient pas, ou l
 `not_found` ou `no_results` qui disent ce qui a été cherché. Le reste de la réponse reste valable. La
 liste est vide quand il n'y a rien à dire.
 
-Les énoncés qui viennent de la concordance de Légifrance le disent : `per Légifrance concordance`. Un
-énoncé que Vigueur a déduit lui-même le dit aussi : `inferred from text comparison`. Voir
+Les énoncés qui viennent de la concordance de Légifrance le disent : `per Légifrance concordance`.
+Sans concordance, la réponse sur un article dit seulement si la version suivante a les mêmes mots :
+`… has the same wording.` ou `… has a different wording.` Voir
 [Codes, lois et décrets](02-legislation.md).
 
 ## Chaque résultat dit comment le lire en entier
@@ -142,8 +143,9 @@ Un résultat de recherche porte un champ `read_with` qui nomme l'appel qui perme
 
 Une recherche ne montre qu'un extrait ; le texte entier demande une seconde requête, que Claude fait
 pour vous quand vous demandez à le lire. Un résultat qu'aucun outil ne lit, tel qu'un article publié au
-Journal officiel, a `"read_with": null` et seulement son `link`. Une décision qui existe dans l'autre
-source le dit dans `other_source`.
+Journal officiel, a `"read_with": null` et seulement son `link`. Sur sa dernière page, une décision
+judiciaire dotée d'un ECLI donne dans `other_source` l'appel qui cherche cet ECLI dans l'autre
+source (depuis Judilibre, pour une décision de la Cour de cassation seulement).
 
 Les liens (`link`) pointent vers la page officielle. Vigueur les construit à partir des identifiants de
 la source.
@@ -277,7 +279,7 @@ Une erreur n'a ni `warnings` ni `cached`. Les valeurs de `kind` :
 | `forbidden` | Accès refusé (HTTP 403) | Le message seul : `<source>: access refused (HTTP 403)` |
 | `quota_exceeded` | Quota atteint | `PISTE quota reached. Retry in about N s.` (ou `Wait a moment and try again.`) |
 | `upstream_unavailable` | PISTE en panne ou lent | `PISTE is unavailable or timed out. Wait a moment and try again…` |
-| `unexpected_response` | Réponse inattendue | La source a renvoyé quelque chose que Vigueur ne comprend pas, peut-être un changement d'API |
+| `unexpected_response` | Réponse inattendue, ou de plus de 64 Mo | La source a renvoyé quelque chose que Vigueur ne comprend pas, peut-être un changement d'API |
 | `not_found` | La source a répondu que ce qui est demandé n'existe pas (HTTP 404) | Le message seul : `<source>: not found (HTTP 404)` |
 | `deadline` | Pas de réponse en 45 secondes | `Légifrance did not answer within 45 s. Try again in a moment.` |
 | `invalid_input` | Une requête que l'outil refuse | Le message seul, par exemple `"date_from" must not be after "date_to".` |

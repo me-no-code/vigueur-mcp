@@ -108,10 +108,10 @@ Each check holds the `source` probed, its `state`, a `detail` (the reason the pr
 | `not_enabled` | PISTE refused the request (HTTP 403): the API is not subscribed on your application. | [Create your PISTE account](../10-setup/01-piste-account.md), steps 3 and 4 |
 | `credentials_invalid` | PISTE rejected the client ID and secret. | [PISTE rejected my credentials](../00-intro/05-troubleshooting.md#piste-rejected-my-credentials) |
 | `quota_exceeded` | PISTE's rate limit is reached. `retry_after_seconds` gives the delay PISTE asks for, when it gives one. | [Quota](../00-intro/05-troubleshooting.md#piste-says-the-quota-is-reached) |
-| `unexpected_response` | PISTE answered, but not as Vigueur expects: an HTTP 400 or 404, or a body Vigueur cannot read. Possibly an API change; `detail` gives the answer. | [A source shows `unexpected_response`](../00-intro/05-troubleshooting.md#a-source-shows-unexpected_response) |
-| `unavailable` | PISTE or the source did not answer in time, could not be reached, or answered with a server error. | [PISTE is unavailable](../00-intro/05-troubleshooting.md#piste-is-unavailable-or-timed-out) |
+| `unexpected_response` | PISTE answered, but not as Vigueur expects: an HTTP 4xx other than 401, 403 and 429, or a body Vigueur cannot read or over 64 MB. Possibly an API change; `detail` gives the answer. | [A source shows `unexpected_response`](../00-intro/05-troubleshooting.md#a-source-shows-unexpected_response) |
+| `unavailable` | PISTE or the source did not answer in time, could not be reached, or answered with a server error. An answer from PISTE's token service that Vigueur cannot read shows here too. | [PISTE is unavailable](../00-intro/05-troubleshooting.md#piste-is-unavailable-or-timed-out) |
 
-How each source is checked: Légifrance by asking for the list of codes (one entry), Judilibre by its health check. Both are checked at the same time. A check waits up to 8 seconds and is not retried. A source that refuses the check is reported as a check, not as an error.
+How each source is checked: Légifrance by asking for the list of codes (one entry), Judilibre by its health check. When Vigueur holds no valid token, it first signs in to PISTE (up to 10 seconds). Both sources are then checked at the same time. A check waits up to 8 seconds and is not retried, except once with a new token after an HTTP 401. A source that refuses the check is reported as a check, not as an error.
 
 ## Error answers every Vigueur tool can give
 
@@ -147,7 +147,7 @@ When a tool fails, the answer is marked as an error and is a JSON object with `o
 | Access refused (HTTP 403) | `forbidden` | The message alone: `Légifrance: access refused (HTTP 403)` (or `Judilibre:`) |
 | Quota reached (HTTP 429, after one retry) | `quota_exceeded` | Ends with `PISTE quota reached. Retry in about {n} s.` or `PISTE quota reached. Wait a moment and try again.` |
 | PISTE or the source unavailable, timed out or unreachable (after one retry; a failed PISTE sign-in is not retried) | `upstream_unavailable` | Ends with `PISTE is unavailable or timed out. Wait a moment and try again; if it persists, call vigueur_status.` |
-| An answer Vigueur does not understand | `unexpected_response` | Ends with `{Source} returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.` |
+| An answer Vigueur does not understand, or one over 64 MB | `unexpected_response` | Ends with `{Source} returned a response Vigueur does not understand (possibly an API change). Try again later; if it persists, report it.` |
 | No answer within 45 seconds | `deadline` | The whole message: `{Source} did not answer within 45 s. Try again in a moment.` |
 | A request Vigueur or the source finds invalid | `invalid_input` | The message alone, for example `"date_from" must not be after "date_to".` |
 | Anything else | `unexpected` | The whole message: `Unexpected error: {message}. Call vigueur_status to check the setup.` |

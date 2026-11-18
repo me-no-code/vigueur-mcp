@@ -3,7 +3,7 @@ title: "judilibre_search_decisions"
 level: reference
 tags: [tool, judilibre, case-law, search]
 summary: "Chercher dans Judilibre des décisions de la Cour de cassation et des juridictions du fond, choisir comment les mots se combinent, et lire ce que montre chaque réponse."
-updated: 2026-11-17
+updated: 2026-11-18
 ---
 
 # judilibre_search_decisions
@@ -119,7 +119,7 @@ Une décision contient :
 | `decided`, `numbers` | La date de la décision et les numéros de la décision. |
 | `formation`, `publication`, `solution` | La formation, la manière dont la Cour de cassation a publié la décision, et la solution. `publication` est une liste, vide quand la décision n'est pas publiée au Bulletin. |
 | `summary` | Le sommaire de la Cour de cassation, coupé à 600 caractères ; `null` quand il n'y en a pas. |
-| `excerpt` | Les passages correspondants joints par ` … `, les mots trouvés placés entre `**`, coupés à 700 caractères ; `null` quand il n'y en a pas. |
+| `excerpt` | Deux passages correspondants au plus, joints par ` … `, les mots trouvés placés entre `**`, coupés à 700 caractères ; `null` quand il n'y en a pas. |
 | `read_with` | L'appel qui renvoie la décision complète, pour [`judilibre_get_decision`](judilibre_get_decision.md). |
 
 Un rejet non spécialement motivé garde la formulation de la source dans `formation` et `solution` : `"formation": "Formation restreinte RNSM/NA (rejet non spécialement motivé ou non-admission)"`, `"solution": "Rejet"`.
@@ -130,7 +130,7 @@ Avertissements que vous pouvez rencontrer :
 - `Only the first 10 000 are reachable by paging; narrow the search to see the others.` (au-dessus de 10 000 résultats)
 - `(Only the first {n} of {m} hits of this page fit — use a smaller "page_size".)` (une page trop longue pour une seule réponse montre les premières décisions qui tiennent)
 
-**Aucun résultat.** `items` est vide et `warnings` nomme les critères et suggère ce qu'il faut assouplir : `No Judilibre decision matches "licenciement" with these criteria: all words, Cour de cassation.` puis `Try "match": "any_word", fewer filters, another jurisdiction or legifrance_search_case_law (Conseil d'État, Conseil constitutionnel, CNIL, financial courts, older Cour de cassation decisions).`
+**Aucun résultat.** `items` est vide et `warnings` contient une seule phrase, qui nomme vos mots et vos critères : `No Judilibre decision matches "licenciement" with these criteria: all words, Cour de cassation.` Elle ne suggère pas d'autre recherche.
 
 **Page au-delà de la dernière.** Le type de réponse est `no_results`, `items` est vide et `page` indique la page demandée et le nombre de pages :
 
