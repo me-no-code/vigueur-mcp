@@ -318,6 +318,45 @@ describe('secret-leak guard', () => {
   }
 });
 
+describe('response size', () => {
+  const capped = (body: string, headers: Record<string, string> = {}) =>
+    createPisteHttp({
+      baseUrl: 'https://x.test/base',
+      source: 'legifrance',
+      tokens: { getToken: async () => 'tok-1', invalidate: () => {} },
+      fetch: fakeFetch(() => new Response(body, { headers })).fetch,
+      maxBodyBytes: 20,
+    });
+
+  it('reads a body that starts with a byte-order mark', async () => {
+    const { http } = setup(() => new Response('\uFEFF{"a":1}'));
+    await expect(http.request({ method: 'GET', path: '/a' })).resolves.toEqual({ a: 1 });
+  });
+
+  it('reads a body up to the cap', async () => {
+    await expect(
+      capped('{"a":"0123456789ab"}').request({ method: 'GET', path: '/a' }),
+    ).resolves.toEqual({
+      a: '0123456789ab',
+    });
+  });
+
+  it('stops reading a body over the cap: an unexpected response, not retried', async () => {
+    const err = await failure(
+      capped('{"a":"0123456789abc"}').request({ method: 'GET', path: '/a' }),
+    );
+    expect(err).toMatchObject({ kind: 'unexpected_response' });
+    expect(err.message).toBe('Légifrance: response larger than 20 bytes, not read.');
+  });
+
+  it('refuses a body whose declared length is over the cap', async () => {
+    const err = await failure(
+      capped('{}', { 'content-length': '1000' }).request({ method: 'GET', path: '/a' }),
+    );
+    expect(err).toMatchObject({ kind: 'unexpected_response' });
+  });
+});
+
 describe('400 body redaction', () => {
   for (const [name, prefix] of [
     ['with Bearer', 'Bearer '],

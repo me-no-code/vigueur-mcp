@@ -24,6 +24,8 @@ export interface PisteHttp {
 
 export const DEFAULT_MAX_RETRIES = 1;
 export const DEFAULT_TIMEOUT_MS = 10_000;
+/** The largest body read: tables of contents reach 19.3 MB (Code du travail). */
+export const DEFAULT_MAX_BODY_BYTES = 64 * 1024 * 1024;
 const MAX_RETRY_AFTER_WAIT_MS = 10_000;
 const BACKOFF_BASE_MS = 500;
 const BODY_EXCERPT_CHARS = 300;
@@ -86,6 +88,30 @@ function parseRetryAfter(value: string | null): number | undefined {
   return Number.isSafeInteger(seconds) ? seconds : undefined;
 }
 
+/** The body as text; `null`, without reading it all, when it is over `max` bytes. */
+async function readText(res: Response, max: number): Promise<string | null> {
+  if (Number(res.headers.get('content-length')) > max) {
+    await res.body?.cancel();
+    return null;
+  }
+  if (res.body === null) return '';
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  // TextDecoder drops a leading byte-order mark, as res.text() does.
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 function isTimeout(err: unknown, signal: AbortSignal): boolean {
   return (
     (signal.aborted && signal.reason instanceof Error && signal.reason.name === 'TimeoutError') ||
@@ -101,10 +127,15 @@ export function createPisteHttp(opts: {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   maxRetries?: number;
   timeoutMs?: number;
+  maxBodyBytes?: number;
 }): PisteHttp {
   const doFetch: FetchLike = opts.fetch ?? ((input, init) => fetch(input, init));
   const sleep = opts.sleep ?? defaultSleep;
   const label = SOURCE_LABELS[opts.source];
+  const maxBodyBytes = opts.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
+  const MB = 1024 * 1024;
+  const maxBodyLabel =
+    maxBodyBytes >= MB ? `${Math.round(maxBodyBytes / MB)} MB` : `${maxBodyBytes} bytes`;
 
   const fail = (kind: ErrorKind, message: string, status?: number, retryAfterSeconds?: number) =>
     new VigueurError(kind, `${label}: ${message}`, {
@@ -155,7 +186,16 @@ export function createPisteHttp(opts: {
           redirect: 'error',
           ...(hasBody && { body: JSON.stringify(req.body) }),
         });
-        const text = await res.text();
+        const text = await readText(res, maxBodyBytes);
+        if (text === null) {
+          const big = fail(
+            'unexpected_response',
+            `response larger than ${maxBodyLabel}, not read.`,
+            res.status,
+          );
+          final.add(big);
+          throw big;
+        }
 
         if (res.ok) {
           try {
