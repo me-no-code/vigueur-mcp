@@ -52,6 +52,17 @@ describe('createSearchLegislation', () => {
     });
   });
 
+  it('reads a text number and a NOR as get_text does', async () => {
+    const { repo, calls } = fakeLegislation();
+    const run = createSearchLegislation(repo, { today });
+    await run({ collection: 'loda', textNumber: 'n° 78 – 17' });
+    await run({ collection: 'jorf', nor: ' jusc1522466r ' });
+    expect(calls.searchLegislation.map((c) => c.args[0])).toMatchObject([
+      { textNumber: '78-17' },
+      { nor: 'JUSC1522466R' },
+    ]);
+  });
+
   it('rejects pageSize 51, page 0 and bad dates', async () => {
     const { repo } = fakeLegislation();
     const run = createSearchLegislation(repo, { today });

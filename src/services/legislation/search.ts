@@ -14,6 +14,7 @@ import {
   resolveCode,
   todayInParis,
 } from './resolve.js';
+import { normaliseTextNumber } from './text-ref.js';
 
 export interface SearchLegislationInput {
   collection: LegislationCollection;
@@ -84,8 +85,11 @@ export function createSearchLegislation(
     const text = blankToNull(input.query);
     const rawCode = blankToNull(input.code);
     const rawNumber = blankToNull(input.articleNumber);
-    const textNumber = blankToNull(input.textNumber);
-    const nor = blankToNull(input.nor);
+    // As get_text reads them: "n° 78 – 17" is number 78-17, and a NOR is uppercase.
+    const textNumber = blankToNull(
+      input.textNumber === undefined ? undefined : normaliseTextNumber(input.textNumber),
+    );
+    const nor = blankToNull(input.nor)?.toUpperCase() ?? null;
     const nature = blankToNull(input.nature);
     const idcc = blankToNull(input.idcc);
 
