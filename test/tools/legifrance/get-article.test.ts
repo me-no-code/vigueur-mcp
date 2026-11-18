@@ -12,10 +12,8 @@ import type { CallContext, VersionSummary } from '../../../src/services/legislat
 import { VigueurError } from '../../../src/shared/errors.js';
 import { toolAnswer } from '../../../src/tools/envelope.js';
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
-import {
-  buildGetArticleAnswer,
-  getArticleOutput,
-} from '../../../src/tools/legifrance/get-article.js';
+import { buildGetArticleAnswer } from '../../../src/tools/legifrance/get-article-answer.js';
+import { getArticleOutput } from '../../../src/tools/legifrance/get-article-output.js';
 import {
   createLegifranceSource,
   type LegifranceServices,

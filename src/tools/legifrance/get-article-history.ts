@@ -36,7 +36,8 @@ import {
   WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
-import { buildLookupMiss, lookupMissBranches } from './get-article.js';
+import { buildLookupMiss } from './get-article-answer.js';
+import { lookupMissBranches } from './get-article-output.js';
 
 export type GetArticleHistory = (
   input: GetArticleHistoryInput,
