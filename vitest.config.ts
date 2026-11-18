@@ -14,5 +14,13 @@ export default defineConfig(({ mode }) => ({
     restoreMocks: true,
     testTimeout: 15000,
     env: OPT_IN[mode] ?? {},
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.ts'],
+      reporter: ['text-summary', 'text'],
+      // The measured baseline, floored, minus one point: V8 counts differ a little between Node
+      // versions. Raise them when coverage rises; never lower them to let a change in.
+      thresholds: { statements: 96, branches: 89, functions: 97, lines: 98 },
+    },
   },
 }));

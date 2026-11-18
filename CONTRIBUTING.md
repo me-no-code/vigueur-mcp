@@ -17,6 +17,7 @@ cp .env.example .env   # then fill in PISTE_CLIENT_ID, PISTE_CLIENT_SECRET and P
 npm install
 git config core.hooksPath .githooks   # once per clone: user docs are changed in both languages
 npm test               # builds, then runs the offline test suite (no credentials, no network)
+npm run coverage       # the same, with coverage; fails below the thresholds in vitest.config.ts
 npm run typecheck
 npm run lint
 npm run format         # rewrites the files Biome formats
