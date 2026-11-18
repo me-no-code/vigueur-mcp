@@ -5,8 +5,7 @@ own writing rules in [user-docs/CONTRIBUTING.md](user-docs/CONTRIBUTING.md).
 
 ## Prerequisites
 
-- Node.js 22.12 or later for the test toolchain (vitest 5). The server itself runs on Node.js 20 or
-  later.
+- Node.js 22 or later. The test toolchain (vitest 5) needs 22.12 or later, 24, or 26 and later.
 - A PISTE application (free account on https://piste.gouv.fr) for the live tests and for running
   the server. The steps are in
   [Create your PISTE account](user-docs/en/10-setup/01-piste-account.md).

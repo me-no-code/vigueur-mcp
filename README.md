@@ -33,13 +33,13 @@ Once installed, ask Claude: "Run vigueur_status." Each source should answer `ok`
 Open Vigueur's bundle file, `vigueur-<version>.mcpb`, and confirm the install dialog. Then fill in
 the three settings in **Settings**, **Extensions**, **Vigueur**, and click **Save**.
 
-The bundle will be published with each release. Until then, build it (Node.js 20 or later, and
+The bundle will be published with each release. Until then, build it (Node.js 22 or later, and
 git): clone the repository, then run `npm install` and `npm run bundle`; the file is in `build/`.
 Details: [Install in Claude Desktop](user-docs/en/10-setup/03-install-claude-desktop.md).
 
 ### Claude Code
 
-1. Clone and build Vigueur (Node.js 20 or later, and git), in a folder of your choice:
+1. Clone and build Vigueur (Node.js 22 or later, and git), in a folder of your choice:
 
    ```sh
    git clone https://github.com/me-no-code/vigueur-mcp.git

@@ -30,6 +30,7 @@ describe('Claude Desktop bundle manifest', () => {
     expect(manifest.display_name).toBe('Vigueur');
     expect(manifest.version).toBe(pkg.version);
     expect(lock.version).toBe(pkg.version);
+    expect(pkg.engines.node).toBe(manifest.compatibility.runtimes.node);
     expect(lock.packages[''].version).toBe(pkg.version);
     expect(manifest.version).toBe(plugin.version);
     expect(manifest.version).toBe(VERSION);
@@ -90,10 +91,10 @@ describe('Claude Desktop bundle manifest', () => {
     }
   });
 
-  it('targets macOS and Windows with Node 20 or later, and links the privacy page', () => {
+  it('targets macOS and Windows with Node 22 or later, and links the privacy page', () => {
     expect(manifest.compatibility).toEqual({
       platforms: ['darwin', 'win32'],
-      runtimes: { node: '>=20' },
+      runtimes: { node: '>=22' },
     });
     expect(manifest.privacy_policies).toEqual([
       `${REPO}/blob/main/user-docs/en/00-intro/04-privacy-and-your-data.md`,

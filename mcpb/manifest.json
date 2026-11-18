@@ -108,7 +108,7 @@
   "compatibility": {
     "platforms": ["darwin", "win32"],
     "runtimes": {
-      "node": ">=20"
+      "node": ">=22"
     }
   },
   "privacy_policies": [
