@@ -24,11 +24,10 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   jsonCost,
   listPage,
-  MAX_TOOL_TEXT,
   presentOrUndefined,
+  roomAfter,
   WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
@@ -196,10 +195,10 @@ export function buildListTaxonomyAnswer(
   // The frame is measured with the widest page numbers, so the split does not depend on the page.
   const frame = JSON.stringify(
     answer([], WIDE_PAGE, WIDE_PAGE + 1, { ...request, page: WIDE_PAGE }, []),
-  ).length;
+  );
   const paged = listPage(result.entries, page, (e) => jsonCost(e), {
     maxItems: MAX_ENTRIES,
-    budget: MAX_TOOL_TEXT - frame - FRAME_SLACK,
+    budget: roomAfter(frame),
   });
   return answer(
     paged.items.map((e) => ({ key: e.key, label: e.label, group: e.group })),

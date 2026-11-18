@@ -38,12 +38,11 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   jsonCost,
   listPage,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
+  roomAfter,
   sliceForJson,
   WIDE_PAGE,
 } from '../format.js';
@@ -580,19 +579,18 @@ function textAnswer(v: TextView, opts: GetTextAnswerOptions): TextAnswer {
 
   // The frame: this answer with no items, its widest numbers and every note it may carry,
   // measured the same for every page asked (the request's page included), so pages split alike.
-  const frame =
-    JSON.stringify({
-      ...answer(
-        'no_results',
-        { number: WIDE, of: WIDE },
-        { page: WIDE },
-        WIDE,
-        [],
-        opts.part === 'articles' ? [withheld] : [],
-      ),
-      request: { ...opts.request, page: WIDE },
-    }).length + FRAME_SLACK;
-  const budget = MAX_TOOL_TEXT - frame;
+  const frame = JSON.stringify({
+    ...answer(
+      'no_results',
+      { number: WIDE, of: WIDE },
+      { page: WIDE },
+      WIDE,
+      [],
+      opts.part === 'articles' ? [withheld] : [],
+    ),
+    request: { ...opts.request, page: WIDE },
+  });
+  const budget = roomAfter(frame);
   const all: Item[] = opts.part === 'outline' ? sectionItems(v) : articleItems(v, budget);
   const paged = listPage(all, opts.page, (item) => jsonCost(item), {
     maxItems: MAX_ITEMS,

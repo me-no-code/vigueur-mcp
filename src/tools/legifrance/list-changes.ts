@@ -20,13 +20,12 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   isoDateSchema,
   jsonCost,
   listPage,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
+  roomAfter,
   WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
@@ -214,11 +213,10 @@ export function buildListChangesAnswer(
   });
 
   // The frame is measured with the widest page numbers, whatever page is asked, so pages split alike.
-  const frame =
-    JSON.stringify({
-      ...answer('results', [], WIDE_PAGE, true, WIDE_PAGE),
-      request: { ...opts.request, page: WIDE_PAGE },
-    }).length + FRAME_SLACK;
+  const frame = JSON.stringify({
+    ...answer('results', [], WIDE_PAGE, true, WIDE_PAGE),
+    request: { ...opts.request, page: WIDE_PAGE },
+  });
   const paged = listPage(
     flat,
     opts.page,
@@ -228,7 +226,7 @@ export function buildListChangesAnswer(
       (previous?.group === i.group
         ? 0
         : JSON.stringify(view.groups[i.group]?.amendingTitle).length + 40),
-    { maxItems: ENTRIES_PER_PAGE, budget: MAX_TOOL_TEXT - frame },
+    { maxItems: ENTRIES_PER_PAGE, budget: roomAfter(frame) },
   );
 
   const items: Group[] = [];

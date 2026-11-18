@@ -21,12 +21,11 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   jsonCost,
   listPage,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
+  roomAfter,
   WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
@@ -226,14 +225,13 @@ export function buildBrowseCodeAnswer(
   });
 
   // The frame is measured with the widest page numbers, whatever page is asked, so pages split alike.
-  const frame =
-    JSON.stringify({
-      ...answer([], WIDE_PAGE, true, WIDE_PAGE),
-      request: { ...opts.request, page: WIDE_PAGE },
-    }).length + FRAME_SLACK;
+  const frame = JSON.stringify({
+    ...answer([], WIDE_PAGE, true, WIDE_PAGE),
+    request: { ...opts.request, page: WIDE_PAGE },
+  });
   const paged = listPage(all, opts.page, (item) => jsonCost(item), {
     maxItems: MAX_ITEMS,
-    budget: MAX_TOOL_TEXT - frame,
+    budget: roomAfter(frame),
   });
   return answer(paged.items, paged.pageCount, paged.hasMore);
 }

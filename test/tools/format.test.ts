@@ -3,11 +3,15 @@ import {
   callSignal,
   cut,
   deadlineHit,
+  FRAME_SLACK,
+  fitting,
   isoDateSchema,
   listPage,
+  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
   responseFormatSchema,
+  roomAfter,
   sliceForJson,
 } from '../../src/tools/format.js';
 
@@ -149,6 +153,38 @@ describe('listPage', () => {
       ['c', undefined],
       ['d', 'c'],
     ]);
+  });
+});
+
+describe('roomAfter', () => {
+  it('leaves the cap minus the frame and the slack', () => {
+    expect(roomAfter('{"a":1}')).toBe(MAX_TOOL_TEXT - 7 - FRAME_SLACK);
+  });
+});
+
+describe('fitting', () => {
+  const len = (s: string) => s.length;
+
+  it('keeps every item when their total equals the room', () => {
+    expect(fitting(['aaa', 'bbb'], 6, len)).toEqual(['aaa', 'bbb']);
+  });
+
+  it('stops before the item that would pass the room', () => {
+    expect(fitting(['aaa', 'bbb'], 5, len)).toEqual(['aaa']);
+  });
+
+  it('always keeps the first item, however large', () => {
+    expect(fitting(['aaaaaa', 'b'], 1, len)).toEqual(['aaaaaa']);
+  });
+
+  it('an empty list gives an empty list', () => {
+    expect(fitting([], 10, len)).toEqual([]);
+  });
+
+  it('measures items by what they add to a JSON array by default', () => {
+    // {"a":1} is 7 characters, plus its comma: 8 each.
+    expect(fitting([{ a: 1 }, { a: 2 }], 16)).toEqual([{ a: 1 }, { a: 2 }]);
+    expect(fitting([{ a: 1 }, { a: 2 }], 15)).toEqual([{ a: 1 }]);
   });
 });
 

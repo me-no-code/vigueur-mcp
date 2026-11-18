@@ -71,6 +71,34 @@ export function jsonCost(value: unknown): number {
 }
 
 /**
+ * The characters left for a page's items or text once its frame is paid: `frameJson` is the
+ * answer with no items or text, serialized at its widest, and `FRAME_SLACK` covers the rest.
+ */
+export function roomAfter(frameJson: string): number {
+  return MAX_TOOL_TEXT - frameJson.length - FRAME_SLACK;
+}
+
+/**
+ * The longest start of `items` whose costs add up to at most `room`; the first item is kept
+ * however large, so a non-empty list never gives an empty page.
+ */
+export function fitting<T>(
+  items: readonly T[],
+  room: number,
+  cost: (item: T) => number = jsonCost,
+): T[] {
+  let used = 0;
+  let kept = 0;
+  for (const item of items) {
+    const c = cost(item);
+    if (kept > 0 && used + c > room) break;
+    used += c;
+    kept += 1;
+  }
+  return items.slice(0, kept);
+}
+
+/**
  * The longest slice of `text` from `offset` that takes at most `room` characters once escaped in
  * a JSON string (quotes excluded), at least one character when any is left; never splits a
  * surrogate pair.

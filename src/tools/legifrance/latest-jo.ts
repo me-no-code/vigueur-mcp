@@ -22,12 +22,11 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   jsonCost,
   listPage,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
+  roomAfter,
   WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
@@ -279,11 +278,10 @@ export function buildLatestJoAnswer(
   };
 
   // The frame is measured with the widest page numbers, whatever page is asked, so pages split alike.
-  const frame =
-    JSON.stringify({
-      ...answer([], WIDE_PAGE, true, WIDE_PAGE),
-      request: { ...opts.request, page: WIDE_PAGE },
-    }).length + FRAME_SLACK;
+  const frame = JSON.stringify({
+    ...answer([], WIDE_PAGE, true, WIDE_PAGE),
+    request: { ...opts.request, page: WIDE_PAGE },
+  });
   const paged = listPage(
     entries,
     opts.page,
@@ -299,7 +297,7 @@ export function buildLatestJoAnswer(
         (sameGroup ? 0 : JSON.stringify({ path: groupPath(e), texts: [] }).length)
       );
     },
-    { maxItems: MAX_ITEMS, budget: MAX_TOOL_TEXT - frame },
+    { maxItems: MAX_ITEMS, budget: roomAfter(frame) },
   );
 
   const items: Issue[] = [];

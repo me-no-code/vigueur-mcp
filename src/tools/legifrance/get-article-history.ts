@@ -28,12 +28,11 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   jsonCost,
   listPage,
-  MAX_TOOL_TEXT,
   presentOrUndefined,
   responseFormatSchema,
+  roomAfter,
   WIDE_PAGE,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
@@ -257,14 +256,13 @@ function historyAnswer(view: ArticleHistoryView, opts: HistoryAnswerOptions): Hi
   });
 
   // The frame is measured with the widest page numbers, whatever page is asked, so pages split alike.
-  const frame =
-    JSON.stringify({
-      ...page('found', [], WIDE_PAGE, true, WIDE_PAGE),
-      request: { ...opts.request, page: WIDE_PAGE },
-    }).length + FRAME_SLACK;
+  const frame = JSON.stringify({
+    ...page('found', [], WIDE_PAGE, true, WIDE_PAGE),
+    request: { ...opts.request, page: WIDE_PAGE },
+  });
   const paged = listPage(items, opts.page, (item) => jsonCost(item), {
     maxItems: EVENTS_PER_PAGE,
-    budget: MAX_TOOL_TEXT - frame,
+    budget: roomAfter(frame),
   });
   return page(paged.pastEnd ? 'no_results' : 'found', paged.items, paged.pageCount, paged.hasMore);
 }

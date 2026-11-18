@@ -34,11 +34,10 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
   responseFormatSchema,
+  roomAfter,
   sliceForJson,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
@@ -400,10 +399,8 @@ function foundAnswer(a: ArticleView, opts: GetArticleAnswerOptions): FoundAnswer
 
   // The frame with the widest part and next: what is left of the budget is for the text.
   const end = fullText.length;
-  const frame =
-    JSON.stringify(page('', { from: offset, to: end, of: end }, { offset: end })).length +
-    FRAME_SLACK;
-  const slice = sliceForJson(fullText, offset, MAX_TOOL_TEXT - frame);
+  const frame = JSON.stringify(page('', { from: offset, to: end, of: end }, { offset: end }));
+  const slice = sliceForJson(fullText, offset, roomAfter(frame));
   const whole = offset === 0 && slice.nextOffset === null;
   return page(
     slice.text,

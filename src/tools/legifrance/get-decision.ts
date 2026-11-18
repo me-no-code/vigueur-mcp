@@ -33,7 +33,7 @@ import {
   type ToolContext,
   toolAnswer,
 } from '../envelope.js';
-import { callSignal, cut, FRAME_SLACK, fitHead, MAX_TOOL_TEXT, sliceForJson } from '../format.js';
+import { callSignal, cut, fitHead, roomAfter, sliceForJson } from '../format.js';
 import { toolError } from '../tool-error.js';
 
 const TOOL = 'legifrance_get_decision';
@@ -227,14 +227,13 @@ export function buildGetDecisionAnswer(
         true,
       ),
     );
-  const roomLeft = (head: string): number => MAX_TOOL_TEXT - head.length - FRAME_SLACK;
-  const head = fitHead(frame, SUMMARY_MAX.length, roomLeft);
+  const head = fitHead(frame, SUMMARY_MAX.length, roomAfter);
   const level = Math.max(
     0,
     SUMMARY_MAX.findIndex((_, lvl) => frame(lvl) === head),
   );
   const summary = summaryAt(level);
-  const slice = sliceForJson(d.text, offset, roomLeft(head));
+  const slice = sliceForJson(d.text, offset, roomAfter(head));
   const whole = offset === 0 && slice.nextOffset === null;
   return page(
     summary,

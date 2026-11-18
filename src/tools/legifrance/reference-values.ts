@@ -18,11 +18,10 @@ import {
 } from '../envelope.js';
 import {
   callSignal,
-  FRAME_SLACK,
   jsonCost,
-  MAX_TOOL_TEXT,
   optionalIsoDateSchema,
   presentOrUndefined,
+  roomAfter,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
 
@@ -115,7 +114,7 @@ export function buildReferenceValuesAnswer(
         : [{ what: 'Légifrance code list', retrieved: isoSecond(view.fetchedAt) }],
   });
 
-  let room = MAX_TOOL_TEXT - JSON.stringify(answer([])).length - FRAME_SLACK;
+  let room = roomAfter(JSON.stringify(answer([])));
   const items: Value[] = [];
   for (const v of all) {
     room -= jsonCost(v);

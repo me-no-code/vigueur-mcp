@@ -33,12 +33,11 @@ import {
 import {
   callSignal,
   cut,
-  FRAME_SLACK,
-  jsonCost,
-  MAX_TOOL_TEXT,
+  fitting,
   optionalIsoDateSchema,
   presentOrUndefined,
   responseFormatSchema,
+  roomAfter,
 } from '../format.js';
 import { toolError } from '../tool-error.js';
 
@@ -263,17 +262,10 @@ export function buildSearchLegislationAnswer(
 
   const atDate = typeof opts.request.at_date === 'string' ? opts.request.at_date : undefined;
   const hits = result.hits.map((h) => searchItem(h, opts.detailed, atDate, opts.scope));
-  const frame = JSON.stringify(answer('results', [], [onlyFirst(hits.length, hits.length)])).length;
-  let used = frame + FRAME_SLACK;
-  let shown = 0;
-  for (const item of hits) {
-    const cost = jsonCost(item);
-    if (shown > 0 && used + cost > MAX_TOOL_TEXT) break;
-    used += cost;
-    shown += 1;
-  }
-  const extra = shown < hits.length ? [onlyFirst(shown, hits.length)] : [];
-  return answer(shown === 0 ? 'no_results' : 'results', hits.slice(0, shown), extra);
+  const frame = JSON.stringify(answer('results', [], [onlyFirst(hits.length, hits.length)]));
+  const kept = fitting(hits, roomAfter(frame));
+  const extra = kept.length < hits.length ? [onlyFirst(kept.length, hits.length)] : [];
+  return answer(kept.length === 0 ? 'no_results' : 'results', kept, extra);
 }
 
 export function registerSearchLegislationTool(

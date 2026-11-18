@@ -29,7 +29,7 @@ import {
   type ToolContext,
   toolAnswer,
 } from '../envelope.js';
-import { callSignal, cut, FRAME_SLACK, fitHead, MAX_TOOL_TEXT, sliceForJson } from '../format.js';
+import { callSignal, cut, fitHead, roomAfter, sliceForJson } from '../format.js';
 import { toolError } from '../tool-error.js';
 import { identityLine } from './search-decisions.js';
 
@@ -323,13 +323,12 @@ export function buildGetDecisionAnswer(
         true,
       ),
     );
-  const roomLeft = (framed: string): number => MAX_TOOL_TEXT - framed.length - FRAME_SLACK;
-  const framed = fitHead(frame, LEVELS.length, roomLeft);
+  const framed = fitHead(frame, LEVELS.length, roomAfter);
   const level = Math.max(
     0,
     LEVELS.findIndex((_, lvl) => frame(lvl) === framed),
   );
-  const slice = sliceForJson(body, offset, roomLeft(framed));
+  const slice = sliceForJson(body, offset, roomAfter(framed));
   const whole = offset === 0 && slice.nextOffset === null;
   return page(
     headAt(level),
