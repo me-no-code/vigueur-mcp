@@ -89,6 +89,21 @@ describe.skipIf(!process.env.VIGUEUR_BUNDLE)('Claude Desktop bundle', () => {
     }
   });
 
+  it('holds exactly the runtime packages the lockfile lists, no development tool', () => {
+    const lock = JSON.parse(readFileSync(join(ROOT, 'package-lock.json'), 'utf8')) as {
+      packages: Record<string, { dev?: boolean; devOptional?: boolean }>;
+    };
+    const runtime = Object.entries(lock.packages)
+      .filter(([path, p]) => path.startsWith('node_modules/') && !p.dev && !p.devOptional)
+      .map(([path]) => path)
+      .sort();
+    const shipped = [...new Set(filesUnder(dir).filter((f) => f.endsWith('/package.json')))]
+      .map((f) => f.slice(0, -'/package.json'.length))
+      .filter((path) => /^node_modules\/(@[^/]+\/)?[^/@]+$/.test(path))
+      .sort();
+    expect(shipped).toEqual(runtime);
+  });
+
   it('holds no private file, source, test, doc or development tool', () => {
     const forbidden = [
       '.env',
