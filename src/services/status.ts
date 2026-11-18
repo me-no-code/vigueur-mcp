@@ -26,12 +26,9 @@ export interface StatusContext {
 
 export type SourceProbe = (ctx?: StatusContext) => Promise<SourceHealth>;
 
-export interface StatusReport {
-  configured: boolean;
-  env: PisteEnv | null;
-  configProblems: string[];
-  sources: SourceHealth[];
-}
+export type StatusReport =
+  | { configured: false; env: null; configProblems: string[]; sources: [] }
+  | { configured: true; env: PisteEnv; sources: SourceHealth[] };
 
 async function runProbe(
   source: SourceId,
@@ -65,10 +62,5 @@ export async function getStatus(
     const probe = probes[source];
     if (probe) pending.push(runProbe(source, probe, ctx));
   }
-  return {
-    configured: true,
-    env: config.piste.env,
-    configProblems: config.problems,
-    sources: await Promise.all(pending),
-  };
+  return { configured: true, env: config.piste.env, sources: await Promise.all(pending) };
 }

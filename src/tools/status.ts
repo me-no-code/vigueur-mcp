@@ -51,7 +51,7 @@ export function buildStatusAnswer(
   report: StatusReport,
   opts: { request: { tool: string } },
 ): AnswerBody<z.input<typeof statusOutput>> {
-  if (!report.configured || report.env === null) {
+  if (!report.configured) {
     return {
       source: SOURCE,
       outcome: 'not_configured',

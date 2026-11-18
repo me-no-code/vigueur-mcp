@@ -26,16 +26,6 @@ describe('getStatus', () => {
     expect(judilibre).not.toHaveBeenCalled();
   });
 
-  it('passes config problems through when configured', async () => {
-    const report = await getStatus({
-      config: { ...configured, problems: ['PISTE_ENV unknown, using production'] },
-      probes: {},
-    });
-    expect(report.configProblems).toEqual(['PISTE_ENV unknown, using production']);
-    expect(report.configured).toBe(true);
-    expect(report.env).toBe('sandbox');
-  });
-
   it('orders results as SOURCE_IDS even when judilibre resolves first', async () => {
     const legifrance: SourceProbe = async () => {
       await new Promise((r) => setTimeout(r, 20));

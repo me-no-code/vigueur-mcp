@@ -39,7 +39,6 @@ describe('compose', () => {
     expect(await deps.getStatus()).toEqual({
       configured: true,
       env: 'sandbox',
-      configProblems: [],
       sources: [
         { source: 'legifrance', state: 'ok' },
         { source: 'judilibre', state: 'ok' },

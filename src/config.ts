@@ -5,10 +5,11 @@ export interface PisteConfig {
   clientSecret: string;
   env: PisteEnv;
 }
-export interface Config {
-  piste: PisteConfig | null;
-  problems: string[];
-}
+/**
+ * Usable credentials, or none and why. A configured server has no problems by construction, so
+ * a new problem must decide which side it belongs to rather than be carried and dropped.
+ */
+export type Config = { piste: PisteConfig; problems: [] } | { piste: null; problems: string[] };
 
 /** A `${user_config.KEY}` an app passed through unfilled. */
 const UNFILLED = /^\$\{user_config\.[A-Za-z0-9_]+\}$/;
