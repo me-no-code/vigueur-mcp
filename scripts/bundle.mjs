@@ -7,7 +7,7 @@
 // npm_execpath.
 import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -16,11 +16,20 @@ const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const runNode = (script, args, cwd = root) =>
   execFileSync(process.execPath, [script, ...args], { cwd, stdio: 'inherit' });
 
+// Checked before anything is deleted: pnpm and yarn set npm_execpath to themselves.
 const npmCli = process.env.npm_execpath;
-if (!npmCli) throw new Error('npm_execpath is unset: run this script with `npm run bundle`.');
+if (!npmCli || basename(npmCli) !== 'npm-cli.js') {
+  throw new Error(
+    `npm_execpath is ${npmCli ? 'not npm' : 'unset'}: run this script with \`npm run bundle\`.`,
+  );
+}
 const mcpbPackage = join(root, 'node_modules', '@anthropic-ai', 'mcpb');
 const mcpbBin = readJson(join(mcpbPackage, 'package.json')).bin;
-const mcpbCli = join(mcpbPackage, typeof mcpbBin === 'string' ? mcpbBin : mcpbBin.mcpb);
+const mcpbBinPath = typeof mcpbBin === 'string' ? mcpbBin : mcpbBin?.mcpb;
+if (typeof mcpbBinPath !== 'string') {
+  throw new Error('@anthropic-ai/mcpb declares no mcpb command: run `npm install`.');
+}
+const mcpbCli = join(mcpbPackage, mcpbBinPath);
 
 const { version } = readJson(join(root, 'package.json'));
 const output = join(root, 'build', `vigueur-${version}.mcpb`);
