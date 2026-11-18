@@ -5,21 +5,29 @@ node_modules/
 dist/
 build/
 *.mcpb
+*.tgz
 *.tsbuildinfo
 
-# Environment / secrets
+# Environment and secrets
 .env
 .env.*
 !.env.example
 
-# Test & coverage
+# Tests and coverage
 coverage/
 
 # Logs
 *.log
-npm-debug.log*
 
-# OS / editors
+# OS and editor files
 .DS_Store
-.idea/
-.vscode/
+Thumbs.db
+*.swp
+*~
+
+# Hidden folders at the root are local (tools, editors, private work),
+# except the project's own, listed back in below.
+/.*/
+!/.claude-plugin/
+!/.githooks/
+!/.github/

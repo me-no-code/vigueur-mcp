@@ -104,20 +104,20 @@ describe.skipIf(!process.env.VIGUEUR_BUNDLE)('Claude Desktop bundle', () => {
     expect(shipped).toEqual(runtime);
   });
 
-  it('holds no private file, source, test, doc or development tool', () => {
+  it('holds no hidden file or folder at its root, no source, test, doc or development tool', () => {
     const forbidden = [
-      '.env',
       'src/',
       'test/',
       'docs/',
       'user-docs/',
-      '.git/',
       'node_modules/vitest/',
       'node_modules/typescript/',
       'node_modules/@biomejs/',
       'node_modules/@anthropic-ai/mcpb/',
     ];
-    const leaks = filesUnder(dir).filter((f) => forbidden.some((bad) => f.startsWith(bad)));
+    const leaks = filesUnder(dir).filter(
+      (f) => f.startsWith('.') || forbidden.some((bad) => f.startsWith(bad)),
+    );
     expect(leaks).toEqual([]);
   });
 
