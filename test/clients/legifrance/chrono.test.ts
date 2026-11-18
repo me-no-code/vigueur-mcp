@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
+import { DEFAULT_TIMEOUT_MS } from '../../../src/clients/piste/http.js';
+import { DEFAULT_DEADLINE_MS } from '../../../src/tools/format.js';
 import { fakePisteHttp } from '../../helpers/fake-piste-http.js';
 
 const CIVIL = 'LEGITEXT000006070721';
@@ -15,6 +17,14 @@ function setup(reply?: unknown) {
 }
 
 describe('listChanges', () => {
+  it('gives a long change log more time than a normal request, within the call deadline', async () => {
+    const { repo, calls } = setup();
+    await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');
+    const timeoutMs = calls[0]?.opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    expect(timeoutMs).toBeGreaterThan(DEFAULT_TIMEOUT_MS);
+    expect(timeoutMs).toBeLessThan(DEFAULT_DEADLINE_MS);
+  });
+
   it('requests the years of the range with today as consultation date', async () => {
     const { repo, calls } = setup();
     await repo.listChanges(CIVIL, '2025-01-01', '2026-12-31');

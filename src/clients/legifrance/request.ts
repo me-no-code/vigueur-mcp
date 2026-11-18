@@ -22,6 +22,13 @@ export const HISTORY_ACTIONS: Readonly<Record<string, HistoryEntry['action']>> =
   DEPLACEMENT: 'transfer',
 };
 
+/**
+ * Per-request timeout for the large bodies (whole texts, code tables of contents: 19.3 MB for the
+ * Code du travail, change logs), which the default timeout cuts short on a slow connection. It
+ * stays under the 45 s call deadline, which still bounds the whole call.
+ */
+export const LARGE_BODY_TIMEOUT_MS = 30_000;
+
 /** POSTs to Légifrance and maps the body; any mapping failure is an unexpected response. */
 export async function postJson<T>(
   http: PisteHttp,
@@ -29,10 +36,14 @@ export async function postJson<T>(
   body: unknown,
   ctx: CallContext | undefined,
   map: (raw: unknown) => T,
+  opts: { timeoutMs?: number } = {},
 ): Promise<T> {
   const raw = await http.request<unknown>(
     { method: 'POST', path, body },
-    ctx?.signal ? { signal: ctx.signal } : undefined,
+    {
+      ...(ctx?.signal !== undefined && { signal: ctx.signal }),
+      ...(opts.timeoutMs !== undefined && { timeoutMs: opts.timeoutMs }),
+    },
   );
   try {
     return map(raw);

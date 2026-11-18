@@ -1,7 +1,16 @@
 import { type IsoDate, isoDateInParis } from '../../domain/dates.js';
 import type { CallContext, ChangeEntry, ChangeLog } from '../../services/legislation/ports.js';
 import type { PisteHttp } from '../piste/http.js';
-import { asObj, HISTORY_ACTIONS, keyed, list, lookup, optStr, postJson } from './request.js';
+import {
+  asObj,
+  HISTORY_ACTIONS,
+  keyed,
+  LARGE_BODY_TIMEOUT_MS,
+  list,
+  lookup,
+  optStr,
+  postJson,
+} from './request.js';
 import { cleanTitle, parseApiDate, stripIdSuffix } from './wire.js';
 
 const yearOf = (d: IsoDate) => Number.parseInt(d.slice(0, 4), 10);
@@ -69,5 +78,7 @@ export function listChanges(
     startYear: yearOf(from),
     endYear: yearOf(to),
   };
-  return postJson(http, '/chrono/textCid', body, ctx, (raw) => mapChanges(raw, from, to));
+  return postJson(http, '/chrono/textCid', body, ctx, (raw) => mapChanges(raw, from, to), {
+    timeoutMs: LARGE_BODY_TIMEOUT_MS,
+  });
 }

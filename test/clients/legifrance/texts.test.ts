@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
+import { DEFAULT_TIMEOUT_MS } from '../../../src/clients/piste/http.js';
 import type { TextSection } from '../../../src/services/legislation/ports.js';
 import { VigueurError } from '../../../src/shared/errors.js';
+import { DEFAULT_DEADLINE_MS } from '../../../src/tools/format.js';
 import { type FakeRoute, fakePisteHttp, loadFixture } from '../../helpers/fake-piste-http.js';
 
 function client(routes: FakeRoute[]) {
@@ -22,6 +24,14 @@ const rejected400 = () =>
   );
 
 describe('getText (LODA)', () => {
+  it('gives a whole text more time than a normal request, within the call deadline', async () => {
+    const { repo, calls } = client([serve('/consult/lawDecree', '48-lawDecree-loi-78-17')]);
+    await repo.getText('LEGITEXT000006068624', '2026-11-12');
+    const timeoutMs = calls[0]?.opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    expect(timeoutMs).toBeGreaterThan(DEFAULT_TIMEOUT_MS);
+    expect(timeoutMs).toBeLessThan(DEFAULT_DEADLINE_MS);
+  });
+
   it('maps loi 78-17 (fixture 48)', async () => {
     const { repo, calls } = client([serve('/consult/lawDecree', '48-lawDecree-loi-78-17')]);
     const t = await repo.getText('LEGITEXT000006068624', '2026-11-12');

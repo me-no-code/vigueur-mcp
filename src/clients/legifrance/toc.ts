@@ -8,7 +8,16 @@ import type {
   TocNode,
 } from '../../services/legislation/ports.js';
 import type { PisteHttp } from '../piste/http.js';
-import { asObj, list, type Obj, optStr, postJson, shape, str } from './request.js';
+import {
+  asObj,
+  LARGE_BODY_TIMEOUT_MS,
+  list,
+  type Obj,
+  optStr,
+  postJson,
+  shape,
+  str,
+} from './request.js';
 import { mapPisteStatus } from './status-map.js';
 import { cleanTitle, parseApiDate, stripIdSuffix } from './wire.js';
 
@@ -113,8 +122,13 @@ export function createTocClient(http: PisteHttp, now: () => Date): TocClient {
       }
       cache.delete(key);
       const body = { textId: codeId, date: asOf, nature: 'CODE' };
-      const toc = await postJson(http, '/consult/legi/tableMatieres', body, ctx, (raw) =>
-        mapToc(raw, codeId, asOf, now()),
+      const toc = await postJson(
+        http,
+        '/consult/legi/tableMatieres',
+        body,
+        ctx,
+        (raw) => mapToc(raw, codeId, asOf, now()),
+        { timeoutMs: LARGE_BODY_TIMEOUT_MS },
       );
       cache.set(key, toc);
       while (cache.size > TOC_CACHE_SIZE) {

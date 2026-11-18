@@ -6,7 +6,16 @@ import type {
   TextSection,
 } from '../../services/legislation/ports.js';
 import type { PisteHttp } from '../piste/http.js';
-import { asObj, isUnknownId, list, type Obj, optStr, postJson, str } from './request.js';
+import {
+  asObj,
+  isUnknownId,
+  LARGE_BODY_TIMEOUT_MS,
+  list,
+  type Obj,
+  optStr,
+  postJson,
+  str,
+} from './request.js';
 import { mapPisteStatus } from './status-map.js';
 import { cleanTitle, htmlToText, parseApiDate, stripIdSuffix } from './wire.js';
 
@@ -89,7 +98,7 @@ async function consult(
   ctx: CallContext | undefined,
 ): Promise<TextRecord | null> {
   try {
-    return await postJson(http, path, body, ctx, mapText);
+    return await postJson(http, path, body, ctx, mapText, { timeoutMs: LARGE_BODY_TIMEOUT_MS });
   } catch (err) {
     if (isUnknownId(err)) return null;
     throw err;

@@ -2,8 +2,10 @@ import { statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
+import { DEFAULT_TIMEOUT_MS } from '../../../src/clients/piste/http.js';
 import type { CodeToc, TocArticle, TocNode } from '../../../src/services/legislation/ports.js';
 import { VigueurError } from '../../../src/shared/errors.js';
+import { DEFAULT_DEADLINE_MS } from '../../../src/tools/format.js';
 import { type FakeRoute, fakePisteHttp, loadFixture } from '../../helpers/fake-piste-http.js';
 
 const TRAVAIL = 'LEGITEXT000006072050';
@@ -52,6 +54,14 @@ describe('getCodeToc', () => {
         body: { textId: TRAVAIL, date: '2026-11-12', nature: 'CODE' },
       },
     ]);
+  });
+
+  it('gives the large table of contents more time than a normal request, within the call deadline', async () => {
+    const { repo, calls } = client([tocRoute]);
+    await repo.getCodeToc(TRAVAIL, '2026-11-12');
+    const timeoutMs = calls[0]?.opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    expect(timeoutMs).toBeGreaterThan(DEFAULT_TIMEOUT_MS);
+    expect(timeoutMs).toBeLessThan(DEFAULT_DEADLINE_MS);
   });
 
   it('maps the trimmed Code du travail (fixture 20)', async () => {
