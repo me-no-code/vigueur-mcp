@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { compose } from '../../src/compose.js';
 import type { ServerDeps } from '../../src/server.js';
 import { createJudilibreSource, type JudilibreServices } from '../../src/tools/judilibre/index.js';
@@ -7,9 +7,9 @@ import {
   type LegifranceServices,
 } from '../../src/tools/legifrance/index.js';
 import { expectToolError } from '../helpers/answer.js';
+import { useServers } from '../helpers/composed-server.js';
 import { fakeFetch } from '../helpers/fake-fetch.js';
 import { sandboxConfig } from '../helpers/fixture-fetch.js';
-import { connectClient } from '../helpers/mcp-client.js';
 
 /** Valid minimal arguments for every tool that reaches an upstream API (all but vigueur_status). */
 const MINIMAL_ARGS: Record<string, Record<string, unknown>> = {
@@ -74,15 +74,11 @@ const deps = (): ServerDeps => ({
   ],
 });
 
-const cleanup: Array<() => Promise<void>> = [];
-afterEach(async () => {
-  await Promise.all(cleanup.splice(0).map((close) => close()));
-});
+const { connect } = useServers();
 
 describe('per-call deadline over every tool', () => {
   it('has minimal arguments for every registered tool', async () => {
-    const { client, close } = await connectClient(deps());
-    cleanup.push(close);
+    const client = await connect(deps());
     const { tools } = await client.listTools();
     expect(Object.keys(MINIMAL_ARGS).sort()).toEqual(
       tools
@@ -94,8 +90,7 @@ describe('per-call deadline over every tool', () => {
 
   for (const [name, args] of Object.entries(MINIMAL_ARGS)) {
     it(`${name} answers with the deadline error when the source never answers`, async () => {
-      const { client, close } = await connectClient(deps());
-      cleanup.push(close);
+      const client = await connect(deps());
       const result = await client.callTool({ name, arguments: args });
       const source = name.startsWith('judilibre_') ? 'Judilibre' : 'Légifrance';
       const e = expectToolError(result, 'deadline');
@@ -123,10 +118,7 @@ describe('per-call deadline end to end (tool → service → client → HTTP)', 
   for (const [name, args] of Object.entries(MINIMAL_ARGS)) {
     it(`${name}: the deadline aborts every request it made`, async () => {
       const { fetch, calls } = hangingApi();
-      const { client, close } = await connectClient(
-        compose(sandboxConfig(), { fetch, deadlineMs: 50 }),
-      );
-      cleanup.push(close);
+      const client = await connect(compose(sandboxConfig(), { fetch, deadlineMs: 50 }));
       const result = await client.callTool({ name, arguments: args });
       expectToolError(result, 'deadline');
       const api = calls.filter((c) => !TOKEN.test(c.url));

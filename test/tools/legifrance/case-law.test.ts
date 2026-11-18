@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { compose } from '../../../src/compose.js';
+import { describe, expect, it } from 'vitest';
 import {
   createGetLegifranceDecision,
   createSearchCaseLaw,
@@ -15,37 +14,22 @@ import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
 import { buildGetDecisionAnswer } from '../../../src/tools/legifrance/get-decision.js';
 import { createLegifranceSource } from '../../../src/tools/legifrance/index.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
+import { useServers } from '../../helpers/composed-server.js';
 import { fakeLegifrance } from '../../helpers/fake-case-law.js';
-import {
-  CASE_LAW_FIXTURE_ROUTES,
-  fixtureFetch,
-  sandboxConfig,
-} from '../../helpers/fixture-fetch.js';
-import { connectClient } from '../../helpers/mcp-client.js';
+import { CASE_LAW_FIXTURE_ROUTES, sandboxConfig } from '../../helpers/fixture-fetch.js';
 
 const SOURCE = 'Légifrance';
 const SEARCH = 'legifrance_search_case_law';
 const DECISION = 'legifrance_get_decision';
 const LINK = 'https://www.legifrance.gouv.fr/';
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
-
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
+const { connect, composed } = useServers();
 
 async function call(name: string, args: Record<string, unknown>) {
-  const fixtures = fixtureFetch([...CASE_LAW_FIXTURE_ROUTES]);
-  unmatchedRoutes.push(fixtures.unmatched);
-  const { client, close } = await connectClient(
-    compose(sandboxConfig(), { fetch: fixtures.fetch, today: () => '2026-11-13' }),
-  );
-  cleanup.push(close);
+  const client = await composed({
+    routes: [...CASE_LAW_FIXTURE_ROUTES],
+    today: () => '2026-11-13',
+  });
   return client.callTool({ name, arguments: args });
 }
 
@@ -59,10 +43,9 @@ describe('a long decision that fits one page, read after short ones', () => {
       collection: 'administrative',
       text: 'abcdefghij '.repeat(2_800),
     });
-    const { client, close } = await legifranceOver(
+    const client = await legifranceOver(
       fakeLegifrance({ decisions: { [short.id]: short, [long.id]: long } }).repo,
     );
-    cleanup.push(close);
     const found = { source: SOURCE, outcome: 'found' };
     for (let i = 0; i < 10; i++) {
       expectAnswer(await client.callTool({ name: DECISION, arguments: { id: short.id } }), found);
@@ -310,7 +293,7 @@ function decisionFixture(over: Partial<LegifranceDecision> = {}): LegifranceDeci
 
 function legifranceOver(repo: CaseLawRepository) {
   const unused = () => Promise.reject(new Error('not used'));
-  return connectClient({
+  return connect({
     config: sandboxConfig(),
     getStatus: unused,
     sources: [
@@ -331,8 +314,7 @@ function legifranceOver(repo: CaseLawRepository) {
 }
 
 async function callOver(repo: CaseLawRepository, name: string, args: Record<string, unknown>) {
-  const { client, close } = await legifranceOver(repo);
-  cleanup.push(close);
+  const client = await legifranceOver(repo);
   return client.callTool({ name, arguments: args });
 }
 

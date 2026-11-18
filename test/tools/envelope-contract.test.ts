@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { compose } from '../../src/compose.js';
 import { loadConfig } from '../../src/config.js';
-import type { ServerDeps } from '../../src/server.js';
 import { deniedFetch, expectAnswer, expectToolError } from '../helpers/answer.js';
+import { useServers } from '../helpers/composed-server.js';
 import {
   type FixtureRoute,
   fixtureFetch,
@@ -10,7 +10,6 @@ import {
   sandboxConfig,
 } from '../helpers/fixture-fetch.js';
 import { JUDILIBRE_ROUTES } from '../helpers/judilibre-routes.js';
-import { connectClient } from '../helpers/mcp-client.js';
 
 interface Case {
   tool: string;
@@ -140,18 +139,7 @@ function sourceOf(tool: string): string {
   return 'PISTE';
 }
 
-let cleanup: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-});
-
-async function connect(deps: ServerDeps) {
-  const { client, close } = await connectClient(deps);
-  cleanup.push(close);
-  return client;
-}
+const { connect } = useServers();
 
 describe('envelope contract', () => {
   it('every registered tool declares an outputSchema and has a case', async () => {

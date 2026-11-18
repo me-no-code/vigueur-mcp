@@ -1,6 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createLegifranceClient } from '../../../src/clients/legifrance/client.js';
-import { compose } from '../../../src/compose.js';
 import {
   createLatestJo,
   type LatestJoView,
@@ -14,36 +13,16 @@ import {
 } from '../../../src/tools/legifrance/latest-jo.js';
 import { buildReferenceValuesAnswer } from '../../../src/tools/legifrance/reference-values.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
+import { type McpTestClient, useServers } from '../../helpers/composed-server.js';
 import { fakePisteHttp } from '../../helpers/fake-piste-http.js';
-import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
-import { connectClient } from '../../helpers/mcp-client.js';
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
+const { composed } = useServers();
 
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
-
-type Client = Awaited<ReturnType<typeof connectClient>>['client'];
+type Client = McpTestClient;
 
 /** A client over the composed server on the Légifrance fixtures (today is 2026-11-13). */
-async function composedClient(now?: () => Date): Promise<Client> {
-  const fixtures = fixtureFetch();
-  unmatchedRoutes.push(fixtures.unmatched);
-  const { client, close } = await connectClient(
-    compose(sandboxConfig(), {
-      fetch: fixtures.fetch,
-      today: () => '2026-11-13',
-      ...(now !== undefined && { now }),
-    }),
-  );
-  cleanup.push(close);
-  return client;
+function composedClient(now?: () => Date): Promise<Client> {
+  return composed({ today: () => '2026-11-13', ...(now !== undefined && { now }) });
 }
 
 async function call(name: string, args: Record<string, unknown>, now?: () => Date) {

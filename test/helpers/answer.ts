@@ -18,7 +18,7 @@ const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 
 /** An answer as tests read it: any field, at any depth. */
 // biome-ignore lint/suspicious/noExplicitAny: tests read the answer's fields freely.
-type Answer = Record<string, any>;
+export type Answer = Record<string, any>;
 
 interface ToolResult {
   isError?: boolean;

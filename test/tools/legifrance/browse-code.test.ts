@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { compose } from '../../../src/compose.js';
+import { describe, expect, it } from 'vitest';
 import { statusAt } from '../../../src/domain/status-at.js';
 import type {
   BrowseInput,
@@ -15,37 +14,14 @@ import {
   type LegifranceServices,
 } from '../../../src/tools/legifrance/index.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
-import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
-import { connectClient } from '../../helpers/mcp-client.js';
+import { type McpTestClient, useServers } from '../../helpers/composed-server.js';
+import { sandboxConfig } from '../../helpers/fixture-fetch.js';
 
 const TOOL = 'legifrance_browse_code';
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
+const { connect, composed } = useServers();
 
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  // Reset before asserting, so one test's unmatched request never fails the next ones.
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
-
-type Client = Awaited<ReturnType<typeof connectClient>>['client'];
-
-async function connect(deps: Parameters<typeof connectClient>[0]): Promise<Client> {
-  const { client, close } = await connectClient(deps);
-  cleanup.push(close);
-  return client;
-}
-
-/** A client over the composed server, answering PISTE from the Légifrance fixtures. */
-async function composedClient(opts: { now?: () => Date } = {}): Promise<Client> {
-  const fixtures = fixtureFetch();
-  unmatchedRoutes.push(fixtures.unmatched);
-  return connect(compose(sandboxConfig(), { fetch: fixtures.fetch, ...opts }));
-}
+type Client = McpTestClient;
 
 async function browse(client: Client, args: Record<string, unknown>) {
   return client.callTool({ name: TOOL, arguments: args });
@@ -57,7 +33,7 @@ const HINT =
 
 describe('legifrance_browse_code over the composed server (fixtures)', () => {
   it('Code du travail: the top level, then a section_id taken from the answer', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const root = expectAnswer(await browse(client, { code: 'Code du travail' }), {
       source: 'Légifrance',
       outcome: 'results',
@@ -117,7 +93,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
   });
 
   it('a chapter lists its articles with their status and id, below the breadcrumb', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const a = expectAnswer(
       await browse(client, { code: 'Code du travail', section_id: 'LEGISCTA000006177885' }),
       { source: 'Légifrance', outcome: 'results' },
@@ -148,7 +124,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
   });
 
   it('a past date: sections judged by their dates, articles with their label of today', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const root = expectAnswer(
       await browse(client, { code: 'Code du travail', at_date: '2005-01-01' }),
       { source: 'Légifrance', outcome: 'no_results' },
@@ -206,7 +182,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
   });
 
   it('a page past the last is no_results with the same fields, not an error', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const a = expectAnswer(await browse(client, { code: 'Code du travail', page: 99 }), {
       source: 'Légifrance',
       outcome: 'no_results',
@@ -219,7 +195,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
   });
 
   it('an unknown section_id is an error', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const e = expectToolError(
       await browse(client, { code: 'Code du travail', section_id: 'LEGISCTA000000000000' }),
       'invalid_input',
@@ -231,7 +207,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
   it('lists the table of contents with the time it was fetched; a second call keeps that time', async () => {
     // The clock advances one minute per reading.
     let t = Date.UTC(2026, 10, 16, 8, 0, 0);
-    const client = await composedClient({
+    const client = await composed({
       now: () => {
         t += 60_000;
         return new Date(t);
@@ -253,7 +229,7 @@ describe('legifrance_browse_code over the composed server (fixtures)', () => {
   });
 
   it('is listed with its description, annotations and an output schema', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const { tools } = await client.listTools();
     const tool = tools.find((t) => t.name === TOOL);
     expect(tool?.description).toBe(

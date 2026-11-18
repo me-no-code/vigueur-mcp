@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { compose } from '../../../src/compose.js';
+import { describe, expect, it } from 'vitest';
 import type { ChangesView } from '../../../src/services/legislation/changes.js';
 import type { ArticleHistoryView } from '../../../src/services/legislation/history.js';
 import type {
@@ -23,37 +22,16 @@ import {
   searchScope,
 } from '../../../src/tools/legifrance/search-legislation.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
-import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
-import { connectClient } from '../../helpers/mcp-client.js';
+import { useServers } from '../../helpers/composed-server.js';
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
-
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  // Reset before asserting, so one test's unmatched request never fails the next ones.
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
-
-async function connectOnly(opts: { today?: () => string } = {}) {
-  const fixtures = fixtureFetch();
-  unmatchedRoutes.push(fixtures.unmatched);
-  const { client, close } = await connectClient(
-    compose(sandboxConfig(), { fetch: fixtures.fetch, ...opts }),
-  );
-  cleanup.push(close);
-  return { client };
-}
+const { composed } = useServers();
 
 async function call(
   name: string,
   args: Record<string, unknown>,
   opts: { today?: () => string } = {},
 ) {
-  const { client } = await connectOnly(opts);
+  const client = await composed(opts);
   const result = await client.callTool({ name, arguments: args });
   return { result };
 }
@@ -170,7 +148,7 @@ describe('legifrance_get_article_history (fixtures)', () => {
   });
 
   it('declares an output schema', async () => {
-    const { client } = await connectOnly();
+    const client = await composed();
     const tool = (await client.listTools()).tools.find((t) => t.name === HISTORY);
     expect(tool?.outputSchema?.type).toBe('object');
   });
@@ -334,7 +312,7 @@ describe('legifrance_search_legislation (fixtures)', () => {
   });
 
   it('declares an output schema', async () => {
-    const { client } = await connectOnly();
+    const client = await composed();
     const tools = (await client.listTools()).tools;
     for (const name of [SEARCH, CHANGES]) {
       expect(tools.find((t) => t.name === name)?.outputSchema?.type).toBe('object');
@@ -342,7 +320,7 @@ describe('legifrance_search_legislation (fixtures)', () => {
   });
 
   it('the description matches the criteria rule and the per-collection scope', async () => {
-    const { client } = await connectOnly();
+    const client = await composed();
     const tool = (await client.listTools()).tools.find((t) => t.name === SEARCH);
     const description = tool?.description ?? '';
     expect(description).toContain(
@@ -681,13 +659,13 @@ describe('legifrance_list_changes (fixtures)', () => {
   });
 
   it('is titled for codes, laws and decrees alike', async () => {
-    const { client } = await connectOnly();
+    const client = await composed();
     const tool = (await client.listTools()).tools.find((t) => t.name === CHANGES);
     expect(tool?.title).toBe('List changes to a French code, law or decree');
   });
 
   it('has no response_format input (it never changed the answer)', async () => {
-    const { client } = await connectOnly();
+    const client = await composed();
     const tool = (await client.listTools()).tools.find((t) => t.name === CHANGES);
     expect(Object.keys(tool?.inputSchema.properties ?? {})).not.toContain('response_format');
   });

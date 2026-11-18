@@ -1,6 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { compose } from '../../../src/compose.js';
-import type { ServerDeps } from '../../../src/server.js';
+import { describe, expect, it } from 'vitest';
 import {
   createGetJudilibreDecision,
   createListJudilibreTaxonomy,
@@ -14,11 +12,11 @@ import type {
 import { MAX_TOOL_TEXT } from '../../../src/tools/format.js';
 import { createJudilibreSource } from '../../../src/tools/judilibre/index.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
+import { useServers } from '../../helpers/composed-server.js';
 import { decisionOf, fakeJudilibre } from '../../helpers/fake-case-law.js';
 import { loadFixture } from '../../helpers/fake-piste-http.js';
-import { type FixtureRoute, fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
+import { type FixtureRoute, sandboxConfig } from '../../helpers/fixture-fetch.js';
 import { JUDILIBRE_ROUTES } from '../../helpers/judilibre-routes.js';
-import { connectClient } from '../../helpers/mcp-client.js';
 
 const SOURCE = 'Judilibre';
 const SEARCH = 'judilibre_search_decisions';
@@ -41,27 +39,10 @@ const ROUTES: FixtureRoute[] = [
   },
 ];
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
+const { connect, composed } = useServers();
 
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
-
-async function connect(deps: ServerDeps) {
-  const { client, close } = await connectClient(deps);
-  cleanup.push(close);
-  return client;
-}
-
-async function composedClient(now?: () => Date) {
-  const fixtures = fixtureFetch(ROUTES);
-  unmatchedRoutes.push(fixtures.unmatched);
-  return connect(compose(sandboxConfig(), { fetch: fixtures.fetch, ...(now && { now }) }));
+function composedClient(now?: () => Date) {
+  return composed({ routes: ROUTES, ...(now && { now }) });
 }
 
 async function call(name: string, args: Record<string, unknown>) {

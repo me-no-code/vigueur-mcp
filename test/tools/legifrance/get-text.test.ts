@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { compose } from '../../../src/compose.js';
+import { describe, expect, it } from 'vitest';
 import type {
   GetTextInput,
   GetTextResult,
@@ -26,8 +25,8 @@ import {
   type LegifranceServices,
 } from '../../../src/tools/legifrance/index.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
-import { fixtureFetch, sandboxConfig } from '../../helpers/fixture-fetch.js';
-import { connectClient } from '../../helpers/mcp-client.js';
+import { type McpTestClient, readAllPages, useServers } from '../../helpers/composed-server.js';
+import { sandboxConfig } from '../../helpers/fixture-fetch.js';
 
 const TOOL = 'legifrance_get_text';
 const SOURCE = 'Légifrance';
@@ -39,54 +38,20 @@ const DATE = /^\d{4}-\d\d-\d\d$/;
 
 type Answer = ReturnType<typeof expectAnswer>;
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
+const { connect, composed } = useServers();
 
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  // Reset before asserting, so one test's unmatched request never fails the next ones.
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
-
-type Client = Awaited<ReturnType<typeof connectClient>>['client'];
-
-async function connect(deps: Parameters<typeof connectClient>[0]): Promise<Client> {
-  const { client, close } = await connectClient(deps);
-  cleanup.push(close);
-  return client;
-}
-
-/** A client over the composed server, answering PISTE from the Légifrance fixtures. */
-async function composedClient(): Promise<Client> {
-  const fixtures = fixtureFetch();
-  unmatchedRoutes.push(fixtures.unmatched);
-  return connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
-}
+type Client = McpTestClient;
 
 async function call(args: Record<string, unknown>) {
-  const client = await composedClient();
+  const client = await composed();
   return client.callTool({ name: TOOL, arguments: args });
 }
 
-/** Every page of an answer, following its `next.page` from the first page. */
-async function readAllPages(client: Client, args: Record<string, unknown>): Promise<Answer[]> {
-  const pages: Answer[] = [];
-  let page = 1;
-  for (let i = 0; i < 50; i++) {
-    const result = await client.callTool({
-      name: TOOL,
-      arguments: page > 1 ? { ...args, page } : args,
-    });
-    const a = expectAnswer(result, FOUND);
-    pages.push(a);
-    if (a.next === null) return pages;
-    page = a.next.page;
-    expect(page).toBe(pages.length + 1);
-  }
-  throw new Error('more than 50 pages');
+/** Every page of the articles, from the first; each page's `next.page` is the page after it. */
+async function readTextPages(client: Client, args: Record<string, unknown>): Promise<Answer[]> {
+  const pages = await readAllPages(client, TOOL, args, FOUND);
+  for (const [i, p] of pages.slice(0, -1).entries()) expect(p.next.page).toBe(i + 2);
+  return pages;
 }
 
 const LOI_78_17 =
@@ -181,8 +146,8 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
   });
 
   it('loi 78-17 articles: bounded pages, each with the text fields and the link, every article once', async () => {
-    const client = await composedClient();
-    const pages = await readAllPages(client, { nature: 'loi', number: '78-17', part: 'articles' });
+    const client = await composed();
+    const pages = await readTextPages(client, { nature: 'loi', number: '78-17', part: 'articles' });
     expect(pages.length).toBeGreaterThan(1);
     const [first, second] = pages as [Answer, Answer];
     const art1 = first.items.find((i: Answer) => i.number === '1');
@@ -214,8 +179,8 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
   });
 
   it('an article not in force on the date: its status, its text withheld', async () => {
-    const client = await composedClient();
-    const pages = await readAllPages(client, { nature: 'loi', number: '78-17', part: 'articles' });
+    const client = await composed();
+    const pages = await readTextPages(client, { nature: 'loi', number: '78-17', part: 'articles' });
     const on = pages[0]?.on;
     const holding = pages.find((p) => p.items.some((i: Answer) => i.id === 'LEGIARTI000037088068'));
     const art51 = holding?.items.find((i: Answer) => i.id === 'LEGIARTI000037088068');
@@ -268,8 +233,8 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
       part: 'articles',
     });
 
-    const client = await composedClient();
-    const pages = await readAllPages(client, {
+    const client = await composed();
+    const pages = await readTextPages(client, {
       nature: 'loi',
       number: '78-17',
       section_id: 'LEGISCTA000006095881',
@@ -322,8 +287,8 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
   });
 
   it('by NOR, articles: a 62 000-character article is split over bounded pages', async () => {
-    const client = await composedClient();
-    const pages = await readAllPages(client, { nor: 'JUSC1522466R', part: 'articles' });
+    const client = await composed();
+    const pages = await readTextPages(client, { nor: 'JUSC1522466R', part: 'articles' });
     const items = pages.flatMap((p) => p.items);
     for (const page of pages) {
       expect(page.title).toBe(ORD_2016_131);
@@ -454,8 +419,8 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
     expect(outline.in_force_count).toBe(127);
     expect(outline.on).toBe('2015-01-01');
 
-    const client = await composedClient();
-    const pages = await readAllPages(client, {
+    const client = await composed();
+    const pages = await readTextPages(client, {
       id: 'LEGITEXT000006052581',
       at_date: '2015-01-01',
       part: 'articles',
@@ -472,7 +437,7 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
   });
 
   it('page 99 of loi 78-17 articles: no results, the same fields, no items', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const args = { nature: 'loi', number: '78-17', part: 'articles' };
     const first = expectAnswer(await client.callTool({ name: TOOL, arguments: args }), FOUND);
     const past = expectAnswer(
@@ -490,7 +455,7 @@ describe('legifrance_get_text over the composed server (fixtures)', () => {
   });
 
   it('is listed with its description, annotations and an output schema', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const { tools } = await client.listTools();
     const tool = tools.find((t) => t.name === TOOL);
     expect(tool?.description).toBe(

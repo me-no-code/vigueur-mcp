@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../../src/config.js';
 import type { StatusContext, StatusReport } from '../../src/services/status.js';
 import { toolContext } from '../../src/tools/envelope.js';
 import { expectAnswer, expectToolError } from '../helpers/answer.js';
-import { connectClient } from '../helpers/mcp-client.js';
+import { useServers } from '../helpers/composed-server.js';
 
 const unconfigured: StatusReport = {
   configured: false,
@@ -23,21 +23,16 @@ const allOk: StatusReport = {
 
 const NOW = new Date('2026-11-16T10:20:30.456Z');
 
-let cleanup: Array<() => Promise<void>> = [];
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-});
+const { connect } = useServers();
 
 /** Calls vigueur_status on a server whose status service answers `getStatus`. */
 async function callStatus(getStatus: (ctx?: StatusContext) => Promise<StatusReport>) {
-  const { client, close } = await connectClient({
+  const client = await connect({
     config: loadConfig({}),
     getStatus,
     sources: [],
     tools: toolContext({ now: () => NOW }),
   });
-  cleanup.push(close);
   return client.callTool({ name: 'vigueur_status' });
 }
 

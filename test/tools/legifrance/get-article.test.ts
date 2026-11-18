@@ -1,8 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { htmlToText } from '../../../src/clients/html.js';
 import { compose } from '../../../src/compose.js';
 import { loadConfig } from '../../../src/config.js';
-import type { ServerDeps } from '../../../src/server.js';
 import type {
   ArticleView,
   GetArticleInput,
@@ -19,6 +18,7 @@ import {
   type LegifranceServices,
 } from '../../../src/tools/legifrance/index.js';
 import { expectAnswer, expectToolError } from '../../helpers/answer.js';
+import { readAllPages, useServers } from '../../helpers/composed-server.js';
 import { loadFixture } from '../../helpers/fake-piste-http.js';
 import {
   bodyField,
@@ -27,7 +27,7 @@ import {
   LEGIFRANCE_FIXTURE_ROUTES,
   sandboxConfig,
 } from '../../helpers/fixture-fetch.js';
-import { connectClient, firstText } from '../../helpers/mcp-client.js';
+import { firstText } from '../../helpers/mcp-client.js';
 
 const TOOL = 'legifrance_get_article';
 const SOURCE = 'Légifrance';
@@ -35,33 +35,10 @@ const FOUND = { source: SOURCE, outcome: 'found' };
 
 type Answer = ReturnType<typeof expectAnswer>;
 
-let cleanup: Array<() => Promise<void>> = [];
-let unmatchedRoutes: string[][] = [];
-
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-  // Reset before asserting, so one test's unmatched request never fails the next ones.
-  const pending = unmatchedRoutes;
-  unmatchedRoutes = [];
-  for (const unmatched of pending) expect(unmatched, 'requests without a fixture').toEqual([]);
-});
-
-async function connect(deps: ServerDeps) {
-  const { client, close } = await connectClient(deps);
-  cleanup.push(close);
-  return client;
-}
-
-/** A client over the composed server, answering PISTE from the Légifrance fixtures (or `routes`). */
-async function composedClient(routes?: readonly FixtureRoute[]) {
-  const fixtures = fixtureFetch(routes);
-  unmatchedRoutes.push(fixtures.unmatched);
-  return connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
-}
+const { connect, composed, watch } = useServers();
 
 async function call(args: Record<string, unknown>) {
-  const client = await composedClient();
+  const client = await composed();
   return client.callTool({ name: TOOL, arguments: args });
 }
 
@@ -71,7 +48,7 @@ const link = (id: string) => `https://www.legifrance.gouv.fr/codes/article_lc/${
 // while `sliceForJson` had been compiled on short texts and not yet on long ones.
 describe('a long article that fits one page, read after short ones', () => {
   it('CGI art. 199 undecies B (fixture 59, default inputs): no part and no next, on every call', async () => {
-    const client = await composedClient();
+    const client = await composed();
     for (let i = 0; i < 10; i++) {
       const short = await client.callTool({
         name: TOOL,
@@ -334,7 +311,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
 
   it('without include_neighbours, no neighbours are read or shown', async () => {
     const fixtures = fixtureFetch();
-    unmatchedRoutes.push(fixtures.unmatched);
+    watch(fixtures.unmatched);
     const client = await connect(compose(sandboxConfig(), { fetch: fixtures.fetch }));
     const result = await client.callTool({
       name: TOOL,
@@ -345,7 +322,7 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
   });
 
   it('is listed with annotations and an output schema, only when configured', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const { tools } = await client.listTools();
     const tool = tools.find((t) => t.name === TOOL);
     expect(tool?.annotations).toEqual({
@@ -521,25 +498,6 @@ describe('legifrance_get_article handler', () => {
 // ---------------------------------------------------------------------------------------------
 // Long articles: only the article text is paginated; every page carries every field.
 
-type Client = Awaited<ReturnType<typeof clientOver>>;
-
-/** Every page of an article, following `next.offset` from the first page. */
-async function readAllPages(client: Client, args: Record<string, unknown>): Promise<Answer[]> {
-  const pages: Answer[] = [];
-  let offset = 0;
-  for (let i = 0; i < 50; i++) {
-    const result = await client.callTool({
-      name: TOOL,
-      arguments: offset > 0 ? { ...args, offset } : args,
-    });
-    const a = expectAnswer(result, FOUND);
-    pages.push(a);
-    if (a.next === null) return pages;
-    offset = a.next.offset;
-  }
-  throw new Error('more than 50 pages');
-}
-
 /**
  * The pages chain: each `part` starts where the previous page's `next.offset` pointed and ends
  * where its own does, and the texts joined are `full`.
@@ -578,7 +536,12 @@ describe('legifrance_get_article on a long article', () => {
     '%s: every page carries every field, stays bounded, and the pages rebuild the text',
     async (format) => {
       const client = await clientOver(async () => longArticle);
-      const pages = await readAllPages(client, { number: '7', response_format: format });
+      const pages = await readAllPages(
+        client,
+        TOOL,
+        { number: '7', response_format: format },
+        FOUND,
+      );
       expect(pages.length).toBeGreaterThanOrEqual(5);
       for (const page of pages) {
         // expectAnswer already bounded the page by MAX_TOOL_TEXT.
@@ -621,10 +584,10 @@ describe('legifrance_get_article on a long article', () => {
   const CGI = 'LEGIARTI000046892900';
 
   it('CGI art. 199 undecies B by id (fixture 59): bounded pages, each with the article fields', async () => {
-    const client = await composedClient();
+    const client = await composed();
     const texts: string[] = [];
     for (const format of ['concise', 'detailed']) {
-      const pages = await readAllPages(client, { id: CGI, response_format: format });
+      const pages = await readAllPages(client, TOOL, { id: CGI, response_format: format }, FOUND);
       for (const page of pages) {
         expect(page.code).toBe('Code général des impôts');
         expect(page.number).toBe('199 undecies B');
@@ -654,9 +617,9 @@ describe('legifrance_get_article on a long article', () => {
     expect(full.length).toBeGreaterThan(60_000);
     expect(full).toMatch(/["\n]/);
 
-    const client = await composedClient([longCgi, ...LEGIFRANCE_FIXTURE_ROUTES]);
+    const client = await composed({ routes: [longCgi, ...LEGIFRANCE_FIXTURE_ROUTES] });
     for (const format of ['concise', 'detailed']) {
-      const pages = await readAllPages(client, { id: CGI, response_format: format });
+      const pages = await readAllPages(client, TOOL, { id: CGI, response_format: format }, FOUND);
       expect(pages.length).toBeGreaterThanOrEqual(2);
       for (const page of pages) {
         expect(page.id).toBe(CGI);

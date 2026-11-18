@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { compose } from '../../src/compose.js';
+import { useServers } from '../helpers/composed-server.js';
 import { fixtureFetch, sandboxConfig } from '../helpers/fixture-fetch.js';
-import { connectClient } from '../helpers/mcp-client.js';
 
 /** Tool and parameter descriptions say what the code does: the model calls the tools from them. */
 
@@ -12,18 +12,10 @@ interface Listed {
   outputSchema?: unknown;
 }
 
-let cleanup: Array<() => Promise<void>> = [];
-
-afterEach(async () => {
-  for (const close of cleanup.reverse()) await close();
-  cleanup = [];
-});
+const { connect } = useServers();
 
 async function listed(name: string): Promise<Listed> {
-  const { client, close } = await connectClient(
-    compose(sandboxConfig(), { fetch: fixtureFetch().fetch }),
-  );
-  cleanup.push(close);
+  const client = await connect(compose(sandboxConfig(), { fetch: fixtureFetch().fetch }));
   const tool = (await client.listTools()).tools.find((t) => t.name === name);
   if (tool === undefined) throw new Error(`${name} is not listed`);
   return tool as Listed;
