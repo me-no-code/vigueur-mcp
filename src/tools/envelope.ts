@@ -2,8 +2,8 @@ import type { CallToolResult } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import type { IsoDate } from '../domain/dates.js';
 import type { StatusAt } from '../domain/status-at.js';
+import { todayInParis } from '../services/input.js';
 import type { HistoryEntry } from '../services/legislation/ports.js';
-import { todayInParis } from '../services/legislation/resolve.js';
 import { VERSION } from '../version.js';
 import { DEFAULT_DEADLINE_MS, MAX_TOOL_TEXT, presentOrUndefined } from './format.js';
 

@@ -1,4 +1,5 @@
 import type { IsoDate } from '../../domain/dates.js';
+import { blankToNull, invalid, requireIsoDate, todayInParis } from '../input.js';
 import type {
   CallContext,
   LegislationCollection,
@@ -6,14 +7,7 @@ import type {
   LegislationRepository,
   LegislationSearchPage,
 } from './ports.js';
-import {
-  blankToNull,
-  cleanArticleNumber,
-  invalid,
-  requireIsoDate,
-  resolveCode,
-  todayInParis,
-} from './resolve.js';
+import { cleanArticleNumber, resolveCode } from './resolve.js';
 import { normaliseTextNumber } from './text-ref.js';
 
 export interface SearchLegislationInput {

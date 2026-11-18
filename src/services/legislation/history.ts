@@ -2,6 +2,7 @@ import type { IsoDate } from '../../domain/dates.js';
 import type { ArticleRef } from '../../domain/relocation.js';
 import { coversDate } from '../../domain/status-at.js';
 import { VigueurError } from '../../shared/errors.js';
+import { blankToNull, invalid, todayInParis } from '../input.js';
 import type {
   ArticleRecord,
   CallContext,
@@ -14,17 +15,14 @@ import {
   type Ambiguous,
   ARTICLE_ID,
   bestEffort,
-  blankToNull,
   byStart,
   dedupeById,
   fetchListed,
-  invalid,
   latestPeriod,
   type NotFound,
   ownSummary,
   resolveCitation,
   targetOf,
-  todayInParis,
 } from './resolve.js';
 
 export interface ArticleHistoryView {

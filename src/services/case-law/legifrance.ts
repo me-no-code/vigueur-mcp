@@ -5,7 +5,7 @@ import {
   normalizeCaseNumber,
   normalizeEcli,
 } from '../../domain/decisions.js';
-import { blankToNull, invalid, requireIsoDate } from '../legislation/resolve.js';
+import { blankToNull, invalid, requireIsoDate } from '../input.js';
 import type {
   CallContext,
   CaseLawQuery,

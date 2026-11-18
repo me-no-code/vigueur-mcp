@@ -3,6 +3,7 @@ import { jorfUrl, lodaUrl } from '../../domain/links.js';
 import { foldKey } from '../../domain/text.js';
 import { type TextForce, textForceAt } from '../../domain/text-force.js';
 import { VigueurError } from '../../shared/errors.js';
+import { blankToNull, invalid, requireIsoDate, todayInParis } from '../input.js';
 import type {
   CallContext,
   LegislationHit,
@@ -11,7 +12,6 @@ import type {
   TextRecord,
   TextSection,
 } from './ports.js';
-import { blankToNull, invalid, requireIsoDate, todayInParis } from './resolve.js';
 import { normaliseTextNumber, type TextNature } from './text-ref.js';
 
 export type { TextNature } from './text-ref.js';

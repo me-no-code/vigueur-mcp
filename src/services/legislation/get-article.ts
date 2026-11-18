@@ -7,6 +7,7 @@ import {
   type StatusAt,
   statusAt,
 } from '../../domain/status-at.js';
+import { blankToNull, invalid, requireIsoDate, todayInParis } from '../input.js';
 import type {
   ArticleHit,
   ArticleRecord,
@@ -18,16 +19,12 @@ import {
   type Ambiguous,
   ARTICLE_ID,
   bestEffort,
-  blankToNull,
   fetchListed,
-  invalid,
   latestPeriod,
   type NotFound,
   ownSummary,
-  requireIsoDate,
   resolveCitation,
   targetOf,
-  todayInParis,
 } from './resolve.js';
 
 export interface GetArticleInput {

@@ -1,8 +1,9 @@
 import { normalizeArticleNumber } from '../../domain/articles.js';
 import { resolveCodeName } from '../../domain/codes.js';
-import { type IsoDate, isIsoDate, isoDateInParis } from '../../domain/dates.js';
+import type { IsoDate } from '../../domain/dates.js';
 import { foldKey } from '../../domain/text.js';
 import { VigueurError } from '../../shared/errors.js';
+import { blankToNull, invalid } from '../input.js';
 import type {
   ArticleHit,
   ArticleRecord,
@@ -37,14 +38,6 @@ export async function bestEffort<T>(
 
 export const ARTICLE_ID = /^(LEGIARTI|KALIARTI)\d{12}$/;
 
-export const invalid = (message: string) => new VigueurError('invalid_input', message);
-
-/** Trimmed string, or `null` when absent or blank. */
-export function blankToNull(s: string | undefined): string | null {
-  const t = s?.trim();
-  return t === undefined || t === '' ? null : t;
-}
-
 /** `Art. L. 1234-1` → `L1234-1`: drops a leading "article" / "art." then normalizes. */
 export function cleanArticleNumber(raw: string): string {
   const num = normalizeArticleNumber(raw.trim().replace(/^(?:article|art)\.?\s*/i, ''));
@@ -78,18 +71,6 @@ export async function resolveCode(
     .sort((a, b) => a.localeCompare(b, 'fr'))
     .slice(0, MAX_CODE_SUGGESTIONS);
   return { code: null, didYouMean };
-}
-
-export const todayInParis = (): IsoDate => isoDateInParis(new Date());
-
-/** Throws `invalid_input` unless `value` is a real `YYYY-MM-DD` date. */
-export function requireIsoDate(value: string, label?: string): IsoDate {
-  if (!isIsoDate(value)) {
-    throw invalid(
-      `${label ? `${label}: ` : ''}"${value}" is not a valid date: use a real date as YYYY-MM-DD.`,
-    );
-  }
-  return value;
 }
 
 /** What the caller asked for: exactly one of a number or an id. */

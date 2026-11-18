@@ -1,7 +1,8 @@
 import type { IsoDate } from '../../domain/dates.js';
+import { invalid, requireIsoDate, todayInParis } from '../input.js';
 import { createGetText, type GetTextInput } from './get-text.js';
 import type { CallContext, ChangeEntry, LegislationRepository } from './ports.js';
-import { invalid, requireIsoDate, resolveCode, todayInParis } from './resolve.js';
+import { resolveCode } from './resolve.js';
 import { parseTextRef } from './text-ref.js';
 
 export interface ChangesView {

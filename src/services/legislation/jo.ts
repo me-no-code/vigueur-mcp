@@ -2,8 +2,8 @@ import type { IsoDate } from '../../domain/dates.js';
 import { minusDays } from '../../domain/dates.js';
 import { foldKey } from '../../domain/text.js';
 import type { LegalStatus } from '../../domain/versions.js';
+import { invalid, requireIsoDate, todayInParis } from '../input.js';
 import type { CallContext, JoGroup, JoIssue, LegislationRepository } from './ports.js';
-import { invalid, requireIsoDate, todayInParis } from './resolve.js';
 
 const MAX_ISSUES_PER_DATE = 3;
 

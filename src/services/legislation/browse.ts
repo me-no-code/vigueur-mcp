@@ -1,8 +1,9 @@
 import type { IsoDate } from '../../domain/dates.js';
 import { type StatusAt, statusAt } from '../../domain/status-at.js';
 import type { LegalStatus } from '../../domain/versions.js';
+import { invalid, requireIsoDate, todayInParis } from '../input.js';
 import type { CallContext, LegislationRepository, TocArticle, TocNode } from './ports.js';
-import { invalid, requireIsoDate, resolveCode, todayInParis } from './resolve.js';
+import { resolveCode } from './resolve.js';
 
 export interface BrowseInput {
   code: string;
