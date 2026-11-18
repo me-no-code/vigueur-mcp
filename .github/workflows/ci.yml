@@ -24,5 +24,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      # Offline only: the live suite needs PISTE credentials and is never run here.
-      - run: npm test
+      # Offline only: the live suite needs PISTE credentials and is never run here. Builds, runs the
+      # offline suite and fails below the coverage thresholds in vitest.config.ts.
+      - run: npm run coverage
