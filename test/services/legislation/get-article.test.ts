@@ -398,14 +398,11 @@ describe('createGetArticle — found article', () => {
       until: '2016-10-01',
     });
     expect(article.relocation).toEqual({
-      change: 'replaced',
+      sameWording: false,
       movedTo: [REF_1240],
-      evidence: ['concordance', 'text_similarity', 'section_change'],
       from: OLD_1382.versions[0],
       successor: OLD_1382.versions[1],
     });
-    expect(article.relocation?.movedTo[0]?.num).toBe('1240');
-    expect(article.relocation?.evidence).toContain('concordance');
     expect(calls.getConcordance.map((c) => c.args)).toEqual([['LEGIARTI000006438819']]);
     expect(calls.getArticle.map((c) => c.args)).toEqual([
       ['LEGIARTI000006438819', '2015-01-01'],
@@ -413,7 +410,7 @@ describe('createGetArticle — found article', () => {
     ]);
   });
 
-  it('an amendment in the same section carries no relocation evidence', async () => {
+  it('an amendment: the next version has a different wording and no move', async () => {
     const [v1, v2] = lineage(
       makeArticle({
         id: 'LEGIARTI000000000001',
@@ -437,9 +434,8 @@ describe('createGetArticle — found article', () => {
     const { getArticle } = setup({ articles: [v1, v2], concordance: {} });
     const result = await getArticle({ id: v1.version.id });
     expect(result.kind === 'found' && result.article.relocation).toEqual({
-      change: 'amended',
+      sameWording: false,
       movedTo: [],
-      evidence: [],
       from: v1.versions[0],
       successor: v1.versions[1],
     });
@@ -606,9 +602,8 @@ describe('createGetArticle — relocation is best effort', () => {
     const result = await getArticle({ id: OLD_1382.version.id, atDate: '2015-01-01' });
     if (result.kind !== 'found') throw new Error(`expected found, got ${result.kind}`);
     expect(result.article.relocation).toEqual({
-      change: 'replaced',
+      sameWording: null,
       movedTo: [REF_1240],
-      evidence: ['concordance'],
       from: OLD_1382.versions[0],
       successor: OLD_1382.versions[1],
     });
@@ -665,9 +660,8 @@ describe('createGetArticle — where content went when no later version exists',
     if (result.kind !== 'found') throw new Error(`expected found, got ${result.kind}`);
     expect(result.article.statusAt.inForce).toBe(true);
     expect(result.article.relocation).toEqual({
-      change: 'replaced',
+      sameWording: null,
       movedTo: [REF_L1511_1],
-      evidence: ['concordance'],
       from: L800_4.versions[0],
       successor: null,
     });
@@ -682,9 +676,8 @@ describe('createGetArticle — where content went when no later version exists',
     const result = await getArticle({ id: R4217_2.version.id, atDate: '2015-01-01' });
     if (result.kind !== 'found') throw new Error(`expected found, got ${result.kind}`);
     expect(result.article.relocation).toEqual({
-      change: 'replaced',
+      sameWording: null,
       movedTo: [REF_MOVED],
-      evidence: ['concordance'],
       from: R4217_2.versions[0],
       successor: null,
     });

@@ -884,40 +884,38 @@ describe('buildGetArticleAnswer', () => {
     expect(answer(found(), 'found').neighbours).toBeNull();
   });
 
-  it('relocation without concordance: inferred from text comparison, past tense', () => {
+  it('no concordance, next version worded differently: states that fact, with its id', () => {
     const a = answer(
       found({
         asOf: '2015-01-01',
         relocation: {
-          change: 'amended',
+          sameWording: false,
           movedTo: [],
-          evidence: [],
           from: summary({ id: 'LEGIARTI000000000001' }),
-          successor: summary({ validFrom: '2020-01-01' }),
+          successor: summary({ id: 'LEGIARTI000000000002', validFrom: '2020-01-01' }),
         },
       }),
       'found',
     );
     expect(a.relocation).toBe(
-      'The content of this article was amended on 2020-01-01 (inferred from text comparison).',
+      'The next version (in force from 2020-01-01, id LEGIARTI000000000002) has a different wording.',
     );
   });
 
-  it('relocation after today: future tense', () => {
+  it('no concordance, next version worded the same: states that fact', () => {
     const a = answer(
       found({
         relocation: {
-          change: 'replaced',
+          sameWording: true,
           movedTo: [],
-          evidence: ['text_similarity'],
           from: summary({ id: 'LEGIARTI000000000001' }),
-          successor: summary({ validFrom: '2027-01-01' }),
+          successor: summary({ id: 'LEGIARTI000000000002', validFrom: '2027-01-01' }),
         },
       }),
       'found',
     );
     expect(a.relocation).toBe(
-      'The content of this article will be replaced on 2027-01-01 (inferred from text comparison).',
+      'The next version (in force from 2027-01-01, id LEGIARTI000000000002) has the same wording.',
     );
   });
 
@@ -925,7 +923,7 @@ describe('buildGetArticleAnswer', () => {
     const a = answer(
       found({
         relocation: {
-          change: 'replaced',
+          sameWording: false,
           movedTo: [
             {
               id: 'LEGIARTI000000000009',
@@ -934,7 +932,6 @@ describe('buildGetArticleAnswer', () => {
               label: 'Code civil - art. 8',
             },
           ],
-          evidence: ['concordance'],
           from: summary({ id: 'LEGIARTI000000000001' }),
           successor: summary({ validFrom: '2027-01-01' }),
         },
@@ -1349,9 +1346,8 @@ describe('buildGetArticleAnswer', () => {
       label: 'Code civil - art. 8',
     };
     const relocation = (validTo: string | null) => ({
-      change: 'replaced' as const,
+      sameWording: null,
       movedTo: [ref],
-      evidence: ['concordance' as const],
       from: summary({ id: 'LEGIARTI000000000001', validFrom: '2010-01-01', validTo }),
       successor: null,
     });

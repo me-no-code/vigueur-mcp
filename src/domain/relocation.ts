@@ -1,4 +1,4 @@
-import { type ChangeKind, classifyChange } from './changes.js';
+import { sameWording } from './changes.js';
 
 export interface ArticleRef {
   id: string;
@@ -7,23 +7,21 @@ export interface ArticleRef {
   label: string;
 }
 
+/** Exact facts about what followed a version: same wording or not, and where it moved. */
 export interface Relocation {
-  change: ChangeKind;
+  /** Whether the next version has the same words; `null` when there is no later text to compare. */
+  sameWording: boolean | null;
+  /** Where Légifrance concordance says the content went. */
   movedTo: ArticleRef[];
-  evidence: Array<'concordance' | 'text_similarity' | 'section_change'>;
 }
 
 export function assessRelocation(input: {
   earlierText: string;
   laterText: string | null;
   concordanceTo: readonly ArticleRef[];
-  sectionChanged: boolean;
 }): Relocation {
-  const change = classifyChange(input.earlierText, input.laterText ?? '');
-  const movedTo = [...input.concordanceTo];
-  const evidence: Relocation['evidence'] = [];
-  if (movedTo.length > 0) evidence.push('concordance');
-  if (change === 'replaced') evidence.push('text_similarity');
-  if (input.sectionChanged) evidence.push('section_change');
-  return { change, movedTo, evidence };
+  return {
+    sameWording: input.laterText === null ? null : sameWording(input.earlierText, input.laterText),
+    movedTo: [...input.concordanceTo],
+  };
 }

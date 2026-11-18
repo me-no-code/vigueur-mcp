@@ -198,7 +198,9 @@ const foundBranch = answerSchema(SOURCE, 'found', {
   relocation: z
     .string()
     .nullable()
-    .describe('Where the content of this version went; null when no move or change is recorded.'),
+    .describe(
+      'Where the content of this version went per Légifrance concordance, or whether the next version has the same wording (identical but for typography); null when neither is recorded.',
+    ),
   neighbours: z
     .object({ previous: neighbourSchema, next: neighbourSchema })
     .nullable()
@@ -303,19 +305,21 @@ function movedSentence(
     : `Content moved — per Légifrance concordance, ${what} is now at ${labels}${date === null ? '' : ` (since ${date})`}.`;
 }
 
-function relocationSentence(r: RelocationView, num: string, asOf: IsoDate, today: IsoDate): string {
+function relocationSentence(
+  r: RelocationView,
+  num: string,
+  asOf: IsoDate,
+  today: IsoDate,
+): string | null {
   // With no later version, the content left when the found version ended.
   const date = r.successor === null ? r.from.validTo : r.successor.validFrom;
-  const future = date !== null && date > today;
   if (r.movedTo.length > 0) {
     return movedSentence(`the text of art. ${num} as of ${asOf}`, r.movedTo, date, today);
   }
-  const on = date === null ? '' : ` on ${date}`;
-  const change =
-    r.change === 'unchanged'
-      ? `${future ? 'will stay' : 'stayed'} unchanged in the next version${on}`
-      : `${future ? 'will be' : 'was'} ${r.change}${on}`;
-  return `The content of this article ${change} (inferred from text comparison).`;
+  if (r.successor === null || r.sameWording === null) return null;
+  const when = date === null ? '' : `in force from ${date}, `;
+  const wording = r.sameWording ? 'the same wording' : 'a different wording';
+  return `The next version (${when}id ${r.successor.id}) has ${wording}.`;
 }
 
 function neighbourValue(n: Neighbour | null) {

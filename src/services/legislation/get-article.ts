@@ -45,9 +45,9 @@ export interface RelocationView extends Relocation {
   /** The version that was found. */
   from: VersionSummary;
   /**
-   * The next version of the same lineage, whose content is compared with `from`. `null` when
+   * The next version of the same lineage, whose wording is compared with `from`. `null` when
    * the found version ended (or is recorded as repealed) with no later version: `movedTo` then
-   * comes from Légifrance concordance alone and `change` is 'replaced'.
+   * comes from Légifrance concordance alone and `sameWording` is `null`.
    */
   successor: VersionSummary | null;
 }
@@ -129,16 +129,10 @@ async function endedRelocation(
   if (!ended) return null;
   const concordance = await repo.getConcordance(version.id, ctx);
   if (concordance.to.length === 0) return null;
-  return {
-    change: 'replaced',
-    movedTo: concordance.to,
-    evidence: ['concordance'],
-    from: ownSummary(record),
-    successor: null,
-  };
+  return { sameWording: null, movedTo: concordance.to, from: ownSummary(record), successor: null };
 }
 
-/** Amended or replaced, and where the content moved (per Légifrance concordance). */
+/** Whether the next version has the same wording, and where the content moved (per concordance). */
 async function relocationOf(
   repo: LegislationRepository,
   record: ArticleRecord,
@@ -152,22 +146,14 @@ async function relocationOf(
   ]);
   const from = ownSummary(record);
   if (later === null) {
-    // No later text to compare: only the concordance (a source fact) can say the content moved,
-    // which means the text now under this number is not the same content ('replaced').
+    // No later text to compare: only the concordance (a source fact) can say the content moved.
     if (concordance.to.length === 0) return null;
-    return {
-      change: 'replaced',
-      movedTo: concordance.to,
-      evidence: ['concordance'],
-      from,
-      successor,
-    };
+    return { sameWording: null, movedTo: concordance.to, from, successor };
   }
   const relocation = assessRelocation({
     earlierText: record.version.text,
     laterText: later.version.text,
     concordanceTo: concordance.to,
-    sectionChanged: later.sectionPath.at(-1) !== record.sectionPath.at(-1),
   });
   return { ...relocation, from, successor };
 }
@@ -362,8 +348,8 @@ async function byCitation(
  * - a number with no version in force on the date but other versions on record is
  *   `not_in_force_at_date` (e.g. repealed), never `not_found`; when its latest period ended,
  *   it says where that content went per Légifrance concordance;
- * - a found version followed by another one says whether its content was amended or
- *   replaced, and where it moved per Légifrance concordance; one that ended (or is recorded
+ * - a found version followed by another one says whether the next version has the same
+ *   wording, and where its content moved per Légifrance concordance; one that ended (or is recorded
  *   as repealed) with no later version says where its content went, per concordance only.
  *   Best effort: a failure of these checks becomes a warning (only a cancellation fails the
  *   lookup).
