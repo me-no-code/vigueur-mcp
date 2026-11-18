@@ -5,6 +5,8 @@
   "description": "Reliable access to French law for Claude: Légifrance and Judilibre through your own PISTE credentials, running locally.",
   "author": { "name": "Vigueur contributors" },
   "license": "PolyForm-Shield-1.0.0",
+  "homepage": "https://github.com/me-no-code/vigueur-mcp",
+  "repository": "https://github.com/me-no-code/vigueur-mcp",
   "keywords": ["legifrance", "judilibre", "french-law", "droit", "mcp"],
   "mcpServers": {
     "vigueur": {

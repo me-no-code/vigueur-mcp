@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { expectAnswer } from '../helpers/answer.js';
 
 // Opt-in (`npm run test:live`): talks to PISTE with the credentials in `.env`.
-// Spawns the built entry point: run `npm run build` first.
+// Spawns the built entry point, which `npm run test:live` builds first.
 const ENTRY = fileURLToPath(new URL('../../dist/index.js', import.meta.url));
 const ENV_FILE = fileURLToPath(new URL('../../.env', import.meta.url));
 

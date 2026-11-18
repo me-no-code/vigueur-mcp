@@ -19,7 +19,8 @@ git config core.hooksPath .githooks   # once per clone: user docs are changed in
 npm test               # builds, then runs the offline test suite (no credentials, no network)
 npm run typecheck
 npm run lint
-npm run test:live      # opt-in: calls PISTE with the credentials in .env
+npm run format         # rewrites the files Biome formats
+npm run test:live      # opt-in: builds, then calls PISTE with the credentials in .env
 npm run dev            # builds and starts the server on stdio with .env
 npm run inspect        # builds and opens the server in the MCP Inspector
 npm run bundle         # a clean build, packed as the Claude Desktop bundle build/vigueur-<version>.mcpb

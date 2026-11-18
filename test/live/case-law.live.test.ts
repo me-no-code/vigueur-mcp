@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { expectAnswer } from '../helpers/answer.js';
 
 // Opt-in (`npm run test:live`): talks to PISTE with the credentials in `.env`.
-// Spawns the built entry point: run `npm run build` first. One call per test (8 in all):
+// Spawns the built entry point, which `npm run test:live` builds first. One call per test (8 in all):
 // run them individually with `-t`, never the whole file twice. Assertions read the answer's
 // `structuredContent` fields and check stable facts (ids, ECLIs, labels), not full texts,
 // because live data evolves.
