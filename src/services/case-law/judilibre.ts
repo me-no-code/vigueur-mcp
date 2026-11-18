@@ -1,5 +1,5 @@
-import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
+import type { CassChamber } from '../../domain/decisions.js';
 import { PUBLICATION_WIRE } from '../../domain/judilibre-labels.js';
 import { foldKey } from '../../domain/text.js';
 import { blankToNull, invalid, requireIsoDate } from '../legislation/resolve.js';

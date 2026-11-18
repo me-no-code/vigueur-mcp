@@ -1,6 +1,9 @@
-import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
-import { CASS_CHAMBER_LABELS, type CaseLawCollection } from '../../domain/decisions.js';
+import {
+  CASS_CHAMBER_LABELS,
+  type CaseLawCollection,
+  type CassChamber,
+} from '../../domain/decisions.js';
 import { isDecisionId } from '../../domain/links.js';
 import type {
   CallContext,

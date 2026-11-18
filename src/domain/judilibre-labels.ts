@@ -1,4 +1,4 @@
-import type { CassChamber } from './citations.js';
+import type { CassChamber } from './decisions.js';
 
 // Judilibre label tables: the source's own wording, copied from its `/taxonomy`. The one addition
 // is a longer `frr` label. One copy, used by the client (hit labels) and the tools (header

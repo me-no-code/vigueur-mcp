@@ -51,7 +51,7 @@ const seeded = () =>
 describe('createLatestJo', () => {
   it('reads one issue by default', async () => {
     const { repo, calls } = seeded();
-    const view = await createLatestJo(repo, { today })({});
+    const view = await createLatestJo(repo)({});
     expect(calls.latestJo[0]?.args).toEqual([1]);
     expect(view.issues).toHaveLength(1);
     expect(view.totalTexts).toBe(5);
@@ -60,7 +60,7 @@ describe('createLatestJo', () => {
 
   it('rejects a count outside 1-10, or not whole, before any request', async () => {
     const { repo, calls } = seeded();
-    const run = createLatestJo(repo, { today });
+    const run = createLatestJo(repo);
     await expect(run({ count: 0 })).rejects.toMatchObject({ kind: 'invalid_input' });
     await expect(run({ count: 11 })).rejects.toMatchObject({ kind: 'invalid_input' });
     await expect(run({ count: 1.5 })).rejects.toMatchObject({ kind: 'invalid_input' });
@@ -79,7 +79,7 @@ describe('createLatestJo', () => {
         },
       },
     });
-    const view = await createLatestJo(repo, { today })({ date: '2026-11-11' });
+    const view = await createLatestJo(repo)({ date: '2026-11-11' });
     expect(calls.joIssuesOn[0]?.args).toEqual(['2026-11-11']);
     expect(calls.joIssue.map((c) => c.args[0])).toEqual(['A', 'B', 'C']);
     expect(calls.latestJo).toHaveLength(0);
@@ -88,7 +88,7 @@ describe('createLatestJo', () => {
 
   it('filters by nature, accent- and case-insensitively', async () => {
     const { repo } = seeded();
-    const run = createLatestJo(repo, { today });
+    const run = createLatestJo(repo);
     const view = await run({ nature: 'décret' });
     expect(view.totalTexts).toBe(2);
     expect(view.issues[0]?.groups?.map((g) => g.path)).toEqual([['Décrets']]);
@@ -97,21 +97,21 @@ describe('createLatestJo', () => {
 
   it('emitter travail matches both spellings and lists them', async () => {
     const { repo } = seeded();
-    const view = await createLatestJo(repo, { today })({ emitter: 'Travail' });
+    const view = await createLatestJo(repo)({ emitter: 'Travail' });
     expect(view.totalTexts).toBe(2);
     expect([...view.filter.matchedEmitters].sort()).toEqual([TRAVAIL_A, TRAVAIL_B].sort());
   });
 
   it('emitter also matches the emitter field', async () => {
     const { repo } = seeded();
-    const view = await createLatestJo(repo, { today })({ emitter: 'parlement' });
+    const view = await createLatestJo(repo)({ emitter: 'parlement' });
     expect(view.totalTexts).toBe(1);
     expect(view.filter.matchedEmitters).toEqual(['Parlement']);
   });
 
   it('no match keeps the issues with empty groups and lists what exists (before filtering)', async () => {
     const { repo } = seeded();
-    const view = await createLatestJo(repo, { today })({ nature: 'decret', emitter: 'defense' });
+    const view = await createLatestJo(repo)({ nature: 'decret', emitter: 'defense' });
     expect(view.issues).toHaveLength(1);
     expect(view.issues[0]?.id).toBe('JORFCONT1');
     expect(view.issues[0]?.groups).toEqual([]);

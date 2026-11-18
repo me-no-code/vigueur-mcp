@@ -1,5 +1,5 @@
-import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
+import type { CassChamber } from '../../domain/decisions.js';
 import {
   type CaseLawCollection,
   normalizeCaseNumber,

@@ -62,7 +62,7 @@ A version number lives in four files, bumped together: `package.json` (and its l
 
 ## Architecture
 
-- `src/domain/`: pure logic (citations, versions, statuses on a date, changes).
+- `src/domain/`: pure logic (article numbers, versions, statuses on a date, wording, links).
 - `src/services/`: use cases, written against ports (`services/*/ports.ts`).
 - `src/clients/`: the PISTE, Légifrance and Judilibre clients that implement those ports.
 - `src/tools/`: MCP tool definitions, their output schemas and the answer builders.

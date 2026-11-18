@@ -1,6 +1,12 @@
-import type { CassChamber } from './citations.js';
-import type { IsoDate } from './dates.js';
-
+export type CassChamber =
+  | 'plenary'
+  | 'mixed'
+  | 'civ1'
+  | 'civ2'
+  | 'civ3'
+  | 'commercial'
+  | 'social'
+  | 'criminal';
 export type CaseLawCollection =
   | 'judicial'
   | 'administrative'
@@ -54,27 +60,4 @@ export function normalizeCaseNumber(collection: CaseLawCollection, raw: string):
   if (collection === 'judicial') return formatPourvoi(stripped) ?? stripped;
   if (collection === 'constitutional') return stripped.replace(CONSTITUTIONAL_NATURE, '');
   return stripped;
-}
-
-export interface DecisionIdentity {
-  ecli: string | null;
-  courtOfCassation: boolean;
-  date: IsoDate | null;
-  /** Pourvoi numbers, in any spelling. */
-  pourvois: string[];
-}
-
-/**
- * Whether two records, possibly from different sources, are the same decision. Two ECLIs decide;
- * otherwise both must be Cour de cassation decisions of the same date sharing a pourvoi number.
- */
-export function sameDecision(a: DecisionIdentity, b: DecisionIdentity): boolean {
-  if (a.ecli !== null && b.ecli !== null) return a.ecli === b.ecli;
-  if (!a.courtOfCassation || !b.courtOfCassation) return false;
-  if (a.date === null || a.date !== b.date) return false;
-  const mine = new Set(a.pourvois.map(pourvoiDigits).filter((d) => d !== null));
-  return b.pourvois.some((p) => {
-    const d = pourvoiDigits(p);
-    return d !== null && mine.has(d);
-  });
 }

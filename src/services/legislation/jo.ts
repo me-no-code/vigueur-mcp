@@ -45,7 +45,6 @@ function bump(counts: Map<string, number>, value: string | null): void {
  */
 export function createLatestJo(
   repo: LegislationRepository,
-  _opts: { today?: () => IsoDate } = {},
 ): (input: LatestJoInput, ctx?: CallContext) => Promise<LatestJoView> {
   return async (input, ctx) => {
     const natureRaw = input.nature?.trim() || null;

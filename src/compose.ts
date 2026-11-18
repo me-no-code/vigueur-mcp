@@ -85,7 +85,7 @@ export function compose(
       listChanges: createListChanges(legislation, { today }),
       getText: createGetText(legislation, { today }),
       browseCode: createBrowseCode(legislation, { today }),
-      latestJo: createLatestJo(legislation, { today }),
+      latestJo: createLatestJo(legislation),
       listReferenceValues: createListReferenceValues(legislation, { today }),
       searchCaseLaw: createSearchCaseLaw(caseLaw),
       getDecision: createGetLegifranceDecision(caseLaw),

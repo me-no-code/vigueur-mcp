@@ -1,6 +1,5 @@
-import type { CassChamber } from '../../domain/citations.js';
 import type { IsoDate } from '../../domain/dates.js';
-import type { CaseLawCollection } from '../../domain/decisions.js';
+import type { CaseLawCollection, CassChamber } from '../../domain/decisions.js';
 import type { CallContext } from '../legislation/ports.js';
 
 export type { CallContext } from '../legislation/ports.js';

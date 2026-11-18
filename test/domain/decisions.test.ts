@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type DecisionIdentity,
   formatPourvoi,
   normalizeCaseNumber,
   normalizeEcli,
   pourvoiDigits,
-  sameDecision,
 } from '../../src/domain/decisions.js';
 
 describe('pourvoiDigits', () => {
@@ -48,65 +46,5 @@ describe('normalizeCaseNumber', () => {
     ['administrative', 'no  498  123', '498 123'],
   ] as const)('%s %s', (collection, raw, expected) => {
     expect(normalizeCaseNumber(collection, raw)).toBe(expected);
-  });
-});
-
-describe('sameDecision', () => {
-  const cc = (over: Partial<DecisionIdentity>): DecisionIdentity => ({
-    ecli: null,
-    courtOfCassation: true,
-    date: '2026-09-17',
-    pourvois: [],
-    ...over,
-  });
-  it('same ECLI', () => {
-    const e = 'ECLI:FR:CCASS:2025:SO01200';
-    expect(sameDecision(cc({ ecli: e }), cc({ ecli: e, date: null }))).toBe(true);
-  });
-  it('same date and a shared pourvoi in different spellings, with duplicates', () => {
-    expect(
-      sameDecision(
-        cc({ pourvois: ['24-17.365', '24-18.000'] }),
-        cc({ pourvois: ['24-17.365', '24-18.000', '24-17.365'] }),
-      ),
-    ).toBe(true);
-    expect(sameDecision(cc({ pourvois: ['2417365'] }), cc({ pourvois: ['24-17.365'] }))).toBe(true);
-  });
-  it('different dates', () => {
-    expect(
-      sameDecision(
-        cc({ pourvois: ['24-17.365'] }),
-        cc({ pourvois: ['24-17.365'], date: '2026-09-18' }),
-      ),
-    ).toBe(false);
-  });
-  it('different ECLIs despite matching numbers', () => {
-    expect(
-      sameDecision(
-        cc({ ecli: 'ECLI:FR:CCASS:2026:C100001', pourvois: ['24-17.365'] }),
-        cc({ ecli: 'ECLI:FR:CCASS:2026:C100002', pourvois: ['24-17.365'] }),
-      ),
-    ).toBe(false);
-  });
-  it('not Cour de cassation', () => {
-    expect(
-      sameDecision(
-        cc({ pourvois: ['24-17.365'] }),
-        cc({ pourvois: ['24-17.365'], courtOfCassation: false }),
-      ),
-    ).toBe(false);
-  });
-  it('same date, no shared pourvoi', () => {
-    expect(sameDecision(cc({ pourvois: ['24-17.365'] }), cc({ pourvois: ['24-17.366'] }))).toBe(
-      false,
-    );
-  });
-  it('missing date', () => {
-    expect(
-      sameDecision(
-        cc({ pourvois: ['24-17.365'], date: null }),
-        cc({ pourvois: ['24-17.365'], date: null }),
-      ),
-    ).toBe(false);
   });
 });
