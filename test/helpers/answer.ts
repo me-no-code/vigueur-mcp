@@ -13,6 +13,7 @@ export const ENVELOPE_TAIL = ['request', 'retrieved', 'cached', 'vigueur_version
 /** The fields of an error answer, in order (`retrieved` only when the source answered). */
 const ERROR_KEYS = ['source', 'outcome', 'error', 'request', 'retrieved', 'vigueur_version'];
 
+/** Vigueur writes no pictograph; the texts it quotes from a source may hold any character. */
 const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 
 /** An answer as tests read it: any field, at any depth. */
@@ -53,7 +54,7 @@ export function expectAnswer(
   expect(answer.retrieved).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
   expect(answer.vigueur_version).toBe(VERSION);
   expect(text.length).toBeLessThanOrEqual(MAX_TOOL_TEXT);
-  expect(text).not.toMatch(PICTOGRAPH);
+  for (const w of answer.warnings) expect(w).not.toMatch(PICTOGRAPH);
   expect({ source: answer.source, outcome: answer.outcome }).toEqual(expected);
   return answer;
 }
@@ -64,8 +65,8 @@ export function expectToolError(result: unknown, kind: string): Answer {
   expect(r.isError, 'isError').toBe(true);
   expect(r.structuredContent, 'structuredContent').toBeUndefined();
   const text = onlyText(r);
-  expect(text).not.toMatch(PICTOGRAPH);
   const e = JSON.parse(text) as Answer;
+  expect(e.error?.message).not.toMatch(PICTOGRAPH);
   expect(Object.keys(e)).toEqual(ERROR_KEYS.filter((k) => k !== 'retrieved' || 'retrieved' in e));
   expect(e.outcome).toBe('error');
   expect(e.error).toEqual({ kind, message: expect.any(String) });
