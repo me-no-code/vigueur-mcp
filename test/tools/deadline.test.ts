@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { compose } from '../../src/compose.js';
 import type { ServerDeps } from '../../src/server.js';
 import { createJudilibreSource, type JudilibreServices } from '../../src/tools/judilibre/index.js';
 import {
@@ -6,6 +7,7 @@ import {
   type LegifranceServices,
 } from '../../src/tools/legifrance/index.js';
 import { expectToolError } from '../helpers/answer.js';
+import { fakeFetch } from '../helpers/fake-fetch.js';
 import { sandboxConfig } from '../helpers/fixture-fetch.js';
 import { connectClient } from '../helpers/mcp-client.js';
 
@@ -102,6 +104,35 @@ describe('per-call deadline over every tool', () => {
         `${source} did not answer within ${seconds} s. Try again in a moment.`,
       );
       expect(e.request.tool).toBe(name);
+    });
+  }
+});
+
+describe('per-call deadline end to end (tool → service → client → HTTP)', () => {
+  const TOKEN = /\/oauth\/token$/;
+
+  /** Answers the token at once; every API request waits until its signal aborts. */
+  function hangingApi() {
+    return fakeFetch(async (req) => {
+      if (TOKEN.test(req.url)) return Response.json({ access_token: 'tok', expires_in: 3600 });
+      return new Promise<Response>((_resolve, reject) => {
+        req.signal.addEventListener('abort', () => reject(req.signal.reason), { once: true });
+      });
+    });
+  }
+
+  for (const [name, args] of Object.entries(MINIMAL_ARGS)) {
+    it(`${name}: the deadline aborts every request it made`, async () => {
+      const { fetch, calls } = hangingApi();
+      const { client, close } = await connectClient(
+        compose(sandboxConfig(), { fetch, deadlineMs: 50 }),
+      );
+      cleanup.push(close);
+      const result = await client.callTool({ name, arguments: args });
+      expectToolError(result, 'deadline');
+      const api = calls.filter((c) => !TOKEN.test(c.url));
+      expect(api.length).toBeGreaterThan(0);
+      for (const c of api) expect(c.signal.aborted, c.url).toBe(true);
     });
   }
 });

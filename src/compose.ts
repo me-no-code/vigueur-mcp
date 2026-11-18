@@ -37,9 +37,9 @@ import { createLegifranceSource } from './tools/legifrance/index.js';
  */
 export function compose(
   config: Config,
-  opts: { fetch?: FetchLike; today?: () => IsoDate; now?: () => Date } = {},
+  opts: { fetch?: FetchLike; today?: () => IsoDate; now?: () => Date; deadlineMs?: number } = {},
 ): ServerDeps {
-  const tools = toolContext({ today: opts.today, now: opts.now });
+  const tools = toolContext({ today: opts.today, now: opts.now, deadlineMs: opts.deadlineMs });
   const { today, now } = tools;
   const { piste } = config;
   if (piste === null) {
