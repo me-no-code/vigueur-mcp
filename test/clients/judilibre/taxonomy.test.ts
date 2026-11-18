@@ -57,6 +57,21 @@ describe('taxonomy', () => {
     expect(requests).toHaveLength(3);
   });
 
+  it('does not keep a failed fetch: the next call asks again', async () => {
+    let calls = 0;
+    const http: PisteHttp = {
+      async request<T>(): Promise<T> {
+        calls += 1;
+        if (calls === 1) throw new Error('boom');
+        return loadFixture('29-taxonomy-cc-chamber', 'judilibre') as T;
+      },
+    };
+    const repo = createJudilibreClient(http, () => new Date('2026-11-13T10:00:00Z'));
+    await expect(repo.taxonomy('chamber', 'cc')).rejects.toThrow('boom');
+    expect((await repo.taxonomy('chamber', 'cc')).entries.length).toBeGreaterThan(0);
+    expect(calls).toBe(2);
+  });
+
   it('gives the time the list was fetched, also when it is served from the cache', async () => {
     const { http } = serving('29-taxonomy-cc-chamber');
     let at = Date.parse('2026-11-13T10:00:00Z');

@@ -61,6 +61,23 @@ describe('createTokenProvider', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('invalidate() during a token request: that token is not kept', async () => {
+    let n = 0;
+    let release: () => void = () => {};
+    const { tp, calls } = provider(async () => {
+      n += 1;
+      if (n === 1) await new Promise<void>((r) => (release = r));
+      return Response.json({ access_token: `tok-${n}`, token_type: 'Bearer', expires_in: 3600 });
+    });
+    const first = tp.getToken();
+    await Promise.resolve();
+    tp.invalidate();
+    release();
+    await first;
+    expect(await tp.getToken()).toBe('tok-2');
+    expect(calls).toHaveLength(2);
+  });
+
   it('invalidate() forces a new token', async () => {
     const { tp, calls } = provider(tokenResponse);
     await tp.getToken();

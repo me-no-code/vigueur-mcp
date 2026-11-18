@@ -168,6 +168,20 @@ describe('createPisteHttp', () => {
     expect(err.message).toContain('timed out');
   });
 
+  it('retries a request that timed out', async () => {
+    let n = 0;
+    const { http, calls } = setup((req) => {
+      n += 1;
+      if (n > 1) return json({ ok: true });
+      return new Promise<Response>((_, reject) => {
+        req.signal.addEventListener('abort', () => reject(req.signal.reason));
+      });
+    });
+    const out = await http.request({ method: 'GET', path: '/a' }, { maxRetries: 1, timeoutMs: 20 });
+    expect(out).toEqual({ ok: true });
+    expect(calls).toHaveLength(2);
+  });
+
   it('per-request maxRetries overrides the default', async () => {
     const { http, calls } = setup(() => json({}, 503));
     await failure(http.request({ method: 'GET', path: '/a' }, { maxRetries: 0 }));
