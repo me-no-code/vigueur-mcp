@@ -128,6 +128,14 @@ describe('legifrance_get_article over the composed server (fixtures)', () => {
     });
   });
 
+  it('Code civil 1240 on 2016-10-01, the day its version starts: in force', async () => {
+    const a = expectAnswer(
+      await call({ code: 'Code civil', number: '1240', at_date: '2016-10-01' }),
+      FOUND,
+    );
+    expect(a.status).toMatchObject({ state: 'in_force', on: '2016-10-01', from: '2016-10-01' });
+  });
+
   it('a blank code is absent from the request (Code civil 1240, code "")', async () => {
     const a = expectAnswer(await call({ code: '', number: '1240' }), FOUND);
     expect(a.id).toBe('LEGIARTI000032041571');

@@ -15,6 +15,11 @@ describe('statusAt', () => {
       reason: 'not_yet_in_force',
     });
   });
+  it('in force on the day it starts (validFrom is inclusive)', () => {
+    const v = { status: 'in_force', validFrom: '2016-10-01', validTo: null } as const;
+    expect(statusAt(v, '2016-10-01')).toMatchObject({ inForce: true, reason: 'in_force' });
+    expect(statusAt(v, '2016-09-30')).toMatchObject({ inForce: false, reason: 'not_yet_in_force' });
+  });
   it('repeal_pending is in force until validTo', () => {
     const v = { status: 'repeal_pending', validFrom: '2008-05-01', validTo: '2027-01-01' } as const;
     expect(statusAt(v, '2026-11-12')).toMatchObject({ inForce: true, reason: 'in_force' });
