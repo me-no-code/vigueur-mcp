@@ -22,7 +22,7 @@ npm run lint
 npm run format         # rewrites the files Biome formats
 npm run test:live      # opt-in: builds, then calls PISTE with the credentials in .env
 npm run dev            # builds and starts the server on stdio with .env
-npm run inspect        # builds and opens the server in the MCP Inspector
+npm run inspect        # builds and opens the server in the MCP Inspector (Node.js 22.23.4+ or 24.22.1+)
 npm run bundle         # a clean build, packed as the Claude Desktop bundle build/vigueur-<version>.mcpb
 npm run test:bundle    # packs the bundle, then unpacks and starts it as Claude Desktop would
 ```

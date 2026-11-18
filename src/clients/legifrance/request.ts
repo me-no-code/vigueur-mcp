@@ -3,7 +3,7 @@ import { VigueurError } from '../../shared/errors.js';
 import type { PisteHttp } from '../piste/http.js';
 import { stripMarks } from './wire.js';
 
-// Shared by client.ts, search.ts and chrono.ts. Légifrance JSON never leaves `clients/legifrance`;
+// Shared by the Légifrance client modules. Légifrance JSON never leaves `clients/legifrance`;
 // bodies are read field by field and a missing required field is reported as an unexpected
 // response (see `postJson`). The shape helpers live in `../json.ts`.
 
