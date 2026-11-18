@@ -7,6 +7,7 @@ import {
 } from '../../../src/clients/piste/http.js';
 import { VigueurError } from '../../../src/shared/errors.js';
 import { fakeFetch } from '../../helpers/fake-fetch.js';
+import { loadFixture } from '../../helpers/fake-piste-http.js';
 
 function setup(
   handler: (req: Request) => Response | Promise<Response>,
@@ -324,7 +325,8 @@ describe('400 body redaction', () => {
   ] as const) {
     it(`redacts a token straddling the excerpt boundary (${name})`, async () => {
       const pad = 'x'.repeat(300 - prefix.length - 4);
-      const { http } = setup(() => new Response(`${pad}${prefix}tok-1 tail`, { status: 400 }));
+      const body = JSON.stringify({ message: `${pad}${prefix}tok-1 tail` });
+      const { http } = setup(() => new Response(body, { status: 400 }));
       const err = await failure(http.request({ method: 'GET', path: '/a' }));
       const dump = JSON.stringify({ m: err.message, d: err.details });
       for (let n = 4; n <= 5; n++) expect(dump).not.toContain('tok-1'.slice(0, n));
@@ -332,8 +334,43 @@ describe('400 body redaction', () => {
     });
   }
 
+  it('quotes only the message fields of a Légifrance or Judilibre error body', async () => {
+    const legifrance = await failure(
+      setup(() => json(loadFixture('65-err-lawDecree-unknown'), 400)).http.request({
+        method: 'GET',
+        path: '/a',
+      }),
+    );
+    expect(legifrance.message).toBe(
+      "Légifrance: request rejected (HTTP 400): L'expression à valider est fausse.",
+    );
+    const judilibre = await failure(
+      setup(() => json(loadFixture('13-err-search-page-size-51', 'judilibre'), 400)).http.request({
+        method: 'GET',
+        path: '/a',
+      }),
+    );
+    expect(judilibre.message).toBe(
+      'Légifrance: request rejected (HTTP 400): Value of the page_size parameter must be an integer between 1 and 50.',
+    );
+  });
+
+  it('quotes nothing from a body that is not a known error shape', async () => {
+    const plain = await failure(
+      setup(() => new Response('plain body', { status: 400 })).http.request({
+        method: 'GET',
+        path: '/a',
+      }),
+    );
+    expect(plain.message).toBe('Légifrance: request rejected (HTTP 400).');
+    const other = await failure(
+      setup(() => json({ detail: 'x' }, 422)).http.request({ method: 'GET', path: '/a' }),
+    );
+    expect(other.message).toBe('Légifrance: request rejected (HTTP 422).');
+  });
+
   it('leaves the excerpt intact when the token is empty', async () => {
-    const f = fakeFetch(() => new Response('plain body', { status: 400 }));
+    const f = fakeFetch(() => json({ message: 'plain body' }, 400));
     const http = createPisteHttp({
       baseUrl: 'https://x.test/base',
       source: 'legifrance',

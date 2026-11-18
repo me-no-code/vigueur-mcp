@@ -43,6 +43,30 @@ const defaultSleep = (ms: number, signal?: AbortSignal): Promise<void> =>
     signal?.addEventListener('abort', onAbort, { once: true });
   });
 
+/**
+ * The message fields of an error body: Légifrance's `message`, Judilibre's `errors[].msg`. Any
+ * other body (not JSON, or another shape) gives nothing, so a reflected request never reaches an
+ * answer whole.
+ */
+function upstreamMessage(text: string): string {
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return '';
+  }
+  if (typeof body !== 'object' || body === null) return '';
+  const o = body as { message?: unknown; errors?: unknown };
+  const fromErrors = Array.isArray(o.errors)
+    ? o.errors.map((e) =>
+        typeof e === 'object' && e !== null ? (e as { msg?: unknown }).msg : null,
+      )
+    : [];
+  return [o.message, ...fromErrors]
+    .filter((m): m is string => typeof m === 'string' && m !== '')
+    .join('; ');
+}
+
 function redact(text: string, token: string): string {
   const scrubbed = token === '' ? text : text.replaceAll(token, '[redacted]');
   return scrubbed.replace(/bearer\s+\S+/gi, '[redacted]');
@@ -167,9 +191,11 @@ export function createPisteHttp(opts: {
         } else if (res.status === 404) {
           throw fail('not_found', 'not found (HTTP 404)', 404);
         } else {
+          // Known message fields only, then redacted (in case one echoes the token), then cut.
+          const excerpt = redact(upstreamMessage(text), token).slice(0, BODY_EXCERPT_CHARS);
           throw fail(
             'invalid_input',
-            `request rejected (HTTP ${res.status}): ${redact(text, token).slice(0, BODY_EXCERPT_CHARS)}`,
+            `request rejected (HTTP ${res.status})${excerpt === '' ? '.' : `: ${excerpt}`}`,
             res.status,
           );
         }
