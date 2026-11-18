@@ -69,17 +69,19 @@ describe('createTokenProvider', () => {
     expect(calls).toHaveLength(2);
   });
 
-  it('maps 401 to credentials_invalid without leaking the secret', async () => {
-    const { tp } = provider(
-      () =>
-        new Response('{"error":"invalid_client","client_secret":"secret-456"}', { status: 401 }),
-    );
-    const err = await tp.getToken().catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(VigueurError);
-    expect((err as VigueurError).kind).toBe('credentials_invalid');
-    expect((err as VigueurError).message).not.toContain('secret-456');
-    expect((err as VigueurError).message).not.toContain('id-123');
-  });
+  it.each([400, 401])(
+    'maps %i to credentials_invalid without leaking the secret',
+    async (status) => {
+      const { tp } = provider(
+        () => new Response('{"error":"invalid_client","client_secret":"secret-456"}', { status }),
+      );
+      const err = await tp.getToken().catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(VigueurError);
+      expect((err as VigueurError).kind).toBe('credentials_invalid');
+      expect((err as VigueurError).message).not.toContain('secret-456');
+      expect((err as VigueurError).message).not.toContain('id-123');
+    },
+  );
 
   it('maps network failure to upstream_unavailable', async () => {
     const { tp } = provider(() => {

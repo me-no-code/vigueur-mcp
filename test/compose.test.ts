@@ -57,6 +57,24 @@ describe('compose', () => {
     }
   });
 
+  it.each([
+    [401, 'credentials_invalid'],
+    [503, 'unavailable'],
+  ] as const)('a token endpoint answering %i: both checks are %s', async (status, state) => {
+    const { fetch } = fakeFetch((req) =>
+      req.url === TOKEN_URL ? new Response('{}', { status }) : Response.json({}),
+    );
+    const deps = compose(
+      loadConfig({ PISTE_CLIENT_ID: 'id', PISTE_CLIENT_SECRET: 'secret', PISTE_ENV: 'sandbox' }),
+      { fetch },
+    );
+    const report = await deps.getStatus();
+    expect(report.sources.map((s) => [s.source, s.state])).toEqual([
+      ['legifrance', state],
+      ['judilibre', state],
+    ]);
+  });
+
   it('unconfigured: no probes, no network, no sources', async () => {
     const { fetch, calls } = sandboxFetch();
     const config = loadConfig({});
