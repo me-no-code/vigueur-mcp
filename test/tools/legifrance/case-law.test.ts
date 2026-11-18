@@ -238,7 +238,7 @@ describe('legifrance_get_decision', () => {
       tool: 'judilibre_search_decisions',
       query: 'ECLI:FR:CCASS:2025:SO01200',
     });
-    expect(a.warnings).toContain('Same decision on Judilibre (usually earlier, with zones).');
+    expect(a.warnings).toContain("other_source searches Judilibre for this decision's ECLI.");
     expect(a.part).toBeNull();
     expect(a.next).toBeNull();
   });

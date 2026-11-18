@@ -117,7 +117,7 @@ const foundBranch = answerSchema(SOURCE, 'found', {
   other_source: pointerSchema
     .nullable()
     .describe(
-      'The call that finds the same decision on Judilibre; given on the last page of a judicial decision with an ECLI, else null.',
+      "The call that searches Judilibre for this decision's ECLI; given on the last page of a judicial decision with an ECLI, else null.",
     ),
 });
 
@@ -140,7 +140,7 @@ export interface GetDecisionAnswerOptions {
   offset: number;
 }
 
-const JUDILIBRE_FACT = 'Same decision on Judilibre (usually earlier, with zones).';
+const JUDILIBRE_FACT = "other_source searches Judilibre for this decision's ECLI.";
 
 /**
  * One page (`offset`) of a decision. Only the text is cut; every page carries the identity, the

@@ -303,15 +303,8 @@ export function buildSearchDecisionsAnswer(
             labelOf(JURISDICTION_LABELS, input.jurisdiction),
             ...filtersOf(input),
           ].join(', ');
-          const tries = [
-            ...(input.match === 'any_word' ? [] : ['"match": "any_word"']),
-            'fewer filters',
-            'another jurisdiction',
-            "legifrance_search_case_law (Conseil d'État, Conseil constitutionnel, CNIL, financial courts, older Cour de cassation decisions)",
-          ];
           return [
             `No Judilibre decision matches "${input.query}" with these criteria: ${criteria}.`,
-            `Try ${tries.slice(0, -1).join(', ')} or ${tries.at(-1)}.`,
           ];
         })()
       : [];

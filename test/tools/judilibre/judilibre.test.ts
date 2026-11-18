@@ -182,15 +182,15 @@ describe('judilibre_search_decisions', () => {
     expect(hit.publication).toEqual([]);
   });
 
-  it('zero hits says so, names the criteria and the other sources', async () => {
+  it('zero hits says so and names the criteria', async () => {
     const a = await search({ query: 'licenciement' }, 'no_results');
     expect(a.results).toBe(0);
     expect(a.items).toEqual([]);
     expect(a.page).toEqual({ number: 1, of: 1 });
     expect(a.next).toBeNull();
-    const warnings = a.warnings.join('\n');
-    expect(warnings).toContain('No Judilibre decision matches "licenciement"');
-    expect(warnings).toContain('legifrance_search_case_law');
+    expect(a.warnings[0]).toMatch(
+      /^No Judilibre decision matches "licenciement" with these criteria: /,
+    );
   });
 
   it('a page past the end is no_results with the totals', async () => {
@@ -230,14 +230,11 @@ describe('search criteria', () => {
     expect(warnings).toContain('all words');
   });
 
-  it('any_word is echoed, and the zero-hit hint does not suggest it again', async () => {
+  it('any_word is echoed in the request and in the zero-hit criteria', async () => {
     const a = await search({ query: 'forfait jours', match: 'any_word' });
     expect(a.request.match).toBe('any_word');
     const none = await search({ query: 'licenciement', match: 'any_word' }, 'no_results');
-    const warnings = none.warnings.join('\n');
-    expect(warnings).toContain('any word');
-    expect(warnings).not.toContain('"match": "any_word"');
-    expect(warnings).toContain('fewer filters');
+    expect(none.warnings[0]).toContain('any word');
   });
 });
 
@@ -325,16 +322,6 @@ describe('search with a fake repository', () => {
     expect((await ask([hitOf(1)], 9_999)).warnings).toEqual([]);
   });
 
-  it('the zero-hit hint names the other sources and makes no unverified claim', async () => {
-    const a = await ask([], 0);
-    const warnings = a.warnings.join('\n');
-    expect(warnings).toContain(
-      "legifrance_search_case_law (Conseil d'État, Conseil constitutionnel, CNIL, financial courts, older Cour de cassation decisions)",
-    );
-    expect(warnings).not.toContain('for older decisions');
-    expect(warnings).toContain('"match": "any_word"');
-  });
-
   it('an unknown location key (a tribunal judiciaire) is kept as is', async () => {
     const hit: JudilibreHit = {
       ...hitOf(1),
@@ -389,9 +376,7 @@ describe('judilibre_get_decision', () => {
       ecli: a.ecli,
     });
     expect(a.ecli).toMatch(/^ECLI:FR:CCASS:/);
-    expect(a.warnings).toContain(
-      'Same decision on Légifrance (when it holds it, usually weeks later).',
-    );
+    expect(a.warnings).toContain("other_source searches Légifrance for this decision's ECLI.");
     expect(a.request).toEqual({ tool: DECISION, id: '6a0e9ff1cdc6046d47668703', offset: 0 });
     expect(JSON.stringify(a)).not.toContain('not case law');
   });
@@ -425,9 +410,7 @@ describe('judilibre_get_decision', () => {
       (loadFixture('49-decision-ca-paris', 'judilibre') as { update_date: string }).update_date,
     );
     expect(a.other_source).toBeNull();
-    expect(a.warnings).not.toContain(
-      'Same decision on Légifrance (when it holds it, usually weeks later).',
-    );
+    expect(a.warnings).not.toContain("other_source searches Légifrance for this decision's ECLI.");
   });
 
   it('a Cour de cassation decision without publication is not in the Bulletin (empty list)', async () => {

@@ -21,7 +21,7 @@ const DECISION_ID = /^(JURI|CETA|CONS|CNIL|JUFI)TEXT\d{12}$/;
 
 /** Shared by the services, the tools and their tests. */
 export const LEGIFRANCE_CASE_LAW_COVERAGE_NOTE =
-  'Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. For a recent, unreasoned or appeal-court decision, use judilibre_search_decisions.';
+  'Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. Judilibre (judilibre_search_decisions) holds those decisions.';
 
 export const CASE_LAW_COLLECTION_LABELS: Readonly<Record<CaseLawCollection, string>> = {
   judicial: 'judicial courts (JURI)',

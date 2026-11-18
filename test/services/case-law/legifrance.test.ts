@@ -19,7 +19,7 @@ const rejects = async (p: Promise<unknown>, message: string) => {
 describe('LEGIFRANCE_CASE_LAW_COVERAGE_NOTE', () => {
   it('is the exact coverage note', () => {
     expect(LEGIFRANCE_CASE_LAW_COVERAGE_NOTE).toBe(
-      'Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. For a recent, unreasoned or appeal-court decision, use judilibre_search_decisions.',
+      'Note: Légifrance does not hold every Cour de cassation decision (in particular not its unreasoned rejections and non-admissions, formation restreinte RNSM/NA), receives the ones it holds weeks after Judilibre, and holds no appeal-court decisions after early 2023. Judilibre (judilibre_search_decisions) holds those decisions.',
     );
   });
 });

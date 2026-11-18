@@ -143,7 +143,7 @@ const foundBranch = answerSchema(SOURCE, 'found', {
   other_source: pointerSchema
     .nullable()
     .describe(
-      'The call that finds the same decision on Légifrance; given on the last page of a Cour de cassation decision with an ECLI, else null.',
+      "The call that searches Légifrance for this decision's ECLI; given on the last page of a Cour de cassation decision with an ECLI, else null.",
     ),
 });
 
@@ -166,7 +166,7 @@ export interface GetDecisionAnswerOptions {
   offset: number;
 }
 
-const LEGIFRANCE_FACT = 'Same decision on Légifrance (when it holds it, usually weeks later).';
+const LEGIFRANCE_FACT = "other_source searches Légifrance for this decision's ECLI.";
 
 /** The head of the first page: the summary and lists cut to `lim`; nothing on later pages. */
 interface Head {
