@@ -1,0 +1,2 @@
+# One line ending everywhere: the pre-commit hook is a shell script, and Biome checks endings.
+* text=auto eol=lf
