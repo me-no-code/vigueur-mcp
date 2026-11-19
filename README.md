@@ -131,4 +131,4 @@ Each app keeps some logs after that; they hold no questions, answers or credenti
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Licence: [PolyForm Shield 1.0.0](LICENSE): use Vigueur for any purpose, except to provide a
-product that competes with it.
+product that competes with it. Third-party data credits are in [NOTICE](NOTICE).

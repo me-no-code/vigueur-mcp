@@ -1,0 +1,22 @@
+Vigueur
+Copyright 2026 Titouan BAZIN
+
+Vigueur is licensed under the PolyForm Shield License 1.0.0 (see LICENSE).
+The third-party material listed below is not covered by that licence.
+
+
+Légifrance and Judilibre data
+-----------------------------
+
+The files under test/fixtures/ are responses from two French public APIs,
+recorded from production through the PISTE portal (https://piste.gouv.fr)
+between 12 and 14 November 2026. Only the offline tests read them; they are
+not part of the npm package or the Claude Desktop bundle.
+
+- test/fixtures/legifrance/: Légifrance, published by the Direction de
+  l'information légale et administrative (DILA), https://www.legifrance.gouv.fr
+- test/fixtures/judilibre/: Judilibre, published by the Cour de cassation,
+  https://www.courdecassation.fr
+
+They are reused under the Licence Ouverte / Open Licence 2.0 (Etalab):
+https://www.etalab.gouv.fr/licence-ouverte-open-licence/
