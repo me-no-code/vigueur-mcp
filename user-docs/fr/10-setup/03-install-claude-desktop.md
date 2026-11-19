@@ -3,7 +3,7 @@ title: "Installer dans Claude Desktop"
 level: start
 tags: [install, claude-desktop, setup]
 summary: "Installez Vigueur dans Claude Desktop à partir de son fichier groupé, saisissez vos identifiants PISTE et vérifiez que Légifrance et Judilibre répondent."
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # Installer dans Claude Desktop
@@ -27,10 +27,12 @@ compte PISTE obtenu.
 
 ### 1. Obtenir le fichier groupé
 
-Le fichier porte le numéro de sa version, par exemple `vigueur-0.1.0.mcpb`. Chaque version de
-Vigueur le publiera sur la page GitHub Releases du projet. Aucune version n'est encore publiée :
-d'ici là, compilez le fichier vous-même. Il vous faut Node.js 22 ou plus récent, et git. Dans un
-terminal :
+Le fichier porte le numéro de sa version, par exemple `vigueur-0.1.0.mcpb`. Téléchargez-le depuis la
+dernière version publiée, sur la page GitHub Releases du projet, rubrique **Assets** :
+https://github.com/me-no-code/vigueur-mcp/releases/latest
+
+Pour compiler le fichier vous-même à la place, il vous faut Node.js 22 ou plus récent, et git. Dans
+un terminal :
 
 ```
 git clone https://github.com/me-no-code/vigueur-mcp.git

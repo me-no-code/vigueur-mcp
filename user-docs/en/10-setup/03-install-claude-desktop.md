@@ -3,7 +3,7 @@ title: Install in Claude Desktop
 level: start
 tags: [install, claude-desktop, setup]
 summary: Install Vigueur in Claude Desktop from its bundle file, enter your PISTE credentials and check that Légifrance and Judilibre answer.
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # Install in Claude Desktop
@@ -26,9 +26,11 @@ Node.js it ships with. Allow about five minutes once you have your PISTE account
 
 ### 1. Get the bundle file
 
-The file is named after its version, for example `vigueur-0.1.0.mcpb`. Each release of Vigueur will
-publish it on the project's GitHub Releases page. There is no release yet: until then, build the
-file yourself. This needs Node.js 22 or later and git. In a terminal:
+The file is named after its version, for example `vigueur-0.1.0.mcpb`. Download it from the latest
+release on the project's GitHub Releases page, under **Assets**:
+https://github.com/me-no-code/vigueur-mcp/releases/latest
+
+To build the file yourself instead, you need Node.js 22 or later and git. In a terminal:
 
 ```
 git clone https://github.com/me-no-code/vigueur-mcp.git

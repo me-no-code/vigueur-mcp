@@ -16,7 +16,7 @@ French government's API gateway: no third-party account, and nothing goes anywhe
 
 The documentation, in English and French, is in [user-docs](user-docs/README.md).
 
-Status: work in progress, not released yet.
+Status: early version (0.x), still evolving.
 
 ## Install
 
@@ -33,8 +33,12 @@ Once installed, ask Claude: "Run vigueur_status." Each source should answer `ok`
 Open Vigueur's bundle file, `vigueur-<version>.mcpb`, and confirm the install dialog. Then fill in
 the three settings in **Settings**, **Extensions**, **Vigueur**, and click **Save**.
 
-The bundle will be published with each release. Until then, build it (Node.js 22 or later, and
-git): clone the repository, then run `npm ci` and `npm run bundle`; the file is in `build/`.
+Download the bundle under **Assets** in the
+[latest release](https://github.com/me-no-code/vigueur-mcp/releases/latest). To check that the file
+was built by this repository's release workflow, run
+`gh attestation verify vigueur-<version>.mcpb --repo me-no-code/vigueur-mcp` (GitHub CLI).
+To build it yourself instead (Node.js 22 or later, and git): clone the repository, then run
+`npm ci` and `npm run bundle`; the file is in `build/`.
 Details: [Install in Claude Desktop](user-docs/en/10-setup/03-install-claude-desktop.md).
 
 ### Claude Code
