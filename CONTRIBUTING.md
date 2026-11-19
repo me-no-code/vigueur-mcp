@@ -70,6 +70,32 @@ A version number lives in four files, bumped together: `package.json` (and its l
 `.claude-plugin/plugin.json`, `src/version.ts` and `mcpb/manifest.json`.
 `test/bundle-manifest.test.ts` fails when they differ.
 
+## Releasing
+
+Pushing a version tag publishes the Claude Desktop bundle, `vigueur-<version>.mcpb`, on the
+repository's Releases page (`.github/workflows/release.yml`). The workflow runs the CI checks,
+builds and checks the bundle from the tagged commit, attests it, then creates the release with the
+bundle attached.
+
+1. Bump the version in the four files above, commit and push to `main`.
+2. Optional dry run: in the **Actions** tab, run **Release** on `main`. It runs the CI checks and
+   builds and checks the bundle, but publishes nothing.
+3. Tag the commit and push the tag:
+
+   ```sh
+   git tag -a v0.2.0 -m "vigueur-mcp v0.2.0"
+   git push origin v0.2.0
+   ```
+
+The workflow refuses a tag that differs from the version in `package.json`, and a commit that is not
+on `main`. A tag with a suffix, such as `v0.2.0-rc.1`, gives a pre-release. GitHub writes the
+release notes (a link to every change since the previous tag) and shows the bundle's SHA-256 next to
+it; edit the notes on the release page if needed. The attestation is a signed record, kept by
+GitHub, that the release workflow built the bundle from the tagged commit; anyone can check a
+downloaded bundle with the GitHub CLI:
+`gh attestation verify vigueur-0.2.0.mcpb --repo me-no-code/vigueur-mcp`. For a local bundle,
+`npm run bundle` is still the way.
+
 ## Architecture
 
 - `src/shared/`: what every layer uses: the error type and its kinds, the source ids and labels,
