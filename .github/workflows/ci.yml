@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The release workflow runs these same checks before it publishes anything.
+  workflow_call:
 
 permissions:
   contents: read
@@ -14,10 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: ["22", "24"]
+        # The oldest maintained LTS (the floor in engines), the Node built into Claude Desktop, and the
+        # newest LTS, whatever it is when the job runs. See "Node versions" in CONTRIBUTING.md.
+        node: ["22", "24", "lts/*"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -27,3 +31,23 @@ jobs:
       # Offline only: the live suite needs PISTE credentials and is never run here. Builds, runs the
       # offline suite and fails below the coverage thresholds in vitest.config.ts.
       - run: npm run coverage
+
+  workflows:
+    name: Lint the workflow files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The repository only allows GitHub's own actions, so actionlint comes from its release archive,
+      # checked against the published checksum. It runs the runner's shellcheck on the run: scripts.
+      # Dependabot does not update it: bump the version and the checksum together, by hand.
+      - name: actionlint
+        env:
+          VERSION: 1.7.12
+          SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          archive="actionlint_${VERSION}_linux_amd64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/${archive}"
+          echo "$SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
