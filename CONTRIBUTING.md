@@ -16,8 +16,9 @@ Vigueur supports every Node.js LTS line that is still maintained
 (https://nodejs.org/en/about/previous-releases). The oldest one sets the floor, 22 until its end of
 life on 2027-04-30: `engines` in `package.json`, `compatibility.runtimes.node` in
 `mcpb/manifest.json` and `@types/node` all follow it, so the typecheck rejects any Node API the
-floor lacks. CI tests 22, 24 (the Node built into Claude Desktop) and the newest LTS. When the
-floor's line reaches its end of life, raise all of them in one commit.
+floor lacks; Dependabot does not propose major versions of `@types/node` for that reason. CI tests
+22, 24 (the Node built into Claude Desktop) and the newest LTS. When the floor's line reaches its
+end of life, raise all of them in one commit.
 
 ## Commands
 

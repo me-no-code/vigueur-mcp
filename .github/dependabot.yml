@@ -1,0 +1,35 @@
+# Weekly update pull requests, which run the CI checks like any other. A version must be a week old
+# before Dependabot proposes it, so a hijacked release is usually caught and pulled first.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      # Node's types follow the oldest Node Vigueur supports (engines: >=22), so that code using a
+      # newer Node's API fails the typecheck. Raise them with the engines field, by hand.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Minor and patch updates in one pull request; each major version gets its own.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]
