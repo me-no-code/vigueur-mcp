@@ -2,7 +2,7 @@
   "name": "vigueur-mcp",
   "version": "0.1.0",
   "private": true,
-  "description": "Local MCP server giving Claude reliable access to French law (Légifrance, Judilibre).",
+  "description": "Local MCP server giving reliable access to French law from the official sources (Légifrance, Judilibre).",
   "license": "SEE LICENSE IN LICENSE",
   "author": "Vigueur contributors",
   "homepage": "https://github.com/me-no-code/vigueur-mcp",
