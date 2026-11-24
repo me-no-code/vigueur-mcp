@@ -3,7 +3,7 @@ title: vigueur_status
 level: reference
 tags: [tool, status, piste, setup, errors]
 summary: Check whether your PISTE credentials work and whether Légifrance and Judilibre answer, and understand the error answers every Vigueur tool can give.
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # vigueur_status
@@ -16,7 +16,7 @@ Checks Vigueur's setup: whether PISTE credentials are configured, which PISTE en
 - "Pourquoi Vigueur ne répond-il pas ?" / "Why is Vigueur not answering?"
 - "Vigueur utilise-t-il la production ou le bac à sable ?" / "Is Vigueur using production or the sandbox?"
 
-Claude also runs it by itself when another Vigueur tool reports a credentials, access or availability problem.
+The assistant may also run it by itself when another Vigueur tool reports a credentials, access or availability problem.
 
 ## What it takes
 
@@ -45,7 +45,7 @@ It makes no change to anything: it reads your configuration and sends one small 
 }
 ```
 
-To set up access, follow [Create your PISTE account](../10-setup/01-piste-account.md), then enter the values in your app: see [Install in Claude Desktop](../10-setup/03-install-claude-desktop.md#3-enter-your-credentials) or [Install in Claude Code](../10-setup/02-install-claude-code.md#3-enter-your-credentials).
+To set up access, follow [Create your PISTE account](../10-setup/01-piste-account.md), then enter the values in your app: see [Install Vigueur](../10-setup/02-install.md#1-add-vigueur-to-your-app), [Install the Claude Code plugin](../10-setup/03-install-claude-code.md#2-enter-your-credentials) or [Install the Claude Desktop bundle](../10-setup/04-install-claude-desktop.md#3-enter-your-credentials).
 
 **A configuration problem** is listed in `config_problems`. The outcome is then `not_configured` too, because Vigueur does not use settings it cannot read:
 
@@ -57,7 +57,7 @@ To set up access, follow [Create your PISTE account](../10-setup/01-piste-accoun
 ],
 ```
 
-One problem is reported at a time. The messages name the variables the app passes to Vigueur: `PISTE_CLIENT_ID` and `PISTE_CLIENT_SECRET` hold the client ID and secret, `PISTE_ENV` is Claude Code's **PISTE environment** setting, and `PISTE_PRODUCTION` is Claude Desktop's **Production application** switch.
+One problem is reported at a time. The messages name the variables the app passes to Vigueur: `PISTE_CLIENT_ID` and `PISTE_CLIENT_SECRET` hold the client ID and secret, and `PISTE_ENV` or `PISTE_PRODUCTION` the environment: the Claude Code plugin's **PISTE environment** setting, the Claude Desktop bundle's **Production application** switch.
 
 | Problem | What it means |
 |---|---|
@@ -164,6 +164,7 @@ A decision or text that does not exist is not an error: the tools answer with `o
 
 - [PISTE](../40-sources/03-piste.md): what PISTE is, sandbox and production, quota.
 - [Create your PISTE account](../10-setup/01-piste-account.md)
-- [Install in Claude Desktop](../10-setup/03-install-claude-desktop.md)
-- [Install in Claude Code](../10-setup/02-install-claude-code.md)
+- [Install Vigueur](../10-setup/02-install.md)
+- [Install the Claude Code plugin](../10-setup/03-install-claude-code.md)
+- [Install the Claude Desktop bundle](../10-setup/04-install-claude-desktop.md)
 - [Troubleshooting and FAQ](../00-intro/05-troubleshooting.md)

@@ -1,7 +1,8 @@
 # Documentation de Vigueur
 
-Comment installer Vigueur, vous en servir pour interroger Claude sur le droit français, et lire les
-réponses. Vous débutez ? Commencez par la [page de bienvenue](00-intro/01-welcome.md).
+Comment installer Vigueur, vous en servir pour poser des questions sur le droit français depuis un
+assistant IA, et lire les réponses. Vous débutez ? Commencez par la
+[page de bienvenue](00-intro/01-welcome.md).
 
 | Niveau | À quoi s'attendre |
 |---|---|
@@ -27,10 +28,11 @@ Vous écrivez ou mettez à jour une page ? Lisez d'abord [CONTRIBUTING.md](../CO
 | # | Page | Niveau | Statut |
 |---|---|---|---|
 | 01 | [Créer votre compte PISTE](10-setup/01-piste-account.md) | Démarrage | Rédigée |
-| 02 | [Installer dans Claude Code](10-setup/02-install-claude-code.md) | Démarrage | Rédigée |
-| 03 | [Installer dans Claude Desktop](10-setup/03-install-claude-desktop.md) | Démarrage | Rédigée |
-| 04 | [Mettre à jour Vigueur](10-setup/04-updating.md) | Guide | Rédigée |
-| 05 | [Désinstaller Vigueur](10-setup/05-uninstalling.md) | Guide | Rédigée |
+| 02 | [Installer Vigueur](10-setup/02-install.md) | Démarrage | Rédigée |
+| 03 | [Installer le plugin Claude Code](10-setup/03-install-claude-code.md) | Démarrage | Rédigée |
+| 04 | [Installer le fichier groupé pour Claude Desktop](10-setup/04-install-claude-desktop.md) | Démarrage | Rédigée |
+| 05 | [Mettre à jour Vigueur](10-setup/05-updating.md) | Guide | Rédigée |
+| 06 | [Désinstaller Vigueur](10-setup/06-uninstalling.md) | Guide | Rédigée |
 
 ## Utiliser Vigueur
 

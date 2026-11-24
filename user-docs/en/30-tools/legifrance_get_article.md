@@ -3,7 +3,7 @@ title: legifrance_get_article
 level: reference
 tags: [tool, legifrance, article, code]
 summary: Read one article of a French code on a given date, and see whether it was in force then and where its content moved.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # legifrance_get_article
@@ -208,7 +208,7 @@ Warnings you can meet, each one an entry of `warnings`:
 
 ### A long article, cut into pages
 
-An answer holds at most 40,000 characters. Only the article text is cut: every page repeats the identity, `status`, the note, the warnings and the link. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the whole text) and `next` gives `{ "offset": <number> }`, the position where the rest starts. When nothing is left, `next` is `null`. Ask Claude to continue and it passes that `offset`. An `offset` at or past the end of the text (equal to its length, or more) is an error: `"offset" <n> is past the end of the article text (<length> characters). Call again without "offset".`
+An answer holds at most 40,000 characters. Only the article text is cut: every page repeats the identity, `status`, the note, the warnings and the link. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the whole text) and `next` gives `{ "offset": <number> }`, the position where the rest starts. When nothing is left, `next` is `null`. Ask the assistant to continue from that `offset`. An `offset` at or past the end of the text (equal to its length, or more) is an error: `"offset" <n> is past the end of the article text (<length> characters). Call again without "offset".`
 
 For a text of about 64,000 characters, the first page and the last page look like this (the same fields otherwise; the excerpt keeps only the ones that change):
 

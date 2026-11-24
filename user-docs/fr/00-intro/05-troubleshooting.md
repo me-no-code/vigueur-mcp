@@ -3,22 +3,22 @@ title: "Dépannage et FAQ"
 level: guide
 tags: [troubleshooting, errors, faq, vigueur_status]
 summary: "Retrouvez le message que Vigueur vous a donné, comprenez ce qu'il signifie et que faire, et vérifiez votre installation avec vigueur_status."
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # Dépannage et FAQ
 
-Commencez ici quand Claude vous dit que quelque chose ne va pas avec Vigueur. La plupart des
-problèmes viennent des identifiants PISTE, ou des deux API qui ne sont pas activées sur votre
-application PISTE. Une seule vérification repère l'un comme l'autre.
+Commencez ici quand quelque chose ne va pas avec Vigueur pendant que vous l'utilisez depuis un
+assistant IA. La plupart des problèmes viennent des identifiants PISTE, ou des deux API qui ne sont
+pas activées sur votre application PISTE. Une seule vérification repère l'un comme l'autre.
 
 ## D'abord, vérifiez votre installation
 
 ### Comment vérifier que Vigueur fonctionne ?
 
-Demandez à Claude : « Lance `vigueur_status`. » Il vérifie vos identifiants et demande à PISTE si
-Légifrance et Judilibre répondent. La réponse est un objet JSON (transmis sur une seule ligne de
-JSON ; indenté ici). Quand tout va bien, la réponse ressemble à ceci :
+Demandez à l'assistant : « Lance `vigueur_status`. » Cet outil vérifie vos identifiants et
+demande à PISTE si Légifrance et Judilibre répondent. La réponse est un objet JSON (transmis sur
+une seule ligne de JSON ; indenté ici). Quand tout va bien, la réponse ressemble à ceci :
 
 ```
 {
@@ -65,19 +65,22 @@ Quand Vigueur n'a pas de jeton valide, la vérification se connecte d'abord à P
 10 secondes). Elle interroge ensuite chaque source une fois et attend sa réponse jusqu'à 8 secondes.
 Une source qui rejette le jeton (HTTP 401) est interrogée une seconde fois avec un nouveau jeton.
 
-### Claude dit n'avoir que `vigueur_status`, ou ne trouve pas les autres outils de Vigueur
+### L'assistant dit n'avoir que `vigueur_status`, ou ne trouve pas les autres outils de Vigueur
 
 Vigueur ne propose ses outils juridiques que si l'identifiant client et le secret client sont
 tous deux renseignés et que le réglage d'environnement est valide. Sinon, le seul outil disponible
 est `vigueur_status`, et sa réponse indique dans `config_problems` tout problème de réglage.
 Renseignez les identifiants :
 
-- dans Claude Desktop, dans **Paramètres**, **Extensions**, **Vigueur**, puis cliquez sur
-  **Enregistrer**. Voir
-  [Installer dans Claude Desktop](../10-setup/03-install-claude-desktop.md#3-saisir-vos-identifiants) ;
-- dans Claude Code, avec `/plugin configure vigueur@vigueur`, puis exécutez `/mcp`, sélectionnez
-  **vigueur** et choisissez **Reconnect**. Voir
-  [Installer dans Claude Code](../10-setup/02-install-claude-code.md#3-saisir-vos-identifiants).
+- avec l'installation par défaut, dans la configuration MCP de l'application, puis redémarrez
+  l'application. Voir
+  [Installer Vigueur](../10-setup/02-install.md#1-ajouter-vigueur-à-votre-application) ;
+- avec le plugin Claude Code, par `/plugin configure vigueur@vigueur`, puis exécutez `/mcp`,
+  sélectionnez **vigueur** et choisissez **Reconnect**. Voir
+  [Installer le plugin Claude Code](../10-setup/03-install-claude-code.md#2-saisir-vos-identifiants) ;
+- avec le fichier groupé pour Claude Desktop, dans **Paramètres**, **Extensions**, **Vigueur**, puis
+  cliquez sur **Enregistrer**. Voir
+  [Installer le fichier groupé pour Claude Desktop](../10-setup/04-install-claude-desktop.md#3-saisir-vos-identifiants).
 
 ## Messages d'installation
 
@@ -88,8 +91,9 @@ cas échéant, le problème est indiqué dans `config_problems` ; les messages s
 votre compte en suivant [Créer votre compte PISTE](../10-setup/01-piste-account.md), puis saisissez
 les identifiants dans votre application. Les messages nomment les réglages par les variables qui
 leur correspondent : `PISTE_CLIENT_ID` est le réglage **PISTE client ID**, `PISTE_CLIENT_SECRET` le
-réglage **PISTE client secret**, `PISTE_ENV` le réglage **PISTE environment** de Claude Code et
-`PISTE_PRODUCTION` le réglage **Production application** de Claude Desktop.
+réglage **PISTE client secret**, et `PISTE_ENV` ou `PISTE_PRODUCTION` l'environnement (le réglage
+**PISTE environment** du plugin Claude Code, le réglage **Production application** du fichier
+groupé pour Claude Desktop).
 
 ### `PISTE_CLIENT_ID is missing (PISTE_CLIENT_SECRET is set)`
 
@@ -121,14 +125,17 @@ Vérifiez, dans cet ordre :
 
 1. L'identifiant client et le secret client ont été copiés en entier, sans espace en trop.
 2. Le réglage d'environnement correspond à l'application : bac à sable pour l'application que PISTE
-   a créée pour vous, production pour celle que vous avez créée vous-même. Dans Claude Desktop,
-   c'est l'interrupteur **Production application** ; dans Claude Code, le réglage
-   **PISTE environment**.
+   a créée pour vous, production pour celle que vous avez créée vous-même. Avec l'installation par
+   défaut, c'est `PISTE_ENV` (ou `PISTE_PRODUCTION`) ; avec le plugin Claude Code, le réglage
+   **PISTE environment** ; avec le fichier groupé pour Claude Desktop, l'interrupteur
+   **Production application**.
 
-Saisissez ensuite à nouveau les valeurs. Dans Claude Desktop, dans **Paramètres**, **Extensions**,
-**Vigueur**, puis cliquez sur **Enregistrer** : Claude Desktop redémarre Vigueur. Dans Claude Code,
-exécutez `/plugin configure vigueur@vigueur`, puis redémarrez le serveur (voir
-[le serveur est toujours l'ancien](#après-une-mise-à-jour-claude-se-comporte-toujours-comme-avant)).
+Saisissez ensuite à nouveau les valeurs. Avec l'installation par défaut, dans la configuration MCP
+de l'application, puis redémarrez l'application. Avec le plugin Claude Code, exécutez
+`/plugin configure vigueur@vigueur`, puis redémarrez le serveur (voir
+[le serveur est toujours l'ancien](#après-une-mise-à-jour-vigueur-se-comporte-toujours-comme-avant)).
+Avec le fichier groupé pour Claude Desktop, dans **Paramètres**, **Extensions**, **Vigueur**, puis
+cliquez sur **Enregistrer** : Claude Desktop redémarre Vigueur.
 
 ### Une source affiche `not_enabled`
 
@@ -144,7 +151,7 @@ Quand PISTE refuse une recherche ou une lecture, la réponse est une erreur (`"o
 Son `message` est `Légifrance: access refused (HTTP 403)` (ou commence par `Judilibre:`). La cause
 est la même.
 
-## Messages pendant que Claude lit le droit
+## Messages pendant que l'assistant lit le droit
 
 Quand une recherche ou une lecture échoue, la réponse est un objet JSON avec `"outcome": "error"`.
 Son `error` contient un `kind` (la famille d'échec, comme `quota_exceeded`) et un `message`, le
@@ -194,7 +201,7 @@ plus tard ; si cela persiste, signalez-le avec le `detail`.
 
 ### `Légifrance did not answer within 45 s`
 
-Chaque question que Claude pose à Vigueur dispose de 45 secondes au total. Quand la source met
+Chaque question que l'assistant pose à Vigueur dispose de 45 secondes au total. Quand la source met
 plus longtemps, Vigueur s'arrête et répond par une erreur de `kind` `deadline` :
 
 ```
@@ -231,7 +238,7 @@ message au projet Vigueur.
 
 ### `request cancelled`
 
-Vous, ou Claude, avez arrêté l'appel (`kind` `cancelled`). Il n'y a pas de problème.
+Vous, ou l'assistant, avez arrêté l'appel (`kind` `cancelled`). Il n'y a pas de problème.
 
 ## Quand rien n'est trouvé
 
@@ -264,8 +271,8 @@ source.
 
 ## Messages sur ce que vous avez demandé
 
-Ces messages viennent de la requête elle-même, pas de PISTE. Claude corrige en général la requête et réessaie
-de lui-même. Exemples :
+Ces messages viennent de la requête elle-même, pas de PISTE. Le message dit ce qui ne va pas, ce
+qui permet à l'assistant de corriger la requête et de réessayer. Exemples :
 
 - `"offset" … is past the end of the text (… characters).` (un décalage égal à la longueur compte comme au-delà de la fin)
 - `No text found for "…". Check the number, nature or id.` (`kind` `invalid_input` : le texte demandé pour une
@@ -279,7 +286,10 @@ de lui-même. Exemples :
 
 ## Après une mise à jour
 
-### Après une mise à jour, Claude se comporte toujours comme avant
+### Après une mise à jour, Vigueur se comporte toujours comme avant
+
+Avec l'installation par défaut, l'application continue d'exécuter l'ancien serveur jusqu'à ce
+qu'elle relance Vigueur : redémarrez l'application, ou rechargez ses serveurs MCP.
 
 Dans Claude Code, chaque session ouverte continue d'exécuter l'ancien serveur jusqu'à ce que vous
 le reconnectiez. `/reload-plugins` seul ne suffit pas. Exécutez `/mcp`, sélectionnez **vigueur**,
@@ -287,7 +297,7 @@ puis choisissez **Reconnect**. Une nouvelle session démarre la nouvelle version
 
 Dans Claude Desktop, un fichier groupé ne remplace le Vigueur installé que si sa version est plus
 récente. `vigueur_version`, dans la réponse de `vigueur_status`, indique la version qui s'exécute.
-Voir [Mettre à jour Vigueur](../10-setup/04-updating.md).
+Voir [Mettre à jour Vigueur](../10-setup/05-updating.md).
 
 ## Si le problème persiste
 

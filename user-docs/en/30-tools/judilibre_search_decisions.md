@@ -3,7 +3,7 @@ title: judilibre_search_decisions
 level: reference
 tags: [tool, judilibre, case-law, search]
 summary: Search Judilibre for Cour de cassation and lower-court decisions, choose how the words combine, and read what each answer shows.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # judilibre_search_decisions
@@ -38,7 +38,7 @@ Only `query` is required. Judilibre returns nothing without search words.
 | `page` | No | Page of results. | Whole number, 1 or more | 1 |
 | `page_size` | No | Results per page. | Whole number, 1 to 20 | 10 |
 
-`chamber` and `publication` take Vigueur's own names (`social`, `bulletin`), not the keys of the source's lists (`soc`, `b`). Claude handles the difference; it matters only when you read the lists from `judilibre_list_taxonomy`.
+`chamber` and `publication` take Vigueur's own names (`social`, `bulletin`), not the keys of the source's lists (`soc`, `b`). The difference matters only when you read the lists from `judilibre_list_taxonomy`.
 
 ## What the answer shows
 

@@ -3,7 +3,7 @@ title: The Journal officiel and tracking changes
 level: guide
 tags: [journal-officiel, changes, tracking]
 summary: Read the latest Journal officiel, filter it, see what changed in a code or a law since a date and keep track of new texts.
-updated: 2026-11-17
+updated: 2026-11-23
 ---
 
 # The Journal officiel and tracking changes
@@ -16,7 +16,7 @@ official gazette; Légifrance publishes it as JORF.
 
 > What is in today's Journal officiel? / Montre-moi les derniers JO.
 
-Claude runs [`legifrance_latest_jo`](../30-tools/legifrance_latest_jo.md). By default you get the
+The assistant runs [`legifrance_latest_jo`](../30-tools/legifrance_latest_jo.md). By default you get the
 latest issue; you can ask for up to 10 issues, or for the issue published on a date. Dates are
 publication dates. For a date, Vigueur reads at most three issues published that day.
 
@@ -42,7 +42,7 @@ enough, and the answer lists the emitters it matched in `filter`. As an illustra
 }
 ```
 
-Ministry names change with governments. If you are not sure of a name, ask Claude to list the natures
+Ministry names change with governments. If you are not sure of a name, ask the assistant to list the natures
 and emitters that published since a date
 ([`legifrance_list_reference_values`](../30-tools/legifrance_list_reference_values.md)). When a filter
 matches nothing, the answer has `"outcome": "no_results"`, says `No text matches these filters in the selected issue(s).` and lists
@@ -52,7 +52,7 @@ the natures and emitters available in those issues (`available`).
 
 > What changed in the Code du travail since 2026-01-01? / Qu'est-ce qui a changé dans le Code civil depuis le 1er septembre ?
 
-Claude runs [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md) with a start date and,
+The assistant runs [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md) with a start date and,
 if you give one, an end date (default today). The answer lists the articles created, amended,
 repealed, codified, transferred or linked, grouped by the amending text, each with its date, its
 number, its section and its id (`items`, one group per amending text).
@@ -60,7 +60,7 @@ number, its section and its id (`items`, one group per amending text).
 The dates are **entry-into-force dates, not publication dates**. A change that enters into force in
 the future has `"scheduled": true`, and the `scheduled` field counts them.
 
-Lists come in pages of up to 100 entries; `next` gives the next page, and Claude asks for it.
+Lists come in pages of up to 100 entries; `next` gives the next page, which the assistant can ask for.
 
 > **Gaps the answer reports**
 > Some versions have an entry-into-force date that Légifrance leaves undetermined; they are not

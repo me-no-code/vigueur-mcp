@@ -3,22 +3,22 @@ title: Troubleshooting and FAQ
 level: guide
 tags: [troubleshooting, errors, faq, vigueur_status]
 summary: Find the message Vigueur gave you, learn what it means and what to do, and check your setup with vigueur_status.
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # Troubleshooting and FAQ
 
-Start here when Claude tells you something is wrong with Vigueur. Most problems come from the
-PISTE credentials or from the two APIs not being enabled on your PISTE application. One check finds
-both.
+Start here when something goes wrong with Vigueur while you use it from an AI assistant. Most
+problems come from the PISTE credentials or from the two APIs not being enabled on your PISTE
+application. One check finds both.
 
 ## First, check your setup
 
 ### How do I check that Vigueur works?
 
-Ask Claude: "Run `vigueur_status`." It checks your credentials and asks PISTE whether Légifrance and
-Judilibre answer. The answer is one JSON object (on the wire, a single line of JSON; it is indented
-here). A healthy answer looks like this:
+Ask the assistant: "Run `vigueur_status`." This tool checks your credentials and asks PISTE
+whether Légifrance and Judilibre answer. The answer is one JSON object (on the wire, a single line
+of JSON; it is indented here). A healthy answer looks like this:
 
 ```
 {
@@ -65,17 +65,20 @@ When Vigueur holds no valid token, the check first signs in to PISTE (up to 10 s
 asks each source once and waits up to 8 seconds for it. A source that rejects the token (HTTP 401)
 is asked once more with a new token.
 
-### Claude says it only has `vigueur_status`, or cannot find the other Vigueur tools
+### The assistant says it only has `vigueur_status`, or cannot find the other Vigueur tools
 
 Vigueur offers its legal tools only when both a client ID and a client secret are set and the
 environment setting is valid. Otherwise the only tool available is `vigueur_status`, and its answer
 lists any problem with the settings in `config_problems`. Fill in the credentials:
 
-- in Claude Desktop, in **Settings**, **Extensions**, **Vigueur**, then click **Save**. See
-  [Install in Claude Desktop](../10-setup/03-install-claude-desktop.md#3-enter-your-credentials);
-- in Claude Code, with `/plugin configure vigueur@vigueur`, then run `/mcp`, select **vigueur** and
-  choose **Reconnect**. See
-  [Install in Claude Code](../10-setup/02-install-claude-code.md#3-enter-your-credentials).
+- with the default install, in the app's MCP configuration, then restart the app. See
+  [Install Vigueur](../10-setup/02-install.md#1-add-vigueur-to-your-app);
+- with the Claude Code plugin, through `/plugin configure vigueur@vigueur`, then run `/mcp`,
+  select **vigueur** and choose **Reconnect**. See
+  [Install the Claude Code plugin](../10-setup/03-install-claude-code.md#2-enter-your-credentials);
+- with the Claude Desktop bundle, in **Settings**, **Extensions**, **Vigueur**, then click **Save**.
+  See
+  [Install the Claude Desktop bundle](../10-setup/04-install-claude-desktop.md#3-enter-your-credentials).
 
 ## Setup messages
 
@@ -85,8 +88,9 @@ Vigueur has no usable credentials: none were entered, or a setting holds a probl
 there is one, is listed in `config_problems`; the messages are below. Create your account with
 [Create your PISTE account](../10-setup/01-piste-account.md), then enter the credentials in your
 app. The messages name the settings by the variables behind them: `PISTE_CLIENT_ID` is the
-**PISTE client ID** setting, `PISTE_CLIENT_SECRET` the **PISTE client secret**, `PISTE_ENV` Claude
-Code's **PISTE environment** and `PISTE_PRODUCTION` Claude Desktop's **Production application**.
+**PISTE client ID** setting, `PISTE_CLIENT_SECRET` the **PISTE client secret**, and `PISTE_ENV` or
+`PISTE_PRODUCTION` the environment (the Claude Code plugin's **PISTE environment**, the Claude
+Desktop bundle's **Production application**).
 
 ### `PISTE_CLIENT_ID is missing (PISTE_CLIENT_SECRET is set)`
 
@@ -117,13 +121,16 @@ in this order:
 
 1. The client ID and secret were copied whole, with no extra space.
 2. The environment setting matches the application: sandbox for the application PISTE created
-   for you, production for one you created yourself. In Claude Desktop, that is the
-   **Production application** switch; in Claude Code, the **PISTE environment** setting.
+   for you, production for one you created yourself. With the default install, that is
+   `PISTE_ENV` (or `PISTE_PRODUCTION`); with the Claude Code plugin, the **PISTE environment**
+   setting; with the Claude Desktop bundle, the **Production application** switch.
 
-Then enter the values again. In Claude Desktop, in **Settings**, **Extensions**, **Vigueur**, then
-click **Save**: Claude Desktop restarts Vigueur. In Claude Code, run
-`/plugin configure vigueur@vigueur`, then restart the server (see
-[the server is still the old one](#after-an-update-claude-still-behaves-as-before)).
+Then enter the values again. With the default install, in the app's MCP configuration, then
+restart the app. With the Claude Code plugin, run `/plugin configure vigueur@vigueur`, then restart
+the server (see
+[the server is still the old one](#after-an-update-vigueur-still-behaves-as-before)).
+With the Claude Desktop bundle, in **Settings**, **Extensions**, **Vigueur**, then click **Save**:
+Claude Desktop restarts Vigueur.
 
 ### A source shows `not_enabled`
 
@@ -139,7 +146,7 @@ A search or reading that PISTE refuses answers with an error (`"outcome": "error
 Its `message` reads `Légifrance: access refused (HTTP 403)` (or `Judilibre:` first). The cause is
 the same.
 
-## Messages while Claude reads the law
+## Messages while the assistant reads the law
 
 When a search or a reading fails, the answer is a JSON object with `"outcome": "error"`. Its
 `error` holds a `kind` (the family of failure, such as `quota_exceeded`) and a `message`, the text
@@ -187,8 +194,8 @@ its side, not that your setup is wrong. Try again later; if it keeps happening, 
 
 ### `Légifrance did not answer within 45 s`
 
-Each question Claude puts to Vigueur has a limit of 45 seconds in all. When the source takes longer,
-Vigueur stops and answers with an error of `kind` `deadline`:
+Each question the assistant puts to Vigueur has a limit of 45 seconds in all. When the source
+takes longer, Vigueur stops and answers with an error of `kind` `deadline`:
 
 ```
 "error": {
@@ -222,7 +229,7 @@ is healthy, report the message to the Vigueur project.
 
 ### `request cancelled`
 
-You, or Claude, stopped the call (`kind` `cancelled`). Nothing is wrong.
+You, or the assistant, stopped the call (`kind` `cancelled`). Nothing is wrong.
 
 ## When nothing is found
 
@@ -255,8 +262,8 @@ words, fewer filters, or the other source.
 
 ## Messages about what you asked
 
-These come from the request itself, not from PISTE. Claude usually corrects the request and tries
-again by itself. Examples:
+These come from the request itself, not from PISTE. The message says what is wrong, so the
+assistant can correct the request and try again. Examples:
 
 - `"offset" … is past the end of the text (… characters).` (an offset equal to the length counts as past the end)
 - `No text found for "…". Check the number, nature or id.` (`kind` `invalid_input`: the text asked for in a
@@ -270,7 +277,10 @@ again by itself. Examples:
 
 ## After an update
 
-### After an update, Claude still behaves as before
+### After an update, Vigueur still behaves as before
+
+With the default install, the app keeps running the old server until it starts Vigueur again:
+restart the app, or reload its MCP servers.
 
 In Claude Code, each open session keeps running the old server until you reconnect it.
 `/reload-plugins` alone is not enough. Run `/mcp`, select **vigueur**, then choose **Reconnect**. A
@@ -278,7 +288,7 @@ new session starts the new build.
 
 In Claude Desktop, a bundle file replaces the installed Vigueur only when its version is newer.
 `vigueur_version`, in the answer of `vigueur_status`, says which version runs. See
-[Update Vigueur](../10-setup/04-updating.md).
+[Update Vigueur](../10-setup/05-updating.md).
 
 ## Still stuck
 

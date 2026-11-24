@@ -3,7 +3,7 @@ title: Glossary
 level: reference
 tags: [glossary, terms]
 summary: Look up the French legal and technical terms that Vigueur's answers use.
-updated: 2026-11-17
+updated: 2026-11-23
 ---
 
 # Glossary
@@ -19,7 +19,7 @@ A decision given by a *cour*, such as the Cour de cassation or a *cour d'appel*.
 
 The decision that a *pourvoi* challenges (*décision attaquée*). Judilibre and Légifrance decisions
 show it in the `attacked` field when the source states it. When Judilibre also holds the
-attacked decision, the answer gives the call that reads it, so Claude can read it next.
+attacked decision, the answer gives the call that reads it, so the assistant can read it next.
 
 ### Bulletin
 
@@ -177,7 +177,8 @@ An identifier that Légifrance gives each document. The prefix tells the kind.
 | `KALIARTI` | A version of a collective-agreement article |
 | `JURITEXT`, `CETATEXT`, `CONSTEXT`, `CNILTEXT`, `JUFITEXT` | A decision in the judicial, administrative, constitutional, CNIL or financial collection |
 
-Answers show these ids so that Claude can read the same document again, and so that you can quote it.
+Answers show these ids so that the assistant can read the same document again, and so that you can
+quote it.
 
 ### LODA
 
@@ -332,7 +333,7 @@ there is nothing to say. See [Reading Vigueur's answers](../20-using/05-reading-
 
 ### Zone
 
-A named part of a decision on Judilibre. Ask Claude for one zone to read only that part.
+A named part of a decision on Judilibre. Ask the assistant for one zone to read only that part.
 
 | Zone | Part of the decision |
 |---|---|

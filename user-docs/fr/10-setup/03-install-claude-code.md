@@ -1,15 +1,20 @@
 ---
-title: "Installer dans Claude Code"
+title: "Installer le plugin Claude Code"
 level: start
-tags: [install, claude-code, setup]
-summary: "Installez Vigueur dans Claude Code à partir d'une compilation locale, saisissez vos identifiants PISTE et vérifiez que Légifrance et Judilibre répondent."
-updated: 2026-11-18
+tags: [install, cli, claude-code, setup]
+summary: "Installez Vigueur dans Claude Code sous forme de plugin, saisissez vos identifiants PISTE et vérifiez que Légifrance et Judilibre répondent."
+updated: 2026-11-24
 ---
 
-# Installer dans Claude Code
+# Installer le plugin Claude Code
 
-Vous allez télécharger Vigueur, le compiler une fois, l'ajouter à Claude Code comme plugin, saisir
-vos identifiants PISTE et vérifier que tout fonctionne. Comptez environ dix minutes une fois votre
+Vigueur existe sous forme de plugin pour Claude Code : Claude Code demande vos identifiants et
+conserve le secret client dans le coffre sécurisé d'identifiants de votre système. Cette page
+installe ce plugin. Claude Code peut aussi exécuter Vigueur comme toute autre application MCP, avec
+[Installer Vigueur](02-install.md).
+
+Vous allez ajouter le plugin à Claude Code, saisir vos identifiants PISTE et vérifier que tout
+fonctionne. Le plugin télécharge Vigueur depuis npm. Comptez environ cinq minutes une fois votre
 compte PISTE obtenu.
 
 > **Testé sur macOS**
@@ -19,43 +24,27 @@ compte PISTE obtenu.
 ## Avant de commencer
 
 - [Claude Code](https://claude.com/claude-code), qui fonctionne déjà.
-- Node.js 22 ou plus récent, et git.
+- Node.js 22 ou plus récent, qui fournit `npx` : le plugin lance Vigueur avec. Pour le vérifier,
+  lancez `node --version` dans un terminal.
 - Un compte et une application PISTE, avec l'identifiant client et le secret client sous la main.
   Si vous ne les avez pas encore, consultez [Créer votre compte PISTE](01-piste-account.md).
 
 ## Étapes
 
-### 1. Télécharger et compiler Vigueur
+### 1. Ajouter Vigueur à Claude Code
 
-Dans un terminal, dans un dossier où vous rangez vos projets :
-
-```
-git clone https://github.com/me-no-code/vigueur-mcp.git
-cd vigueur-mcp
-npm ci
-npm run build
-pwd
-```
-
-`pwd` affiche le chemin absolu du dossier. Notez-le pour l'étape suivante.
-
-`npm ci` peut afficher un avertissement sur `fsevents` et « allow-scripts ». Il est sans
-conséquence : ce paquet ne sert qu'aux développeurs, et Vigueur n'en a pas besoin.
-
-> **Gardez le dossier propre**
-> Claude Code copie tout le dossier dans son cache de plugins lors de l'installation. N'y mettez ni
-> fichier `.env` ni document privé.
-
-### 2. Ajouter Vigueur à Claude Code
-
-Dans Claude Code, exécutez ces deux commandes. Remplacez le chemin par celui qu'a affiché `pwd`.
+Dans Claude Code, exécutez ces deux commandes :
 
 ```
-/plugin marketplace add /absolute/path/to/vigueur-mcp
+/plugin marketplace add me-no-code/vigueur-mcp
 /plugin install vigueur@vigueur
 ```
 
-### 3. Saisir vos identifiants
+La première ajoute le dépôt GitHub du projet comme marketplace de plugins, nommée `vigueur` ; la
+seconde installe le plugin depuis cette marketplace. Au premier lancement, Vigueur met un peu plus
+de temps à démarrer : `npx` le télécharge depuis npm.
+
+### 2. Saisir vos identifiants
 
 Claude Code demande trois réglages quand le plugin est activé. Pour les modifier plus tard,
 exécutez `/plugin configure vigueur@vigueur`.
@@ -75,7 +64,7 @@ L'environnement doit correspondre à l'application. Voir
 > Créez votre compte avec [Créer votre compte PISTE](01-piste-account.md), puis exécutez
 > `/plugin configure vigueur@vigueur`.
 
-### 4. Vérifier que tout fonctionne
+### 3. Vérifier que tout fonctionne
 
 Demandez à Claude : « Lance `vigueur_status`. » Vigueur répond avec un objet JSON (transmis sur une
 seule ligne de JSON ; indenté ici). Les deux sources doivent afficher `"state": "ok"` :
@@ -121,7 +110,8 @@ Essayez : « Que dit l'article 1240 du Code civil, et est-il en vigueur ? » Voi
 ## Voir aussi
 
 - [Créer votre compte PISTE](01-piste-account.md)
-- [Installer dans Claude Desktop](03-install-claude-desktop.md)
-- [Mettre à jour Vigueur](04-updating.md)
-- [Désinstaller Vigueur](05-uninstalling.md)
+- [Installer Vigueur](02-install.md)
+- [Installer le fichier groupé pour Claude Desktop](04-install-claude-desktop.md)
+- [Mettre à jour Vigueur](05-updating.md)
+- [Désinstaller Vigueur](06-uninstalling.md)
 - [Confidentialité et données](../00-intro/04-privacy-and-your-data.md)

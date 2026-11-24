@@ -3,14 +3,14 @@ title: Case law
 level: guide
 tags: [case-law, judilibre, legifrance, decisions]
 summary: Choose between Légifrance and Judilibre, find a decision by number, ECLI or words, and read it whole or by zone.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Case law
 
 Vigueur reads case law from two sources. They overlap for the Cour de cassation, but neither holds
 everything the other does. This guide tells you which to ask, how to find a decision and how to read
-one. You do not have to choose: say what you want and Claude picks. Knowing the difference helps you
+one. You do not have to choose: say what you want and the assistant picks. Knowing the difference helps you
 read the answer.
 
 ## The two sources
@@ -39,7 +39,7 @@ In plain words: for a recent decision, an unreasoned one
 appeal-court decision, Judilibre is the source to ask.
 
 > **A missing decision is not a missing ruling**
-> If Légifrance returns nothing for a Cour de cassation or appeal-court decision, ask Claude to try
+> If Légifrance returns nothing for a Cour de cassation or appeal-court decision, ask the assistant to try
 > Judilibre before you conclude anything.
 
 ### What Judilibre lacks
@@ -83,7 +83,7 @@ all the words must appear.
 You can narrow a search by decision dates, court level, Cour de cassation chamber and publication
 on both sources. On Judilibre you can also filter by formation, outcome and court location, and
 search one part of the decision only: the *moyens*, the *motivation*, the summary and so on. Ask
-Claude for the values a filter accepts:
+the assistant for the values a filter accepts:
 [`judilibre_list_taxonomy`](../30-tools/judilibre_list_taxonomy.md) lists Judilibre's.
 
 Results come in pages of 10 by default (up to 20). The answer says how many decisions match (`results`), which
@@ -93,19 +93,19 @@ so when a search is larger, and narrowing it shows the others.
 
 When nothing matches, the answer has `"outcome": "no_results"` and its warnings repeat your
 criteria. On Légifrance's judicial collection they also repeat the coverage note above. To widen a
-search, you can ask Claude for any word instead of all (on Judilibre), fewer filters, another
+search, you can ask the assistant for any word instead of all (on Judilibre), fewer filters, another
 jurisdiction, or the other source.
 
 ## Read a decision
 
-Each hit carries a `read_with` field telling Claude how to read it:
+Each hit carries a `read_with` field telling the assistant how to read it:
 
 ```
 "read_with": { "tool": "judilibre_get_decision", "id": "6abcc10bc27382d099087409" }
 "read_with": { "tool": "legifrance_get_decision", "id": "JURITEXT000053197030" }
 ```
 
-Ask Claude to "read it". The ids differ by source: Judilibre ids have 24 hexadecimal characters;
+Ask the assistant to "read it". The ids differ by source: Judilibre ids have 24 hexadecimal characters;
 Légifrance ids are `JURITEXT`, `CETATEXT`, `CONSTEXT`, `CNILTEXT` or `JUFITEXT` followed by 12 digits.
 
 The text is verbatim from the source. Names of natural persons are pseudonymised by the source.
@@ -139,7 +139,7 @@ Besides the `text`, the answer gives what the source records about the decision,
 | `legifrance_status` | For CNIL deliberations, the status as Légifrance labels it |
 
 A field with nothing to show is `null` (or an empty list). Long decisions are paged: `part` says which
-characters are shown and `next` gives the `offset` to continue from, and Claude continues from there. See [Reading Vigueur's answers](05-reading-answers.md).
+characters are shown and `next` gives the `offset` to continue from: ask the assistant to continue. See [Reading Vigueur's answers](05-reading-answers.md).
 
 ### Cross-checking the other source
 

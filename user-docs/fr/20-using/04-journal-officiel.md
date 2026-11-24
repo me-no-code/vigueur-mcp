@@ -3,7 +3,7 @@ title: "Le Journal officiel et le suivi des modifications"
 level: guide
 tags: [journal-officiel, changes, tracking]
 summary: "Lisez le dernier Journal officiel, filtrez-le, voyez ce qui a changé dans un code ou une loi depuis une date et suivez les nouveaux textes."
-updated: 2026-11-17
+updated: 2026-11-23
 ---
 
 # Le Journal officiel et le suivi des modifications
@@ -16,7 +16,7 @@ la publication officielle ; Légifrance le publie sous le nom de JORF.
 
 > Montre-moi les derniers JO. / What is in today's Journal officiel?
 
-Claude lance [`legifrance_latest_jo`](../30-tools/legifrance_latest_jo.md). Par défaut, vous obtenez le
+L'assistant lance [`legifrance_latest_jo`](../30-tools/legifrance_latest_jo.md). Par défaut, vous obtenez le
 dernier numéro ; vous pouvez demander jusqu'à 10 numéros, ou le numéro publié à une date. Les dates
 sont des dates de publication. Pour une date, Vigueur lit au plus trois numéros publiés ce jour-là.
 
@@ -45,7 +45,7 @@ d'illustration de la forme (ce n'est pas une réponse enregistrée) :
 ```
 
 Les noms des ministères changent avec les gouvernements. Si vous n'êtes pas sûr d'un nom, demandez à
-Claude de lister les natures et les émetteurs qui ont publié depuis une date
+l'assistant de lister les natures et les émetteurs qui ont publié depuis une date
 ([`legifrance_list_reference_values`](../30-tools/legifrance_list_reference_values.md)). Quand un
 filtre ne correspond à rien, la réponse contient `"outcome": "no_results"`, dit `No text matches these filters in the selected issue(s).` et liste
 les natures et les émetteurs disponibles dans ces numéros (`available`).
@@ -54,7 +54,7 @@ les natures et les émetteurs disponibles dans ces numéros (`available`).
 
 > Qu'est-ce qui a changé dans le Code civil depuis le 1er septembre ? / What changed in the Code du travail since 2026-01-01?
 
-Claude lance [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md) avec une date de début
+L'assistant lance [`legifrance_list_changes`](../30-tools/legifrance_list_changes.md) avec une date de début
 et, si vous en donnez une, une date de fin (par défaut aujourd'hui). La réponse liste les articles
 créés, modifiés, abrogés, codifiés, transférés ou liés, regroupés par texte modificatif, chacun avec sa
 date, son numéro, sa section et son identifiant (`items`, un groupe par texte modificatif).
@@ -62,8 +62,8 @@ date, son numéro, sa section et son identifiant (`items`, un groupe par texte m
 Les dates sont des **dates d'entrée en vigueur, non des dates de publication**. Un changement qui
 entre en vigueur dans le futur porte `"scheduled": true`, et le champ `scheduled` les compte.
 
-Les listes sont découpées en pages de 100 entrées au plus ; `next` donne la page suivante, et Claude la
-demande.
+Les listes sont découpées en pages de 100 entrées au plus ; `next` donne la page suivante, que
+l'assistant peut demander.
 
 > **Les lacunes que la réponse signale**
 > Certaines versions ont une date d'entrée en vigueur que Légifrance laisse indéterminée ; elles ne

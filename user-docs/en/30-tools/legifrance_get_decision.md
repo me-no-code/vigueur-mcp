@@ -3,7 +3,7 @@ title: legifrance_get_decision
 level: reference
 tags: [tool, legifrance, case-law, read]
 summary: Read one decision from Légifrance by its id, with its identity, official link and full text, page by page.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # legifrance_get_decision
@@ -14,7 +14,7 @@ Reads one decision held by Légifrance: its identity, its official link, the lab
 
 - "Lis la décision JURITEXT000053197030." / "Read decision JURITEXT000053197030."
 - "Montre-moi le texte complet de la décision du Conseil constitutionnel trouvée plus haut." / "Show me the full text of the Conseil constitutionnel decision found above."
-- "Continue la lecture de cette décision." / "Continue reading that decision." (Claude asks for the next page.)
+- "Continue la lecture de cette décision." / "Continue reading that decision." (The assistant asks for the next page.)
 
 You normally get the id from [`legifrance_search_case_law`](legifrance_search_case_law.md).
 
@@ -122,7 +122,7 @@ A Conseil constitutionnel decision fills its own fields:
 }
 ```
 
-**Long texts.** A page holds at most 40,000 characters. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the text) and `next` gives `{ "offset": <number> }`, where the rest starts. When nothing is left, `next` is `null`. Ask Claude to continue, and it passes that offset. The identity fields repeat on every page; the summary appears on the first only.
+**Long texts.** A page holds at most 40,000 characters. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the text) and `next` gives `{ "offset": <number> }`, where the rest starts. When nothing is left, `next` is `null`. Ask the assistant to continue from that offset. The identity fields repeat on every page; the summary appears on the first only.
 
 **Not found.** This is a normal answer, not an error. The outcome is `not_found`, `id` repeats the id, and `warnings` says what to do:
 

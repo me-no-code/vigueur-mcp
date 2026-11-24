@@ -3,7 +3,7 @@ title: "legifrance_get_article"
 level: reference
 tags: [tool, legifrance, article, code]
 summary: "Lire un article d'un code français à une date donnée, et voir s'il était en vigueur à cette date et où son contenu a été déplacé."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # legifrance_get_article
@@ -208,7 +208,7 @@ Avertissements que vous pouvez rencontrer, chacun étant une entrée de `warning
 
 ### Un long article, découpé en pages
 
-Une réponse contient au plus 40 000 caractères. Seul le texte de l'article est coupé : chaque page répète l'identité de l'article, `status`, la note, les avertissements et le lien. Quand le texte est coupé, `part` donne les caractères affichés (`from`, `to`, et `of`, la longueur du texte entier) et `next` donne `{ "offset": <number> }`, la position où reprend la suite. Quand il ne reste rien, `next` vaut `null`. Demandez à Claude de continuer et il passera cet `offset`. Un `offset` situé à la fin du texte ou au-delà (égal ou supérieur à sa longueur) est une erreur : `"offset" <n> is past the end of the article text (<length> characters). Call again without "offset".`
+Une réponse contient au plus 40 000 caractères. Seul le texte de l'article est coupé : chaque page répète l'identité de l'article, `status`, la note, les avertissements et le lien. Quand le texte est coupé, `part` donne les caractères affichés (`from`, `to`, et `of`, la longueur du texte entier) et `next` donne `{ "offset": <number> }`, la position où reprend la suite. Quand il ne reste rien, `next` vaut `null`. Demandez à l'assistant de continuer à partir de cet `offset`. Un `offset` situé à la fin du texte ou au-delà (égal ou supérieur à sa longueur) est une erreur : `"offset" <n> is past the end of the article text (<length> characters). Call again without "offset".`
 
 Pour un texte d'environ 64 000 caractères, la première page et la dernière page ressemblent à ceci (les autres champs sont les mêmes ; l'extrait ne garde que ceux qui changent) :
 

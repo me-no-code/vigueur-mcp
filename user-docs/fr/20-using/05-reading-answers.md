@@ -3,13 +3,13 @@ title: "Lire les réponses de Vigueur"
 level: guide
 tags: [answers, envelope, status, links, pagination, errors]
 summary: "Comprenez les parties communes à toutes les réponses de Vigueur : les champs de l'enveloppe, le type de réponse, l'état de vigueur, les avertissements, la pagination, le contenu en cache et les erreurs."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Lire les réponses de Vigueur
 
-Claude résume en général ce que Vigueur renvoie, mais les réponses de Vigueur ont une forme fixe, et
-vous pouvez demander à Claude de vous en montrer une telle quelle. Chaque réponse est un objet
+Les réponses de Vigueur ont une forme fixe. Quand vous utilisez Vigueur depuis un assistant IA, vous
+pouvez demander à l'assistant de vous en montrer une telle quelle. Chaque réponse est un objet
 JSON : une liste de champs nommés, chacun contenant un fait. Elle est transmise sur une seule ligne de
 JSON.
 Les extraits de cette page sont indentés pour être lisibles, et `…` marque les champs ou le texte omis.
@@ -141,8 +141,8 @@ Un résultat de recherche porte un champ `read_with` qui nomme l'appel qui perme
 "read_with": { "tool": "judilibre_get_decision", "id": "6abcc10bc27382d099087409" }
 ```
 
-Une recherche ne montre qu'un extrait ; le texte entier demande une seconde requête, que Claude fait
-pour vous quand vous demandez à le lire. Un résultat qu'aucun outil ne lit, tel qu'un article publié au
+Une recherche ne montre qu'un extrait ; le texte entier demande une seconde requête, que l'assistant
+fait pour vous quand vous demandez à le lire. Un résultat qu'aucun outil ne lit, tel qu'un article publié au
 Journal officiel, a `"read_with": null` et seulement son `link`. Sur sa dernière page, une décision
 judiciaire dotée d'un ECLI donne dans `other_source` l'appel qui cherche cet ECLI dans l'autre
 source (depuis Judilibre, pour une décision de la Cour de cassation seulement).
@@ -195,7 +195,7 @@ comment obtenir la suite, avec les champs `page`, `part` et `next`.
 | Où | Ce que vous voyez | Comment continuer |
 |---|---|---|
 | Listes (résultats de recherche, modifications, historique, plan, Journal officiel) | `page` donne `number` et `of` (la page où vous êtes et le nombre de pages) ; `next` vaut `{ "page": 2 }` | Demandez la page suivante |
-| Texte long (article, décision) | `part` donne `from`, `to` et `of` (les caractères affichés et la longueur du texte entier) ; `next` vaut `{ "offset": <number> }` | Demandez à Claude de continuer ; il répète la requête avec ce décalage |
+| Texte long (article, décision) | `part` donne `from`, `to` et `of` (les caractères affichés et la longueur du texte entier) ; `next` vaut `{ "offset": <number> }` | Demandez à l'assistant de continuer à partir de ce décalage |
 | Il ne reste rien | `next` vaut `null` | |
 | Une page trop longue | Un avertissement : `(Only the first 7 of 10 hits of this page fit — use a smaller "page_size".)` | Demandez moins de résultats par page |
 
@@ -230,14 +230,14 @@ Quand chaque partie de la réponse a été récupérée pour cet appel, `cached`
 
 ## Le délai
 
-Chaque requête que Claude fait à Vigueur dispose de 45 secondes en tout, nouvelles tentatives
+Chaque requête que l'assistant fait à Vigueur dispose de 45 secondes en tout, nouvelles tentatives
 comprises. Si ce délai est dépassé, la réponse est une erreur avec `kind` `deadline` : `Légifrance did not answer within 45 s. Try again in a
 moment.` (ou Judilibre). Reposez la question.
 
 ## Quand quelque chose ne va pas
 
 Un appel qui échoue donne un objet JSON dont l'`outcome` vaut `error`. Il est marqué comme une erreur,
-si bien que Claude le traite comme un échec :
+si bien que l'assistant peut le traiter comme un échec :
 
 ```
 {
@@ -286,7 +286,7 @@ Une erreur n'a ni `warnings` ni `cached`. Les valeurs de `kind` :
 | `cancelled` | L'appel a été arrêté | Il n'y a pas de problème |
 | `unexpected` | Tout le reste | `Unexpected error: … Call vigueur_status to check the setup.` |
 
-Demandez d'abord à Claude de lancer `vigueur_status` : il vérifie vos réglages et les deux sources.
+Demandez d'abord à l'assistant de lancer `vigueur_status` : cet outil vérifie vos réglages et les deux sources.
 Voir [`vigueur_status`](../30-tools/vigueur_status.md), et
 [Dépannage et FAQ](../00-intro/05-troubleshooting.md) pour savoir que faire.
 

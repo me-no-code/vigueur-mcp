@@ -3,7 +3,7 @@ title: "Créer votre compte PISTE"
 level: start
 tags: [setup, piste, credentials]
 summary: "Créez un compte et une application PISTE gratuits, abonnez l'application aux API Légifrance et Judilibre, et obtenez l'identifiant client et le secret client dont Vigueur a besoin."
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # Créer votre compte PISTE
@@ -28,14 +28,16 @@ vous utilisez Vigueur.
    l'application.
 
 Vous avez maintenant deux valeurs et un choix d'environnement. Vous les saisirez quand vous
-installerez Vigueur [dans Claude Desktop](03-install-claude-desktop.md) ou
-[dans Claude Code](02-install-claude-code.md).
+installerez Vigueur : [Installer Vigueur](02-install.md),
+[Installer le plugin Claude Code](03-install-claude-code.md) ou
+[Installer le fichier groupé pour Claude Desktop](04-install-claude-desktop.md).
 
 > **Gardez le secret client pour vous**
 > Le secret client est un mot de passe de votre application. Ne le collez pas dans une conversation
-> avec Claude, un e-mail ou un document. Saisissez-le uniquement dans les réglages de Vigueur :
-> Claude Desktop le stocke chiffré, et Claude Code le conserve dans le coffre sécurisé
-> d'identifiants de votre système.
+> avec un assistant, un e-mail ou un document. Saisissez-le uniquement dans les réglages de
+> Vigueur. Avec l'installation par défaut, c'est la configuration MCP de l'application, où il est en
+> clair : gardez ce fichier privé. Le plugin Claude Code le conserve dans le coffre sécurisé
+> d'identifiants de votre système, et le fichier groupé pour Claude Desktop le stocke chiffré.
 
 ## Bac à sable ou production
 
@@ -44,8 +46,9 @@ PISTE a deux environnements, et chaque application appartient à l'un d'eux.
 | | Bac à sable (*sandbox*) | Production |
 |---|---|---|
 | Quelle application | Celle que PISTE crée automatiquement pour vous | Une application que vous créez vous-même |
-| Dans Claude Desktop | **Production application** désactivé | **Production application** activé (valeur par défaut) |
-| Dans Claude Code | **PISTE environment** `sandbox` | **PISTE environment** `production` (valeur par défaut) |
+| Avec l'installation par défaut | `PISTE_ENV` `sandbox` (ou `PISTE_PRODUCTION` `false`) | `PISTE_ENV` `production` (valeur par défaut) |
+| Avec le plugin Claude Code | **PISTE environment** `sandbox` | **PISTE environment** `production` (valeur par défaut) |
+| Avec le fichier groupé pour Claude Desktop | **Production application** désactivé | **Production application** activé (valeur par défaut) |
 
 Le réglage doit correspondre à l'application à laquelle appartiennent les identifiants : les
 identifiants du bac à sable ne fonctionnent qu'en bac à sable, et ceux de production qu'en
@@ -57,13 +60,14 @@ Voir [Bac à sable](../00-intro/03-glossary.md#bac-à-sable) et
 
 ## Vérifier que tout fonctionne
 
-Après avoir installé Vigueur et saisi les identifiants, demandez à Claude de lancer
+Après avoir installé Vigueur et saisi les identifiants, demandez à l'assistant de lancer
 `vigueur_status`. Chaque source doit afficher `ok`. Si l'une affiche `not_enabled`, recommencez les
 étapes 3 et 4 ci-dessus.
 
 ## Voir aussi
 
-- [Installer dans Claude Desktop](03-install-claude-desktop.md)
-- [Installer dans Claude Code](02-install-claude-code.md)
+- [Installer Vigueur](02-install.md)
+- [Installer le plugin Claude Code](03-install-claude-code.md)
+- [Installer le fichier groupé pour Claude Desktop](04-install-claude-desktop.md)
 - [PISTE](../40-sources/03-piste.md)
 - [Dépannage et FAQ](../00-intro/05-troubleshooting.md)

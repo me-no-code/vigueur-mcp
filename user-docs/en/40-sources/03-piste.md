@@ -3,7 +3,7 @@ title: PISTE
 level: reference
 tags: [sources, piste, quota, sandbox, production]
 summary: Understand what PISTE is, how sandbox and production differ, why one application serves both sources, how the shared quota behaves, and how Vigueur retries and times out.
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # PISTE
@@ -25,7 +25,7 @@ PISTE has two environments, each with its own addresses and its own applications
 | | Sandbox | Production |
 |---|---|---|
 | Application | PISTE creates one for you automatically (named SANDBOX) | Every application you create yourself |
-| Vigueur's setting | Claude Desktop: **Production application** off. Claude Code: **PISTE environment** `sandbox` | Claude Desktop: **Production application** on. Claude Code: **PISTE environment** `production`. Both are the default |
+| Vigueur's setting | `PISTE_ENV` `sandbox`. Claude Code plugin: **PISTE environment** `sandbox`. Claude Desktop bundle: **Production application** off | `PISTE_ENV` `production`. Claude Code plugin: **PISTE environment** `production`. Claude Desktop bundle: **Production application** on. Production is the default |
 
 > **The environment must match the credentials**
 > Sandbox credentials work only with the sandbox setting, production credentials only with production. A mismatch is reported as rejected credentials, the same as a wrong secret, and `vigueur_status` cannot tell the two apart. Vigueur's start-up line, in its logs, names the environment in use.
@@ -55,7 +55,7 @@ PISTE limits how many requests an application can make. Observed in November 202
 
 **Speed.** Observed in November 2026: Judilibre usually answered in about a tenth of a second and Légifrance in under a second; reading a large code's table of contents took a few seconds.
 
-You can cancel a call from Claude at any time; Vigueur stops waiting and does not retry.
+If you cancel a call, Vigueur stops waiting and does not retry.
 
 ## What is sent where
 

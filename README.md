@@ -39,7 +39,7 @@ was built by this repository's release workflow, run
 `gh attestation verify vigueur-<version>.mcpb --repo me-no-code/vigueur-mcp` (GitHub CLI).
 To build it yourself instead (Node.js 22 or later, and git): clone the repository, then run
 `npm ci` and `npm run bundle`; the file is in `build/`.
-Details: [Install in Claude Desktop](user-docs/en/10-setup/03-install-claude-desktop.md).
+Details: [Install in Claude Desktop](user-docs/en/10-setup/04-install-claude-desktop.md).
 
 ### Claude Code
 
@@ -70,7 +70,7 @@ Details: [Install in Claude Desktop](user-docs/en/10-setup/03-install-claude-des
 > Claude Code copies the whole folder into its plugin cache when it installs the plugin. Install
 > from a fresh clone, never from a folder holding a `.env` file or other private files.
 
-Details: [Install in Claude Code](user-docs/en/10-setup/02-install-claude-code.md).
+Details: [Install in Claude Code](user-docs/en/10-setup/03-install-claude-code.md).
 
 ### Any other MCP app
 
@@ -128,7 +128,7 @@ Follow the section for their app above, with these rules:
   cloned.
 
 Each app keeps some logs after that; they hold no questions, answers or credentials. See
-[Uninstall Vigueur](user-docs/en/10-setup/05-uninstalling.md) for what is left and where.
+[Uninstall Vigueur](user-docs/en/10-setup/06-uninstalling.md) for what is left and where.
 
 ## Development
 

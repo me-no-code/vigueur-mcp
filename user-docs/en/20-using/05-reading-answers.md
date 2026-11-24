@@ -3,13 +3,13 @@ title: Reading Vigueur's answers
 level: guide
 tags: [answers, envelope, status, links, pagination, errors]
 summary: "Understand the parts every Vigueur answer shares: the envelope fields, the kind of answer, the in-force status, warnings, paging, cached content and errors."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Reading Vigueur's answers
 
-Claude usually summarises what Vigueur returns, but Vigueur's answers have a fixed shape, and you can
-ask Claude to show one as it came. Every answer is one JSON object: a list of named fields, each
+Vigueur's answers have a fixed shape. When you use Vigueur from an AI assistant, you can ask the
+assistant to show one as it came. Every answer is one JSON object: a list of named fields, each
 holding one fact. On the wire it is a single line of JSON. The excerpts on this page are indented so
 you can read them, and `…` marks fields or text left out. This page explains the parts every kind of
 answer shares.
@@ -138,8 +138,8 @@ A hit in a search carries a `read_with` field naming the call that reads it:
 "read_with": { "tool": "judilibre_get_decision", "id": "6abcc10bc27382d099087409" }
 ```
 
-A search shows an excerpt only; the full text takes a second request, which Claude makes for you when
-you ask to read it. A hit that no tool reads, such as an article published in the Journal officiel,
+A search shows an excerpt only; the full text takes a second request, which the assistant makes for you
+when you ask to read it. A hit that no tool reads, such as an article published in the Journal officiel,
 has `"read_with": null` and only its `link`. On its last page, a judicial decision with an ECLI
 gives in `other_source` the call that searches the other source for that ECLI (from Judilibre, for a
 Cour de cassation decision only).
@@ -190,7 +190,7 @@ rest, with the fields `page`, `part` and `next`.
 | Where | What you see | How to continue |
 |---|---|---|
 | Lists (search hits, changes, history, outline, Journal officiel) | `page` gives `number` and `of` (the page you have and the number of pages); `next` is `{ "page": 2 }` | Ask for the next page |
-| Long text (article, decision) | `part` gives `from`, `to` and `of` (the characters shown and the length of the whole text); `next` is `{ "offset": <number> }` | Ask Claude to continue; it repeats the request with that offset |
+| Long text (article, decision) | `part` gives `from`, `to` and `of` (the characters shown and the length of the whole text); `next` is `{ "offset": <number> }` | Ask the assistant to continue from that offset |
 | Nothing left | `next` is `null` | |
 | A page too long | A warning: `(Only the first 7 of 10 hits of this page fit — use a smaller "page_size".)` | Ask for fewer results per page |
 
@@ -224,14 +224,14 @@ When every part of the answer was fetched for this call, `cached` is `[]`. See
 
 ## The time limit
 
-Each request Claude makes to Vigueur has 45 seconds in all, retries included. If it runs out, the
+Each request the assistant makes to Vigueur has 45 seconds in all, retries included. If it runs out, the
 answer is an error with `kind` `deadline`: `Légifrance did not answer within 45 s. Try again in a
 moment.` (or Judilibre). Ask again.
 
 ## When something goes wrong
 
-A failed call gives a JSON object with `outcome` set to `error`. It is marked as an error, so Claude
-treats it as a failure:
+A failed call gives a JSON object with `outcome` set to `error`. It is marked as an error, so the
+assistant can treat it as a failure:
 
 ```
 {
@@ -280,7 +280,7 @@ An error has no `warnings` and no `cached`. The `kind` values:
 | `cancelled` | The call was stopped | Nothing is wrong |
 | `unexpected` | Anything else | `Unexpected error: … Call vigueur_status to check the setup.` |
 
-Ask Claude to run `vigueur_status` first: it checks your settings and both sources. See
+Ask the assistant to run `vigueur_status` first: this tool checks your settings and both sources. See
 [`vigueur_status`](../30-tools/vigueur_status.md), and
 [Troubleshooting and FAQ](../00-intro/05-troubleshooting.md) for what to do.
 

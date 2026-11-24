@@ -3,7 +3,7 @@ title: "legifrance_search_case_law"
 level: reference
 tags: [tool, legifrance, case-law, search]
 summary: "Chercher parmi les décisions détenues par Légifrance (juridictions judiciaires, administratives, constitutionnelle, CNIL et financières) et savoir ce que chaque réponse montre et omet."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # legifrance_search_case_law
@@ -156,7 +156,7 @@ Pour le fonds judiciaire, `warnings` porte la note sur la couverture montrée ci
 ## Limites
 
 > **Légifrance ne détient pas toutes les décisions**
-> Légifrance détient une partie des décisions de la Cour de cassation. Il ne détient pas les rejets non spécialement motivés ni les non-admissions, il reçoit les décisions qu'il détient plusieurs semaines après Judilibre, et il ne détient aucune décision de cour d'appel après le début de 2023. Pour une décision récente, non spécialement motivée ou de cour d'appel, demandez à Claude d'utiliser [`judilibre_search_decisions`](judilibre_search_decisions.md). « Introuvable ici » ne prouve pas qu'une décision n'existe pas.
+> Légifrance détient une partie des décisions de la Cour de cassation. Il ne détient pas les rejets non spécialement motivés ni les non-admissions, il reçoit les décisions qu'il détient plusieurs semaines après Judilibre, et il ne détient aucune décision de cour d'appel après le début de 2023. Pour une décision récente, non spécialement motivée ou de cour d'appel, demandez à l'assistant d'utiliser [`judilibre_search_decisions`](judilibre_search_decisions.md). « Introuvable ici » ne prouve pas qu'une décision n'existe pas.
 
 - Les mots sont cherchés selon la règle « tous les mots ». Il n'y a pas ici de choix « un mot quelconque » ni « expression exacte » ; la recherche de Judilibre en propose un.
 - Aucun filtre ne distingue le Conseil d'État, les cours administratives d'appel et les tribunaux administratifs : la source a échoué quand on le lui a demandé (observé en novembre 2026), donc Vigueur ne le propose pas.

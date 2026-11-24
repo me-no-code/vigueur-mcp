@@ -3,7 +3,7 @@ title: "judilibre_get_decision"
 level: reference
 tags: [tool, judilibre, case-law, read]
 summary: "Lire une décision de Judilibre, entière ou par partie (zone), avec son sommaire, son visa et sa décision attaquée, page par page."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # judilibre_get_decision
@@ -15,7 +15,7 @@ Lit une décision de Judilibre : son identité, son lien officiel, les libellés
 - « Lis l'arrêt trouvé ci-dessus. » / « Read the decision found above. »
 - « Montre-moi seulement le dispositif de cet arrêt. » / « Show me only the operative part ([*dispositif*](../00-intro/03-glossary.md)) of this decision. »
 - « Quelle est la décision attaquée ? » / « What is the attacked decision? »
-- « Continue la lecture. » / « Continue reading. » (Claude demande la page suivante.)
+- « Continue la lecture. » / « Continue reading. » (L'assistant demande la page suivante.)
 
 L'identifiant vient normalement de [`judilibre_search_decisions`](judilibre_search_decisions.md), ou du champ `attacked` d'une autre décision.
 
@@ -144,7 +144,7 @@ Le type de réponse (`outcome`) vaut `found` ou `not_found`.
 
 Sans `zone`, une décision sans balisage indique `This decision has no zone markup; showing the full text.`
 
-**Textes longs.** Une page contient au plus 40 000 caractères. Quand le texte est coupé, `part` donne les caractères affichés (`from`, `to`, et `of`, la longueur du texte) et `next` donne `{ "offset": <number> }`, là où le reste commence. Quand il ne reste rien, `next` vaut `null`. Demandez à Claude de continuer, et il transmet ce décalage. La pagination fonctionne aussi à l'intérieur d'une zone. Les longues listes de la première page (titres, visa, rapprochements, fichiers) montrent jusqu'à 30 éléments, chacun coupé à 500 caractères, puis un avertissement tel que `Titles: (+2 more)` ou `Files: (+3 more)` ; quand l'en-tête de la page prendrait la place du texte, Vigueur raccourcit d'abord les listes et le sommaire.
+**Textes longs.** Une page contient au plus 40 000 caractères. Quand le texte est coupé, `part` donne les caractères affichés (`from`, `to`, et `of`, la longueur du texte) et `next` donne `{ "offset": <number> }`, là où le reste commence. Quand il ne reste rien, `next` vaut `null`. Demandez à l'assistant de continuer à partir de ce décalage. La pagination fonctionne aussi à l'intérieur d'une zone. Les longues listes de la première page (titres, visa, rapprochements, fichiers) montrent jusqu'à 30 éléments, chacun coupé à 500 caractères, puis un avertissement tel que `Titles: (+2 more)` ou `Files: (+3 more)` ; quand l'en-tête de la page prendrait la place du texte, Vigueur raccourcit d'abord les listes et le sommaire.
 
 **Introuvable.** C'est une réponse normale, pas une erreur. Le type de réponse est `not_found`, `id` répète l'identifiant, et `warnings` dit quoi faire :
 
