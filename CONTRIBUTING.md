@@ -43,19 +43,20 @@ suite.
 
 ## Running your build in Claude Code
 
-- **One session, uncommitted work:** `claude --plugin-dir /absolute/path/to/vigueur-mcp`.
-- **Installed plugin:** install it from a separate, clean clone of the repository, never from your
-  working folder. Claude Code copies the whole folder into `~/.claude/plugins/cache/vigueur/` at
-  install, `.env` and other ignored files included, and leaves the copy behind on uninstall. To
-  ship a change to that install: commit it, then in the clean clone run `git pull && npm run build`.
-- **Plain MCP registration** (credentials read from `.env`, not copied into Claude Code's config):
+The plugin runs the published npm package, `npx -y vigueur-mcp@<version>`, not your build. To run
+your build, register it as a plain MCP server, with the credentials read from `.env` rather than
+copied into Claude Code's config:
 
-  ```sh
-  claude mcp add vigueur --scope user -- node --env-file=/absolute/path/to/.env /absolute/path/to/dist/index.js
-  ```
+```sh
+claude mcp add vigueur --scope user -- node --env-file=/absolute/path/to/.env /absolute/path/to/dist/index.js
+```
 
 After a new build, an open session keeps the old server until you run `/mcp`, select vigueur, then
-Reconnect. `/reload-plugins` alone keeps the running server.
+Reconnect.
+
+To try a change to the plugin manifest itself, run
+`claude --plugin-dir /absolute/path/to/vigueur-mcp` for one session. The plugin's version in `.claude-plugin/plugin.json` must exist on npm: a version
+bump only works once that version is published.
 
 ## Running your build in Claude Desktop
 

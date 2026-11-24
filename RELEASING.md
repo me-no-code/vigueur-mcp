@@ -12,8 +12,13 @@ bundle attached and attested, then publishes the package on npm.
 ## Versions
 
 A version number lives in four files, bumped together: `package.json` (and its lockfile),
-`.claude-plugin/plugin.json`, `src/version.ts` and `mcpb/manifest.json`.
-`test/bundle-manifest.test.ts` fails when they differ.
+`.claude-plugin/plugin.json` (its `version`, and the npm package its server runs,
+`vigueur-mcp@<version>`), `src/version.ts` and `mcpb/manifest.json`.
+`test/bundle-manifest.test.ts` and `test/plugin.test.ts` fail when they differ.
+
+The Claude Code plugin is installed from `main`, so as soon as the bump is merged, a new install
+asks npm for a version that the release has not published yet. Run the release right after merging
+the bump.
 
 ## Steps
 
