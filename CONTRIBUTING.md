@@ -66,6 +66,19 @@ list of files (`scripts/bundle.mjs`): the manifest, `package.json`, the lockfile
 installed bundle only with a newer version: to try a rebuild of the same version, uninstall
 Vigueur in **Settings**, **Extensions** first, then open the file and enter the settings again.
 
+## Pull requests
+
+`main` is the development branch. Changes reach it only through pull requests:
+
+- Branch from `main`, one change per branch.
+- Give the pull request a [Conventional Commits](https://www.conventionalcommits.org/) title
+  (`docs: …`, `fix(judilibre): …`), and a description of what changes and why.
+- Your commits land on `main` as they are, so keep them clean: one change per commit, each with a
+  Conventional Commits message. Fold fixups into the commit they fix, and rebase on `main` rather
+  than merging `main` into the branch.
+- The four CI checks must pass: lint, typecheck and offline tests on Node 22, 24 and the newest
+  LTS, and the lint of the workflow files.
+
 ## Releasing
 
 Releases are tags on `main`, made by the maintainers with the release workflow: see
@@ -110,4 +123,5 @@ its shape is declared in the tool's `outputSchema`. An answer is at most 40 000 
   headers, the access token included.
 - **Test fixtures** in `test/fixtures/` are verbatim production response bodies, or trimmed with a
   `_note` saying how; never headers.
-- **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/).
+- **Commits and pull request titles** follow
+  [Conventional Commits](https://www.conventionalcommits.org/).
