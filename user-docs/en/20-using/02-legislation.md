@@ -3,13 +3,13 @@ title: Codes, laws and decrees
 level: guide
 tags: [legislation, codes, articles, history, collective-agreements]
 summary: Read an article, a whole text or a code's table of contents, on any date, and find the texts that amended it.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Codes, laws and decrees
 
-You can ask Claude to read legislation from Légifrance: articles of the codes, laws, ordinances,
-decrees, orders and national collective agreements. This guide covers what to ask and what comes back.
+From an AI assistant, you can read legislation from Légifrance: articles of the codes, laws,
+ordinances, decrees, orders and national collective agreements. This guide covers what to ask and what comes back.
 The parameters of each tool are on its own page under [Tools](../30-tools/legifrance_get_article.md).
 
 ## Read an article by its citation
@@ -18,7 +18,7 @@ Give a code and an article number, in the form people cite them:
 
 > Article L. 1234-1 of the Code du travail. / L'article 1240 du Code civil.
 
-Claude runs [`legifrance_get_article`](../30-tools/legifrance_get_article.md). The code can be a common
+The assistant runs [`legifrance_get_article`](../30-tools/legifrance_get_article.md). The code can be a common
 abbreviation such as "C. trav.". The article number can be written `L1234-1`, `L. 1234-1` or
 `199 undecies B`. A Légifrance id (`LEGIARTI` followed by 12 digits) works too.
 
@@ -55,7 +55,7 @@ number, its first words and a link. If a neighbour cannot be read, it is `null` 
 
 > Who amended article L1234-1, and when? / Historique de l'article 1240.
 
-Claude runs [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md). The
+The assistant runs [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md). The
 answer gives:
 
 - the version in force today (`current`), computed from validity dates;
@@ -93,7 +93,7 @@ article gives the same links in `concordance`: `moved` says where a version's co
 
 > Read the loi 78-17. / Lis le décret 2005-1309. / Outline of ordonnance 2016-131.
 
-Claude runs [`legifrance_get_text`](../30-tools/legifrance_get_text.md). You identify a text by its
+The assistant runs [`legifrance_get_text`](../30-tools/legifrance_get_text.md). You identify a text by its
 Légifrance id (`LEGITEXT…` for the consolidated version, `JORFTEXT…` as published), its NOR, or its
 nature and number. The natures are *loi*, *loi organique*, *ordonnance*, *décret* and *arrêté*.
 
@@ -122,8 +122,8 @@ with its `KALIARTI` id.
 
 > Show me the structure of the Code de la route. / Quels sont les titres du Livre I du Code du travail ?
 
-Claude runs [`legifrance_browse_code`](../30-tools/legifrance_browse_code.md). The first answer is the
-top level (books, titles…). Each line carries a `section_id`; ask Claude to open a section to go
+The assistant runs [`legifrance_browse_code`](../30-tools/legifrance_browse_code.md). The first answer is the
+top level (books, titles…). Each line carries a `section_id`; ask the assistant to open a section to go
 deeper, until you reach articles.
 
 Sections not in force on the date (and, today, repealed articles) are hidden, with a count:
@@ -136,7 +136,7 @@ to check.
 
 > Find texts about "télétravail" in force today. / Cherche la convention collective IDCC 1486.
 
-Claude runs [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md), in one of
+The assistant runs [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md), in one of
 four collections:
 
 | Collection | What it searches | Dates |
@@ -152,7 +152,7 @@ version instead of those in force on a date. Each hit shows its title, Légifran
 validity dates, id and official link. A hit that is a code or collective agreement article can be read in full with its id.
 
 > **Search is not reading**
-> A search hit shows an excerpt. Ask Claude to read the article or the text before you quote it.
+> A search hit shows an excerpt. Ask the assistant to read the article or the text before you quote it.
 
 ## Related
 

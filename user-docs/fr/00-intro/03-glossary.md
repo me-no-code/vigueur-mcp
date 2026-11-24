@@ -3,7 +3,7 @@ title: "Glossaire"
 level: reference
 tags: [glossary, terms]
 summary: "Retrouvez les termes juridiques et techniques français que les réponses de Vigueur utilisent."
-updated: 2026-11-17
+updated: 2026-11-23
 ---
 
 # Glossaire
@@ -79,7 +79,8 @@ version dont la fin est enregistrée mais pas encore datée a `until_undetermine
 
 La décision que conteste un pourvoi. Les décisions de Judilibre et de Légifrance l'indiquent dans
 le champ `attacked` quand la source la mentionne. Quand Judilibre détient aussi la décision
-attaquée, la réponse donne l'appel qui permet de la lire, pour que Claude puisse la lire ensuite.
+attaquée, la réponse donne l'appel qui permet de la lire, pour que l'assistant puisse la lire
+ensuite.
 
 ### ECLI
 
@@ -192,8 +193,8 @@ Un identifiant que Légifrance donne à chaque document. Le préfixe indique le 
 | `KALIARTI` | Une version d'un article de convention collective |
 | `JURITEXT`, `CETATEXT`, `CONSTEXT`, `CNILTEXT`, `JUFITEXT` | Une décision du fonds judiciaire, administratif, constitutionnel, CNIL ou financier |
 
-Les réponses affichent ces identifiants pour que Claude puisse relire le même document, et pour que
-vous puissiez le citer.
+Les réponses affichent ces identifiants pour que l'assistant puisse relire le même document, et
+pour que vous puissiez le citer.
 
 ### JORF (Journal officiel)
 
@@ -351,8 +352,8 @@ le visa d'une décision de la Cour de cassation quand elle en a un.
 
 ### Zone
 
-Une partie nommée d'une décision sur Judilibre. Demandez à Claude une zone pour ne lire que cette
-partie.
+Une partie nommée d'une décision sur Judilibre. Demandez à l'assistant une zone pour ne lire que
+cette partie.
 
 | Zone | Partie de la décision |
 |---|---|

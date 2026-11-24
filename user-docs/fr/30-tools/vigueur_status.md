@@ -3,7 +3,7 @@ title: "vigueur_status"
 level: reference
 tags: [tool, status, piste, setup, errors]
 summary: "Vérifier que vos identifiants PISTE fonctionnent et que Légifrance et Judilibre répondent, et comprendre les réponses d'erreur que tout outil Vigueur peut donner."
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # vigueur_status
@@ -16,7 +16,7 @@ Vérifie la configuration de Vigueur : si des identifiants PISTE sont configuré
 - « Pourquoi Vigueur ne répond-il pas ? » / « Why is Vigueur not answering? »
 - « Vigueur utilise-t-il la production ou le bac à sable ? » / « Is Vigueur using production or the sandbox? »
 
-Claude le lance aussi de lui-même quand un autre outil Vigueur signale un problème d'identifiants, d'accès ou de disponibilité.
+L'assistant peut aussi le lancer de lui-même quand un autre outil Vigueur signale un problème d'identifiants, d'accès ou de disponibilité.
 
 ## Ce qu'il faut fournir
 
@@ -45,7 +45,7 @@ Le type de réponse (`outcome`) vaut `results` (Vigueur est configuré et a vér
 }
 ```
 
-Pour configurer l'accès, suivez [Créer votre compte PISTE](../10-setup/01-piste-account.md), puis saisissez les valeurs dans votre application : voir [Installer dans Claude Desktop](../10-setup/03-install-claude-desktop.md#3-saisir-vos-identifiants) ou [Installer dans Claude Code](../10-setup/02-install-claude-code.md#3-saisir-vos-identifiants).
+Pour configurer l'accès, suivez [Créer votre compte PISTE](../10-setup/01-piste-account.md), puis saisissez les valeurs dans votre application : voir [Installer Vigueur](../10-setup/02-install.md#1-ajouter-vigueur-à-votre-application), [Installer le plugin Claude Code](../10-setup/03-install-claude-code.md#2-saisir-vos-identifiants) ou [Installer le fichier groupé pour Claude Desktop](../10-setup/04-install-claude-desktop.md#3-saisir-vos-identifiants).
 
 **Un problème de configuration** est listé dans `config_problems`. Le type de réponse est alors aussi `not_configured`, parce que Vigueur n'utilise pas des réglages qu'il ne sait pas lire :
 
@@ -57,7 +57,7 @@ Pour configurer l'accès, suivez [Créer votre compte PISTE](../10-setup/01-pist
 ],
 ```
 
-Un seul problème est signalé à la fois. Les messages nomment les variables que l'application transmet à Vigueur : `PISTE_CLIENT_ID` et `PISTE_CLIENT_SECRET` contiennent l'identifiant client et le secret, `PISTE_ENV` est le réglage **PISTE environment** de Claude Code, et `PISTE_PRODUCTION` l'interrupteur **Production application** de Claude Desktop.
+Un seul problème est signalé à la fois. Les messages nomment les variables que l'application transmet à Vigueur : `PISTE_CLIENT_ID` et `PISTE_CLIENT_SECRET` contiennent l'identifiant client et le secret, et `PISTE_ENV` ou `PISTE_PRODUCTION` l'environnement : le réglage **PISTE environment** du plugin Claude Code, l'interrupteur **Production application** du fichier groupé pour Claude Desktop.
 
 | Problème | Ce qu'il signifie |
 |---|---|
@@ -164,6 +164,7 @@ Une décision ou un texte qui n'existe pas n'est pas une erreur : les outils ré
 
 - [PISTE](../40-sources/03-piste.md) : ce qu'est PISTE, bac à sable et production, quota.
 - [Créer votre compte PISTE](../10-setup/01-piste-account.md)
-- [Installer dans Claude Desktop](../10-setup/03-install-claude-desktop.md)
-- [Installer dans Claude Code](../10-setup/02-install-claude-code.md)
+- [Installer Vigueur](../10-setup/02-install.md)
+- [Installer le plugin Claude Code](../10-setup/03-install-claude-code.md)
+- [Installer le fichier groupé pour Claude Desktop](../10-setup/04-install-claude-desktop.md)
 - [Dépannage et FAQ](../00-intro/05-troubleshooting.md)

@@ -43,19 +43,20 @@ suite.
 
 ## Running your build in Claude Code
 
-- **One session, uncommitted work:** `claude --plugin-dir /absolute/path/to/vigueur-mcp`.
-- **Installed plugin:** install it from a separate, clean clone of the repository, never from your
-  working folder. Claude Code copies the whole folder into `~/.claude/plugins/cache/vigueur/` at
-  install, `.env` and other ignored files included, and leaves the copy behind on uninstall. To
-  ship a change to that install: commit it, then in the clean clone run `git pull && npm run build`.
-- **Plain MCP registration** (credentials read from `.env`, not copied into Claude Code's config):
+The plugin runs the published npm package, `npx -y vigueur-mcp@<version>`, not your build. To run
+your build, register it as a plain MCP server, with the credentials read from `.env` rather than
+copied into Claude Code's config:
 
-  ```sh
-  claude mcp add vigueur --scope user -- node --env-file=/absolute/path/to/.env /absolute/path/to/dist/index.js
-  ```
+```sh
+claude mcp add vigueur --scope user -- node --env-file=/absolute/path/to/.env /absolute/path/to/dist/index.js
+```
 
 After a new build, an open session keeps the old server until you run `/mcp`, select vigueur, then
-Reconnect. `/reload-plugins` alone keeps the running server.
+Reconnect.
+
+To try a change to the plugin manifest itself, run
+`claude --plugin-dir /absolute/path/to/vigueur-mcp` for one session. The plugin's version in `.claude-plugin/plugin.json` must exist on npm: a version
+bump only works once that version is published.
 
 ## Running your build in Claude Desktop
 
@@ -64,6 +65,19 @@ list of files (`scripts/bundle.mjs`): the manifest, `package.json`, the lockfile
 `dist/` and the production dependencies, never the working folder. Claude Desktop replaces an
 installed bundle only with a newer version: to try a rebuild of the same version, uninstall
 Vigueur in **Settings**, **Extensions** first, then open the file and enter the settings again.
+
+## Pull requests
+
+`main` is the development branch. Changes reach it only through pull requests:
+
+- Branch from `main`, one change per branch.
+- Give the pull request a [Conventional Commits](https://www.conventionalcommits.org/) title
+  (`docs: …`, `fix(judilibre): …`), and a description of what changes and why.
+- Your commits land on `main` as they are, so keep them clean: one change per commit, each with a
+  Conventional Commits message. Fold fixups into the commit they fix, and rebase on `main` rather
+  than merging `main` into the branch.
+- The four CI checks must pass: lint, typecheck and offline tests on Node 22, 24 and the newest
+  LTS, and the lint of the workflow files.
 
 ## Releasing
 
@@ -109,4 +123,5 @@ its shape is declared in the tool's `outputSchema`. An answer is at most 40 000 
   headers, the access token included.
 - **Test fixtures** in `test/fixtures/` are verbatim production response bodies, or trimmed with a
   `_note` saying how; never headers.
-- **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/).
+- **Commits and pull request titles** follow
+  [Conventional Commits](https://www.conventionalcommits.org/).

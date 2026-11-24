@@ -3,12 +3,12 @@ title: "Codes, lois et décrets"
 level: guide
 tags: [legislation, codes, articles, history, collective-agreements]
 summary: "Lisez un article, un texte entier ou la table des matières d'un code, à n'importe quelle date, et trouvez les textes qui l'ont modifié."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Codes, lois et décrets
 
-Vous pouvez demander à Claude de lire la législation sur Légifrance : articles des codes, lois,
+Depuis un assistant IA, vous pouvez lire la législation sur Légifrance : articles des codes, lois,
 ordonnances, décrets, arrêtés et conventions collectives nationales. Ce guide présente ce que vous
 pouvez demander et ce que vous obtenez en retour. Les paramètres de chaque outil se trouvent sur sa propre page, sous
 [Outils](../30-tools/legifrance_get_article.md).
@@ -19,7 +19,7 @@ Donnez un code et un numéro d'article, sous leur forme de citation habituelle :
 
 > L'article 1240 du Code civil. / Article L. 1234-1 of the Code du travail.
 
-Claude lance [`legifrance_get_article`](../30-tools/legifrance_get_article.md). Le code peut être une
+L'assistant lance [`legifrance_get_article`](../30-tools/legifrance_get_article.md). Le code peut être une
 abréviation courante comme « C. trav. ». Le numéro d'article peut s'écrire `L1234-1`, `L. 1234-1` ou
 `199 undecies B`. Un identifiant Légifrance (`LEGIARTI` suivi de 12 chiffres) convient aussi.
 
@@ -60,7 +60,7 @@ et un avertissement le signale.
 
 > Historique de l'article 1240. / Who amended article L1234-1, and when?
 
-Claude lance [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md). La
+L'assistant lance [`legifrance_get_article_history`](../30-tools/legifrance_get_article_history.md). La
 réponse donne :
 
 - la version en vigueur aujourd'hui (`current`), calculée à partir des dates de vigueur ;
@@ -99,7 +99,7 @@ numéro, par exemple `"came_from": ["Code civil - art. 1353 (M)"]` dans l'histor
 
 > Lis le décret 2005-1309. / Read the loi 78-17. / Outline of ordonnance 2016-131.
 
-Claude lance [`legifrance_get_text`](../30-tools/legifrance_get_text.md). Vous identifiez un texte par
+L'assistant lance [`legifrance_get_text`](../30-tools/legifrance_get_text.md). Vous identifiez un texte par
 son identifiant Légifrance (`LEGITEXT…` pour la version consolidée, `JORFTEXT…` pour la version
 publiée), son NOR, ou sa nature et son numéro. Les natures sont loi, loi organique, ordonnance,
 décret et arrêté.
@@ -131,8 +131,8 @@ lisez un article avec son identifiant `KALIARTI`.
 
 > Quels sont les titres du Livre I du Code du travail ? / Show me the structure of the Code de la route.
 
-Claude lance [`legifrance_browse_code`](../30-tools/legifrance_browse_code.md). La première réponse
-donne le niveau supérieur (livres, titres…). Chaque ligne porte un `section_id` ; demandez à Claude
+L'assistant lance [`legifrance_browse_code`](../30-tools/legifrance_browse_code.md). La première réponse
+donne le niveau supérieur (livres, titres…). Chaque ligne porte un `section_id` ; demandez à l'assistant
 d'ouvrir une section pour descendre d'un niveau, jusqu'aux articles.
 
 Les sections qui ne sont pas en vigueur à la date (et, aujourd'hui, les articles abrogés) sont
@@ -145,7 +145,7 @@ Légifrance, et non leur état juridique à cette date : lisez l'article avec ce
 
 > Cherche la convention collective IDCC 1486. / Find texts about "télétravail" in force today.
 
-Claude lance [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md), dans l'un
+L'assistant lance [`legifrance_search_legislation`](../30-tools/legifrance_search_legislation.md), dans l'un
 des quatre fonds :
 
 | Fonds | Ce qu'il recherche | Dates |
@@ -163,7 +163,7 @@ vigueur, son identifiant et son lien officiel. Un résultat qui est un article d
 collective peut être lu en entier avec son identifiant.
 
 > **Rechercher n'est pas lire**
-> Un résultat de recherche montre un extrait. Demandez à Claude de lire l'article ou le texte avant de le citer.
+> Un résultat de recherche montre un extrait. Demandez à l'assistant de lire l'article ou le texte avant de le citer.
 
 ## Voir aussi
 

@@ -1,12 +1,12 @@
 ---
-title: Install in Claude Desktop
+title: Install the Claude Desktop bundle
 level: start
 tags: [install, claude-desktop, setup]
 summary: Install Vigueur in Claude Desktop from its bundle file, enter your PISTE credentials and check that Légifrance and Judilibre answer.
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
-# Install in Claude Desktop
+# Install the Claude Desktop bundle
 
 You will get Vigueur as a single file, open it in Claude Desktop, enter your PISTE credentials, and
 check that it works. The file holds Vigueur ready to run, and Claude Desktop runs it with the
@@ -30,16 +30,24 @@ The file is named after its version, for example `vigueur-0.1.0.mcpb`. Download 
 release on the project's GitHub Releases page, under **Assets**:
 https://github.com/me-no-code/vigueur-mcp/releases/latest
 
-To build the file yourself instead, you need Node.js 22 or later and git. In a terminal:
+To check that the file was built by the project's release workflow on GitHub, run this with the
+GitHub CLI (`gh`), in the folder where the file is, with the file's own name:
 
 ```
-git clone https://github.com/me-no-code/vigueur-mcp.git
-cd vigueur-mcp
+gh attestation verify vigueur-0.1.0.mcpb --repo me-no-code/vigueur-mcp
+```
+
+To build the file yourself instead, you need Node.js 22 or later. Get the code, the latest release
+or the development version, as in
+[Run Vigueur from its source code](02-install.md#run-vigueur-from-its-source-code). Then, in a
+terminal, in that folder:
+
+```
 npm ci
 npm run bundle
 ```
 
-The file is in the `build` folder of the clone.
+The file is in the `build` folder.
 
 ### 2. Open the file
 
@@ -124,7 +132,8 @@ Try: "What does article 1240 of the Code civil say, and is it in force?" Then se
 ## Related
 
 - [Create your PISTE account](01-piste-account.md)
-- [Install in Claude Code](02-install-claude-code.md)
-- [Update Vigueur](04-updating.md)
-- [Uninstall Vigueur](05-uninstalling.md)
+- [Install Vigueur](02-install.md)
+- [Install the Claude Code plugin](03-install-claude-code.md)
+- [Update Vigueur](05-updating.md)
+- [Uninstall Vigueur](06-uninstalling.md)
 - [Privacy and your data](../00-intro/04-privacy-and-your-data.md)

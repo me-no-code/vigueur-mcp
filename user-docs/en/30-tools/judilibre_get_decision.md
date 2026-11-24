@@ -3,7 +3,7 @@ title: judilibre_get_decision
 level: reference
 tags: [tool, judilibre, case-law, read]
 summary: Read one Judilibre decision, whole or by part (zone), with its summary, visa and attacked decision, page by page.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # judilibre_get_decision
@@ -15,7 +15,7 @@ Reads one decision from Judilibre: its identity, official link, the labels and s
 - "Lis l'arrêt trouvé ci-dessus." / "Read the decision found above."
 - "Montre-moi seulement le dispositif de cet arrêt." / "Show me only the operative part ([*dispositif*](../00-intro/03-glossary.md)) of this decision."
 - "Quelle est la décision attaquée ?" / "What is the attacked decision?"
-- "Continue la lecture." / "Continue reading." (Claude asks for the next page.)
+- "Continue la lecture." / "Continue reading." (The assistant asks for the next page.)
 
 You normally get the id from [`judilibre_search_decisions`](judilibre_search_decisions.md), or from the `attacked` field of another decision.
 
@@ -144,7 +144,7 @@ The answer is one JSON object. On the wire it is a single line of JSON; the exce
 
 Without `zone`, a decision with no markup says `This decision has no zone markup; showing the full text.`
 
-**Long texts.** A page holds at most 40,000 characters. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the text) and `next` gives `{ "offset": <number> }`, where the rest starts. When nothing is left, `next` is `null`. Ask Claude to continue, and it passes that offset. Paging works inside a zone too. Long lists on the first page (titles, visa, rapprochements, files) show up to 30 items, each cut at 500 characters, and then a warning such as `Titles: (+2 more)` or `Files: (+3 more)`; when the head of the page would crowd out the text, Vigueur shortens the lists and the summary first.
+**Long texts.** A page holds at most 40,000 characters. When the text is cut, `part` gives the characters shown (`from`, `to`, and `of`, the length of the text) and `next` gives `{ "offset": <number> }`, where the rest starts. When nothing is left, `next` is `null`. Ask the assistant to continue from that offset. Paging works inside a zone too. Long lists on the first page (titles, visa, rapprochements, files) show up to 30 items, each cut at 500 characters, and then a warning such as `Titles: (+2 more)` or `Files: (+3 more)`; when the head of the page would crowd out the text, Vigueur shortens the lists and the summary first.
 
 **Not found.** This is a normal answer, not an error. The outcome is `not_found`, `id` repeats the id, and `warnings` says what to do:
 

@@ -25,11 +25,11 @@ describe('Claude Code plugin manifest', () => {
     expect(plugin.license).toBe('PolyForm-Shield-1.0.0');
   });
 
-  it('runs the built server with the PISTE variables the config reads', () => {
+  it('runs the npm package of its own version, with the PISTE variables the config reads', () => {
     const server = plugin.mcpServers.vigueur;
-    expect(server.command).toBe('node');
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: literal placeholder Claude Code substitutes
-    expect(server.args).toEqual(['${CLAUDE_PLUGIN_ROOT}/dist/index.js']);
+    // The published package, so that installing the plugin from GitHub needs no build.
+    expect(server.command).toBe('npx');
+    expect(server.args).toEqual(['-y', `vigueur-mcp@${pkg.version}`]);
     expect(Object.keys(server.env).sort()).toEqual([
       'PISTE_CLIENT_ID',
       'PISTE_CLIENT_SECRET',

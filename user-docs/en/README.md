@@ -1,7 +1,7 @@
 # Vigueur documentation
 
-How to install Vigueur, ask Claude about French law with it, and read what comes back. New here?
-Start with the [welcome page](00-intro/01-welcome.md).
+How to install Vigueur, ask about French law with it from an AI assistant, and read what comes
+back. New here? Start with the [welcome page](00-intro/01-welcome.md).
 
 | Level | What to expect |
 |---|---|
@@ -27,10 +27,11 @@ Writing or updating a page? Read [CONTRIBUTING.md](../CONTRIBUTING.md) first.
 | # | Page | Level | Status |
 |---|---|---|---|
 | 01 | [Create your PISTE account](10-setup/01-piste-account.md) | Start | Written |
-| 02 | [Install in Claude Code](10-setup/02-install-claude-code.md) | Start | Written |
-| 03 | [Install in Claude Desktop](10-setup/03-install-claude-desktop.md) | Start | Written |
-| 04 | [Update Vigueur](10-setup/04-updating.md) | Guide | Written |
-| 05 | [Uninstall Vigueur](10-setup/05-uninstalling.md) | Guide | Written |
+| 02 | [Install Vigueur](10-setup/02-install.md) | Start | Written |
+| 03 | [Install the Claude Code plugin](10-setup/03-install-claude-code.md) | Start | Written |
+| 04 | [Install the Claude Desktop bundle](10-setup/04-install-claude-desktop.md) | Start | Written |
+| 05 | [Update Vigueur](10-setup/05-updating.md) | Guide | Written |
+| 06 | [Uninstall Vigueur](10-setup/06-uninstalling.md) | Guide | Written |
 
 ## Using Vigueur
 

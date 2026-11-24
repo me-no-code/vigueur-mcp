@@ -3,7 +3,7 @@ title: "judilibre_list_taxonomy"
 level: reference
 tags: [tool, judilibre, taxonomy, filters]
 summary: "Lister les valeurs que Judilibre utilise pour classer les décisions (chambres, formations, solutions, juridictions, thèmes) afin de filtrer une recherche avec la bonne clé."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # judilibre_list_taxonomy
@@ -119,7 +119,7 @@ Les erreurs de la source (identifiants, quota, indisponibilité, pas de réponse
 ## Limites
 
 > **Les clés des listes ne sont pas toujours les noms qu'accepte la recherche**
-> `judilibre_search_decisions` accepte les noms propres à Vigueur pour `chamber` (`social`, `civ1`, `commercial`, `criminal`, `plenary`, `mixed`) et `publication` (`bulletin`, `report`, `chamber_letter`, `press_release`), pas les clés montrées ici (`soc`, `comm`, `cr`, `pl`, `mi` ; `b`, `r`, `l`, `c`). `formation`, `solution` et `location` acceptent les clés telles qu'elles sont listées. Claude fait la correspondance pour vous.
+> `judilibre_search_decisions` accepte les noms propres à Vigueur pour `chamber` (`social`, `civ1`, `commercial`, `criminal`, `plenary`, `mixed`) et `publication` (`bulletin`, `report`, `chamber_letter`, `press_release`), pas les clés montrées ici (`soc`, `comm`, `cr`, `pl`, `mi` ; `b`, `r`, `l`, `c`). `formation`, `solution` et `location` acceptent les clés telles qu'elles sont listées.
 
 - Les listes `chamber`, `formation`, `publication` et `solution` n'existent que pour la Cour de cassation. Les valeurs des cours d'appel et des juridictions du premier degré sont en texte libre.
 - Les listes `theme` sont longues (observé en novembre 2026 : environ 780 entrées pour la Cour de cassation, environ 1 000 en neuf groupes pour les cours d'appel). Utilisez `contains`. La recherche de Vigueur n'a pas de filtre `theme`, parce que le filtre de la source ne renvoyait rien ; `search_in` `themes` cherche à la place dans le texte des thèmes.

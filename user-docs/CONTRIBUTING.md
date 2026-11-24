@@ -1,9 +1,10 @@
 # Writing a Vigueur user doc
 
-These pages are for the people who use Vigueur through Claude: they ask Claude a legal question,
-and Claude calls Vigueur's tools to read the official sources. Most readers are not developers.
-A user doc never needs the reader to know how Vigueur is built; developer material lives in the
-repository's [CONTRIBUTING.md](../CONTRIBUTING.md).
+These pages are for the people who use Vigueur from an AI assistant: they ask the assistant a legal
+question, and the assistant calls Vigueur's tools to read the official sources. Vigueur works in any
+app that can start a local MCP server, so the pages do not assume one app. Most readers are not
+developers. A user doc never needs the reader to know how Vigueur is built; developer material
+lives in the repository's [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Layout
 
@@ -22,9 +23,9 @@ Every page starts with this block:
 
 ```yaml
 ---
-title: Install in Claude Code
+title: Install Vigueur
 level: start            # intro | start | guide | reference
-tags: [install, claude-code]
+tags: [install, setup]
 summary: One sentence saying what the reader can do after reading this page.
 updated: 2026-11-15
 ---
@@ -62,9 +63,18 @@ Every page in `30-tools/` follows the same outline:
 
 - Write to the reader as "you". Short, direct sentences, active voice.
 - Lead with what the reader can do, then how. Each heading states the answer, not the topic.
-- The reader talks to Claude; Claude calls the tools. Say "ask Claude to…", not "call the tool".
-  Tool names appear in backticks, exactly as registered (`legifrance_get_article`), so the reader
-  can name one when they want to.
+- The reader talks to an AI assistant; the assistant calls the tools. The first time a page says
+  how the reader uses Vigueur, write "from an AI assistant" ("Vigueur lets you read French law from
+  an AI assistant"); after that, "the assistant". Never "your AI assistant".
+- Say "ask the assistant to…", not "call the tool". Tool names appear in backticks, exactly as
+  registered (`legifrance_get_article`), so the reader can name one when they want to.
+- Name a client app (Claude Code, Claude Desktop) only where the text is about that app's own
+  package: its install, update and uninstall, where it stores its settings, its logs. Elsewhere,
+  write "the assistant". A link to a setup page keeps that page's title, app name included
+  ("Install the Claude Desktop bundle").
+- Do not turn what one app was seen doing into a claim about every assistant. Describe what the
+  answer allows ("the message says what to change, so the assistant can correct the request"), not
+  how an assistant behaves.
 - Keep French legal terms in French (*pourvoi*, *Journal officiel*, *rejet non spécialement
   motivé*) and link them to the [glossary](en/00-intro/03-glossary.md) the first time a page uses
   them.
@@ -129,9 +139,10 @@ fix both.
 - **Anchors:** a link to a section uses the French heading's anchor (lowercase, punctuation
   dropped, accents kept, spaces as hyphens: `### État juridique (le mot de Légifrance)` is
   `#état-juridique-le-mot-de-légifrance`).
-- **Voice:** *vous*, short sentences, active voice. "Ask Claude to…" is « Demandez à Claude de… ».
-  French quotation marks (« ») for words; backticks for anything Vigueur writes. A space before
-  `:`, `;`, `?` and `!`, none before `.` and `,`.
+- **Voice:** *vous*, short sentences, active voice. "From an AI assistant" is « depuis un
+  assistant IA », "the assistant" is « l'assistant », and "Ask the assistant to…" is « Demandez à
+  l'assistant de… ». French quotation marks (« ») for words; backticks for anything Vigueur writes.
+  A space before `:`, `;`, `?` and `!`, none before `.` and `,`.
 - **Example requests** on tool pages: French first, then English.
 - **Words:** the official wording of the sources and the texts: Légifrance's and Judilibre's own
   labels, the codes, the Cour de cassation. When in doubt, check the source, and use the same

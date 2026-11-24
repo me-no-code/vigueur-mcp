@@ -3,15 +3,15 @@ title: "Quickstart: your first questions"
 level: start
 tags: [quickstart, legislation, case-law]
 summary: "Run a first session end to end: check that Vigueur has access, read an article, see what applied on a past date and find a decision."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Quickstart: your first questions
 
-This page walks you through a first session. You type requests to Claude in plain language, in French
-or in English. Claude calls Vigueur's tools and shows you what the official sources say. You need
-Vigueur installed, [in Claude Desktop](../10-setup/03-install-claude-desktop.md) or
-[in Claude Code](../10-setup/02-install-claude-code.md), with your PISTE credentials set.
+This page walks you through a first session with Vigueur, from an AI assistant. You type requests to
+the assistant in plain language, in French or in English. The assistant calls Vigueur's tools and
+shows you what the official sources say. You need Vigueur installed
+(see [Install Vigueur](../10-setup/02-install.md)), with your PISTE credentials set.
 
 ## 1. Check that Vigueur can reach the sources
 
@@ -19,7 +19,7 @@ Ask:
 
 > Check that Vigueur is set up. / Vérifie que Vigueur est bien configuré.
 
-Claude runs `vigueur_status`. Vigueur's answers are JSON: on the wire, one line of JSON; here it is
+The assistant runs `vigueur_status`. Vigueur's answers are JSON: on the wire, one line of JSON; here it is
 indented so you can read it. When everything works, the answer reads:
 
 ```
@@ -62,7 +62,7 @@ Ask:
 
 > What does article 1240 of the Code civil say? / Que dit l'article 1240 du Code civil ?
 
-Claude runs `legifrance_get_article`. The answer shows these fields (`…` marks fields and text left
+The assistant runs `legifrance_get_article`. The answer shows these fields (`…` marks fields and text left
 out of the excerpt):
 
 ```
@@ -113,7 +113,7 @@ Ask:
 
 > What did article 1382 of the Code civil say on 1 January 2015? / Que disait l'article 1382 du Code civil au 1er janvier 2015 ?
 
-Claude runs `legifrance_get_article` with that date. The answer shows the text as it stood then, and a
+The assistant runs `legifrance_get_article` with that date. The answer shows the text as it stood then, and a
 `status` with both bounds: `"state": "in_force"`, `"from": "1804-03-21"`, `"until": "2016-10-01"`, and
 Légifrance's own label `"legifrance_status": "MODIFIE"`. Article 1382 was renumbered, so the answer
 also says, in `relocation`, where Légifrance records that the content moved:
@@ -131,7 +131,7 @@ Ask:
 
 > Find the Cour de cassation decision with pourvoi number 23-20.348. / Trouve l'arrêt de la Cour de cassation sur le pourvoi 23-20.348.
 
-Claude searches Judilibre (`judilibre_search_decisions`). This decision is an unreasoned rejection,
+The assistant searches Judilibre (`judilibre_search_decisions`). This decision is an unreasoned rejection,
 which Légifrance does not hold. Each hit shows the court and chamber, the decision date, the numbers,
 the ECLI, then the formation, the publication and the outcome, then a summary and an excerpt when
 there are any, the official `link` and `read_with`, the call that reads the decision in full:
@@ -171,7 +171,7 @@ there are any, the official `link` and `read_with`, the call that reads the deci
 }
 ```
 
-Ask Claude to read the decision, or only its reasoning (the
+Ask the assistant to read the decision, or only its reasoning (the
 [*motivations* zone](../00-intro/03-glossary.md#zone)). See [Case law](03-case-law.md).
 
 ## 5. Check what the answer tells you

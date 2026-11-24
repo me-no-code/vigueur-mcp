@@ -3,14 +3,14 @@ title: "Jurisprudence"
 level: guide
 tags: [case-law, judilibre, legifrance, decisions]
 summary: "Choisissez entre Légifrance et Judilibre, trouvez une décision par son numéro, son ECLI ou des mots, et lisez-la en entier ou par zone."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Jurisprudence
 
 Vigueur lit la jurisprudence dans deux sources. Elles se recoupent pour la Cour de cassation, mais
 aucune ne détient tout ce que détient l'autre. Ce guide vous indique laquelle interroger, comment trouver
-une décision et comment la lire. Vous n'avez pas à choisir : dites ce que vous voulez et Claude
+une décision et comment la lire. Vous n'avez pas à choisir : dites ce que vous voulez et l'assistant
 choisit. Connaître la différence vous aide à lire la réponse.
 
 ## Les deux sources
@@ -40,7 +40,7 @@ cour d'appel, Judilibre est la source à interroger.
 
 > **Une décision absente n'est pas une décision inexistante**
 > Si Légifrance ne renvoie rien pour une décision de la Cour de cassation ou d'une cour d'appel,
-> demandez à Claude d'essayer Judilibre avant d'en conclure quoi que ce soit.
+> demandez à l'assistant d'essayer Judilibre avant d'en conclure quoi que ce soit.
 
 ### Ce qui manque sur Judilibre
 
@@ -86,7 +86,7 @@ tous les mots doivent apparaître.
 Vous pouvez restreindre une recherche par dates de décision, type de juridiction, chambre de la Cour
 de cassation et publication, sur les deux sources. Sur Judilibre, vous pouvez aussi filtrer par
 formation, solution et lieu de la juridiction, et chercher dans une seule partie de la décision : les
-moyens, la motivation, le sommaire, etc. Demandez à Claude les valeurs qu'accepte un filtre :
+moyens, la motivation, le sommaire, etc. Demandez à l'assistant les valeurs qu'accepte un filtre :
 [`judilibre_list_taxonomy`](../30-tools/judilibre_list_taxonomy.md) liste celles de Judilibre.
 
 Les résultats sont découpés en pages de 10 par défaut (jusqu'à 20). La réponse indique combien de
@@ -98,19 +98,19 @@ les autres.
 
 Quand rien ne correspond, la réponse contient `"outcome": "no_results"` et ses avertissements répètent
 vos critères. Sur le fonds judiciaire de Légifrance, ils répètent aussi la note de couverture
-ci-dessus. Pour élargir une recherche, vous pouvez demander à Claude n'importe quel mot au lieu de
+ci-dessus. Pour élargir une recherche, vous pouvez demander à l'assistant n'importe quel mot au lieu de
 tous (sur Judilibre), moins de filtres, une autre juridiction, ou l'autre source.
 
 ## Lire une décision
 
-Chaque résultat porte un champ `read_with` qui indique à Claude comment le lire :
+Chaque résultat porte un champ `read_with` qui indique à l'assistant comment le lire :
 
 ```
 "read_with": { "tool": "judilibre_get_decision", "id": "6abcc10bc27382d099087409" }
 "read_with": { "tool": "legifrance_get_decision", "id": "JURITEXT000053197030" }
 ```
 
-Demandez à Claude de « la lire ». Les identifiants diffèrent selon la source : ceux de Judilibre ont 24
+Demandez à l'assistant de « la lire ». Les identifiants diffèrent selon la source : ceux de Judilibre ont 24
 caractères hexadécimaux ; ceux de Légifrance sont `JURITEXT`, `CETATEXT`, `CONSTEXT`, `CNILTEXT` ou
 `JUFITEXT` suivis de 12 chiffres.
 
@@ -147,8 +147,8 @@ propre champ :
 | `legifrance_status` | Pour les délibérations de la CNIL, l'état juridique tel que Légifrance le libelle |
 
 Un champ sans rien à montrer vaut `null` (ou une liste vide). Les longues décisions sont paginées :
-`part` indique quels caractères sont affichés et `next` donne l'`offset` à partir duquel continuer, et
-Claude continue à partir de là. Voir [Lire les réponses de Vigueur](05-reading-answers.md).
+`part` indique quels caractères sont affichés et `next` donne l'`offset` à partir duquel continuer :
+demandez à l'assistant de continuer. Voir [Lire les réponses de Vigueur](05-reading-answers.md).
 
 ### Recouper avec l'autre source
 

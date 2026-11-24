@@ -1,15 +1,19 @@
 ---
-title: Install in Claude Code
+title: Install the Claude Code plugin
 level: start
-tags: [install, claude-code, setup]
-summary: Install Vigueur in Claude Code from a local build, enter your PISTE credentials and check that Légifrance and Judilibre answer.
-updated: 2026-11-18
+tags: [install, cli, claude-code, setup]
+summary: Install Vigueur in Claude Code as a plugin, enter your PISTE credentials and check that Légifrance and Judilibre answer.
+updated: 2026-11-24
 ---
 
-# Install in Claude Code
+# Install the Claude Code plugin
 
-You will download Vigueur, build it once, add it to Claude Code as a plugin, enter your PISTE
-credentials, and check that it works. Allow about ten minutes once you have your PISTE account.
+Vigueur comes as a plugin for Claude Code: Claude Code asks for your credentials and keeps the
+client secret in your system's secure credential store. This page installs that plugin. Claude
+Code can also run Vigueur like any other MCP app, with [Install Vigueur](02-install.md).
+
+You will add the plugin to Claude Code, enter your PISTE credentials, and check that it works. The
+plugin downloads Vigueur from npm. Allow about five minutes once you have your PISTE account.
 
 > **Tested on macOS**
 > These steps were tested on macOS. The commands are the same elsewhere, but where Claude Code
@@ -18,43 +22,27 @@ credentials, and check that it works. Allow about ten minutes once you have your
 ## Before you start
 
 - [Claude Code](https://claude.com/claude-code), already working.
-- Node.js 22 or later, and git.
+- Node.js 22 or later, which comes with `npx`: the plugin starts Vigueur with it. To check, run
+  `node --version` in a terminal.
 - A PISTE account and application, with the client ID and client secret in hand. If you do not have
   them yet, see [Create your PISTE account](01-piste-account.md).
 
 ## Steps
 
-### 1. Download and build Vigueur
+### 1. Add Vigueur to Claude Code
 
-In a terminal, in a folder where you keep projects:
-
-```
-git clone https://github.com/me-no-code/vigueur-mcp.git
-cd vigueur-mcp
-npm ci
-npm run build
-pwd
-```
-
-`pwd` prints the absolute path of the folder. Keep it for the next step.
-
-`npm ci` may print a warning about `fsevents` and "allow-scripts". It is harmless: that package
-is only for developers, and Vigueur does not need it.
-
-> **Keep the folder clean**
-> Claude Code copies the whole folder into its plugin cache when you install. Do not put a `.env`
-> file or private documents in it.
-
-### 2. Add Vigueur to Claude Code
-
-In Claude Code, run these two commands. Replace the path with the one `pwd` printed.
+In Claude Code, run these two commands:
 
 ```
-/plugin marketplace add /absolute/path/to/vigueur-mcp
+/plugin marketplace add me-no-code/vigueur-mcp
 /plugin install vigueur@vigueur
 ```
 
-### 3. Enter your credentials
+The first adds the project's GitHub repository as a plugin marketplace, named `vigueur`; the
+second installs the plugin from it. The first time Vigueur starts, it takes a little longer: `npx`
+downloads it from npm.
+
+### 2. Enter your credentials
 
 Claude Code asks for three settings when the plugin is enabled. To change them later, run
 `/plugin configure vigueur@vigueur`.
@@ -74,7 +62,7 @@ The environment must match the application. See
 > with [Create your PISTE account](01-piste-account.md), then run
 > `/plugin configure vigueur@vigueur`.
 
-### 4. Check that it works
+### 3. Check that it works
 
 Ask Claude: "Run `vigueur_status`." Vigueur answers with one JSON object (one line of JSON on the
 wire; it is indented here). You want both sources to show `"state": "ok"`:
@@ -119,7 +107,8 @@ Try: "What does article 1240 of the Code civil say, and is it in force?" Then se
 ## Related
 
 - [Create your PISTE account](01-piste-account.md)
-- [Install in Claude Desktop](03-install-claude-desktop.md)
-- [Update Vigueur](04-updating.md)
-- [Uninstall Vigueur](05-uninstalling.md)
+- [Install Vigueur](02-install.md)
+- [Install the Claude Desktop bundle](04-install-claude-desktop.md)
+- [Update Vigueur](05-updating.md)
+- [Uninstall Vigueur](06-uninstalling.md)
 - [Privacy and your data](../00-intro/04-privacy-and-your-data.md)

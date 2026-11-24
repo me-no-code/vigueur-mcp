@@ -3,7 +3,7 @@ title: "judilibre_search_decisions"
 level: reference
 tags: [tool, judilibre, case-law, search]
 summary: "Chercher dans Judilibre des décisions de la Cour de cassation et des juridictions du fond, choisir comment les mots se combinent, et lire ce que montre chaque réponse."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # judilibre_search_decisions
@@ -38,7 +38,7 @@ Seul `query` est obligatoire. Judilibre ne renvoie rien sans mots de recherche.
 | `page` | Non | La page de résultats. | Un nombre entier, 1 ou plus | 1 |
 | `page_size` | Non | Le nombre de résultats par page. | Un nombre entier de 1 à 20 | 10 |
 
-`chamber` et `publication` prennent les noms propres à Vigueur (`social`, `bulletin`), pas les clés des listes de la source (`soc`, `b`). Claude gère la différence ; elle n'importe que lorsque vous lisez les listes avec `judilibre_list_taxonomy`.
+`chamber` et `publication` prennent les noms propres à Vigueur (`social`, `bulletin`), pas les clés des listes de la source (`soc`, `b`). La différence n'importe que lorsque vous lisez les listes avec `judilibre_list_taxonomy`.
 
 ## Ce que montre la réponse
 

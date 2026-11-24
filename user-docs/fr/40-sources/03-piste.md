@@ -3,7 +3,7 @@ title: "PISTE"
 level: reference
 tags: [sources, piste, quota, sandbox, production]
 summary: "Comprenez ce qu'est PISTE, en quoi le bac à sable et la production diffèrent, pourquoi une seule application sert les deux sources, comment se comporte le quota partagé, et comment Vigueur gère les nouvelles tentatives et les délais."
-updated: 2026-11-18
+updated: 2026-11-24
 ---
 
 # PISTE
@@ -35,7 +35,7 @@ PISTE a deux environnements, chacun avec ses propres adresses et ses propres app
 | | Bac à sable (*sandbox*) | Production |
 |---|---|---|
 | Application | PISTE en crée une pour vous automatiquement (nommée SANDBOX) | Toute application que vous créez vous-même |
-| Réglage de Vigueur | Claude Desktop : **Production application** désactivé. Claude Code : **PISTE environment** `sandbox` | Claude Desktop : **Production application** activé. Claude Code : **PISTE environment** `production`. Les deux sont la valeur par défaut |
+| Réglage de Vigueur | `PISTE_ENV` `sandbox`. Plugin Claude Code : **PISTE environment** `sandbox`. Fichier groupé pour Claude Desktop : **Production application** désactivé | `PISTE_ENV` `production`. Plugin Claude Code : **PISTE environment** `production`. Fichier groupé pour Claude Desktop : **Production application** activé. La production est la valeur par défaut |
 
 > **L'environnement doit correspondre aux identifiants**
 > Les identifiants du bac à sable ne fonctionnent qu'en bac à sable, ceux de production qu'en
@@ -81,7 +81,7 @@ chacune et ne sont pas relancées, sauf une fois avec un nouveau jeton après un
 et Légifrance en moins d'une seconde ; lire la table des matières d'un grand code prenait quelques
 secondes.
 
-Vous pouvez annuler un appel depuis Claude à tout moment ; Vigueur arrête d'attendre et ne réessaie pas.
+Si vous annulez un appel, Vigueur arrête d'attendre et ne réessaie pas.
 
 ## Ce qui est envoyé où
 

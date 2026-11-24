@@ -10,8 +10,8 @@
   "keywords": ["legifrance", "judilibre", "french-law", "droit", "mcp"],
   "mcpServers": {
     "vigueur": {
-      "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "vigueur-mcp@0.1.0"],
       "env": {
         "PISTE_CLIENT_ID": "${user_config.piste_client_id}",
         "PISTE_CLIENT_SECRET": "${user_config.piste_client_secret}",

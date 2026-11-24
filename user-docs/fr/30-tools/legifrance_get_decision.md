@@ -3,7 +3,7 @@ title: "legifrance_get_decision"
 level: reference
 tags: [tool, legifrance, case-law, read]
 summary: "Lire une décision de Légifrance à partir de son identifiant, avec son identité, son lien officiel et son texte intégral, page par page."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # legifrance_get_decision
@@ -14,7 +14,7 @@ Lit une décision détenue par Légifrance : son identité, son lien officiel, l
 
 - « Lis la décision JURITEXT000053197030. » / « Read decision JURITEXT000053197030. »
 - « Montre-moi le texte complet de la décision du Conseil constitutionnel trouvée plus haut. » / « Show me the full text of the Conseil constitutionnel decision found above. »
-- « Continue la lecture de cette décision. » / « Continue reading that decision. » (Claude demande la page suivante.)
+- « Continue la lecture de cette décision. » / « Continue reading that decision. » (L'assistant demande la page suivante.)
 
 L'identifiant vient normalement de [`legifrance_search_case_law`](legifrance_search_case_law.md).
 
@@ -122,7 +122,7 @@ Une décision du Conseil constitutionnel remplit ses propres champs :
 }
 ```
 
-**Textes longs.** Une page contient au plus 40 000 caractères. Quand le texte est coupé, `part` donne les caractères affichés (`from`, `to`, et `of`, la longueur du texte) et `next` donne `{ "offset": <number> }`, là où le reste commence. Quand il ne reste rien, `next` vaut `null`. Demandez à Claude de continuer, et il transmet ce décalage. Les champs d'identité se répètent sur chaque page ; le sommaire n'apparaît que sur la première.
+**Textes longs.** Une page contient au plus 40 000 caractères. Quand le texte est coupé, `part` donne les caractères affichés (`from`, `to`, et `of`, la longueur du texte) et `next` donne `{ "offset": <number> }`, là où le reste commence. Quand il ne reste rien, `next` vaut `null`. Demandez à l'assistant de continuer à partir de ce décalage. Les champs d'identité se répètent sur chaque page ; le sommaire n'apparaît que sur la première.
 
 **Introuvable.** C'est une réponse normale, pas une erreur. Le type de réponse est `not_found`, `id` répète l'identifiant, et `warnings` dit quoi faire :
 

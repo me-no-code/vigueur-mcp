@@ -1,12 +1,12 @@
 ---
-title: "Installer dans Claude Desktop"
+title: "Installer le fichier groupé pour Claude Desktop"
 level: start
 tags: [install, claude-desktop, setup]
 summary: "Installez Vigueur dans Claude Desktop à partir de son fichier groupé, saisissez vos identifiants PISTE et vérifiez que Légifrance et Judilibre répondent."
-updated: 2026-11-19
+updated: 2026-11-24
 ---
 
-# Installer dans Claude Desktop
+# Installer le fichier groupé pour Claude Desktop
 
 Vous allez obtenir Vigueur sous la forme d'un seul fichier, l'ouvrir dans Claude Desktop, saisir vos
 identifiants PISTE et vérifier que tout fonctionne. Le fichier contient Vigueur prêt à l'emploi, et
@@ -31,17 +31,25 @@ Le fichier porte le numéro de sa version, par exemple `vigueur-0.1.0.mcpb`. Té
 dernière version publiée, sur la page GitHub Releases du projet, rubrique **Assets** :
 https://github.com/me-no-code/vigueur-mcp/releases/latest
 
-Pour compiler le fichier vous-même à la place, il vous faut Node.js 22 ou plus récent, et git. Dans
-un terminal :
+Pour vérifier que le fichier a bien été produit par la procédure de publication du projet sur
+GitHub, lancez cette commande avec GitHub CLI (`gh`), dans le dossier où se trouve le fichier, avec
+le nom de votre fichier :
 
 ```
-git clone https://github.com/me-no-code/vigueur-mcp.git
-cd vigueur-mcp
+gh attestation verify vigueur-0.1.0.mcpb --repo me-no-code/vigueur-mcp
+```
+
+Pour compiler le fichier vous-même à la place, il vous faut Node.js 22 ou plus récent. Récupérez
+le code, la dernière version publiée ou la version de développement, comme dans
+[Exécuter Vigueur depuis son code source](02-install.md#exécuter-vigueur-depuis-son-code-source).
+Puis, dans un terminal, dans ce dossier :
+
+```
 npm ci
 npm run bundle
 ```
 
-Le fichier se trouve dans le dossier `build` du clone.
+Le fichier se trouve dans le dossier `build`.
 
 ### 2. Ouvrir le fichier
 
@@ -130,7 +138,8 @@ Essayez : « Que dit l'article 1240 du Code civil, et est-il en vigueur ? » Voi
 ## Voir aussi
 
 - [Créer votre compte PISTE](01-piste-account.md)
-- [Installer dans Claude Code](02-install-claude-code.md)
-- [Mettre à jour Vigueur](04-updating.md)
-- [Désinstaller Vigueur](05-uninstalling.md)
+- [Installer Vigueur](02-install.md)
+- [Installer le plugin Claude Code](03-install-claude-code.md)
+- [Mettre à jour Vigueur](05-updating.md)
+- [Désinstaller Vigueur](06-uninstalling.md)
 - [Confidentialité et données](../00-intro/04-privacy-and-your-data.md)

@@ -3,7 +3,7 @@ title: judilibre_list_taxonomy
 level: reference
 tags: [tool, judilibre, taxonomy, filters]
 summary: List the values Judilibre uses to classify decisions (chambers, formations, outcomes, courts, themes) so you can filter a search with the right key.
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # judilibre_list_taxonomy
@@ -119,7 +119,7 @@ Source errors (credentials, quota, unavailable, no answer within 45 seconds) are
 ## Limits
 
 > **Keys in the lists are not always the names the search takes**
-> `judilibre_search_decisions` takes Vigueur's own names for `chamber` (`social`, `civ1`, `commercial`, `criminal`, `plenary`, `mixed`) and `publication` (`bulletin`, `report`, `chamber_letter`, `press_release`), not the keys shown here (`soc`, `comm`, `cr`, `pl`, `mi`; `b`, `r`, `l`, `c`). `formation`, `solution` and `location` take the keys as listed. Claude maps them for you.
+> `judilibre_search_decisions` takes Vigueur's own names for `chamber` (`social`, `civ1`, `commercial`, `criminal`, `plenary`, `mixed`) and `publication` (`bulletin`, `report`, `chamber_letter`, `press_release`), not the keys shown here (`soc`, `comm`, `cr`, `pl`, `mi`; `b`, `r`, `l`, `c`). `formation`, `solution` and `location` take the keys as listed.
 
 - The `chamber`, `formation`, `publication` and `solution` lists exist for the Cour de cassation only. The values for courts of appeal and first-instance courts are free text.
 - The `theme` lists are long (observed in November 2026: about 780 entries for the Cour de cassation, about 1 000 in nine groups for the courts of appeal). Use `contains`. Vigueur's search has no `theme` filter, because the source's filter returned nothing; `search_in` `themes` searches the themes text instead.

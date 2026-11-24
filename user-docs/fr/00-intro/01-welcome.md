@@ -2,31 +2,31 @@
 title: "Bienvenue dans Vigueur"
 level: intro
 tags: [intro, overview]
-summary: "Découvrez ce que Vigueur permet à Claude de faire avec le droit français, ce qu'il ne fait pas, et quelle page lire ensuite."
-updated: 2026-11-18
+summary: "Découvrez ce que Vigueur vous permet de faire avec le droit français depuis un assistant IA, ce qu'il ne fait pas, et quelle page lire ensuite."
+updated: 2026-11-24
 ---
 
 # Bienvenue dans Vigueur
 
-Vigueur permet à Claude de lire le droit français dans les sources officielles. Vous posez une
-question en langage courant, en français ou en anglais. Claude cherche le texte ou la décision sur
-Légifrance ou Judilibre, et répond avec ce que dit la source : le texte, s'il est en vigueur, les
-dates, et un lien vers la page officielle.
+Vigueur vous permet de lire le droit français dans les sources officielles, depuis un assistant
+IA. Vous posez une question en langage courant, en français ou en anglais.
+L'assistant cherche le texte ou la décision sur Légifrance ou Judilibre, et reçoit ce que dit la
+source : le texte, s'il est en vigueur, les dates, et un lien vers la page officielle.
 
 Vigueur fonctionne sur votre ordinateur et utilise votre propre compte gratuit sur le portail d'API
 du gouvernement français. Rien ne passe par un serveur de Vigueur : il n'y en a pas.
 
-## Ce que vous pouvez demander à Claude
+## Ce que vous pouvez demander à l'assistant
 
-- « Que dit l'article 1240 du Code civil ? » Claude lit l'article et vous dit s'il est en vigueur
-  aujourd'hui.
-- « Que disait l'article L1234-1 du Code du travail au 1er janvier 2015 ? » Claude lit la version
-  qui s'appliquait à cette date.
-- « Qu'est-ce qui a changé dans le Code de la consommation depuis le 1er janvier 2026 ? » Claude
-  liste les modifications.
-- « Trouve les décisions de la Cour de cassation sur le pourvoi 23-20.348. » Claude trouve la
-  décision et peut la lire en entier, ou une partie seulement.
-- « Qu'est-ce qui a été publié au dernier Journal officiel ? » Claude liste les derniers numéros.
+- « Que dit l'article 1240 du Code civil ? » L'assistant lit l'article, et la réponse indique
+  s'il est en vigueur aujourd'hui.
+- « Que disait l'article L1234-1 du Code du travail au 1er janvier 2015 ? » L'assistant lit la
+  version qui s'appliquait à cette date.
+- « Qu'est-ce qui a changé dans le Code de la consommation depuis le 1er janvier 2026 ? » La
+  réponse liste les modifications.
+- « Trouve les décisions de la Cour de cassation sur le pourvoi 23-20.348. » L'assistant trouve
+  la décision et peut la lire en entier, ou une partie seulement.
+- « Qu'est-ce qui a été publié au dernier Journal officiel ? » La réponse liste les derniers numéros.
 
 Les réponses indiquent leur source, l'état juridique quand la source en donne un, les dates utiles
 et les liens officiels. Voir [Lire les réponses de Vigueur](../20-using/05-reading-answers.md).
@@ -62,8 +62,10 @@ Voir [PISTE](../40-sources/03-piste.md).
 1. [Comment fonctionne Vigueur](02-how-it-works.md) : un aperçu de ce qui se passe quand vous
    posez une question.
 2. [Créer votre compte PISTE](../10-setup/01-piste-account.md) : gratuit, quelques minutes.
-3. [Installer dans Claude Desktop](../10-setup/03-install-claude-desktop.md) ou
-   [dans Claude Code](../10-setup/02-install-claude-code.md) : les étapes d'installation.
+3. [Installer Vigueur](../10-setup/02-install.md) : les étapes d'installation pour toute
+   application, avec le [plugin Claude Code](../10-setup/03-install-claude-code.md) et le
+   [fichier groupé pour Claude Desktop](../10-setup/04-install-claude-desktop.md), des paquets tout
+   prêts pour ces deux applications.
 4. [Prise en main : vos premières questions](../20-using/01-quickstart.md) : ce qu'il faut saisir en premier.
 
 Les mots que vous ne connaissez pas sont dans le [glossaire](03-glossary.md). En cas de problème,

@@ -3,16 +3,15 @@ title: "Prise en main : vos premières questions"
 level: start
 tags: [quickstart, legislation, case-law]
 summary: "Menez une première session de bout en bout : vérifier que Vigueur a accès aux sources, lire un article, voir ce qui s'appliquait à une date passée et trouver une décision."
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Prise en main : vos premières questions
 
-Cette page vous guide dans une première session. Vous écrivez vos demandes à Claude en langage
-courant, en français ou en anglais. Claude appelle les outils de Vigueur et vous montre ce que disent
-les sources officielles. Vigueur doit être installé,
-[dans Claude Desktop](../10-setup/03-install-claude-desktop.md) ou
-[dans Claude Code](../10-setup/02-install-claude-code.md), avec vos identifiants PISTE renseignés.
+Cette page vous guide dans une première session avec Vigueur, depuis un assistant IA. Vous écrivez
+vos demandes à l'assistant en langage courant, en français ou en anglais. L'assistant appelle les
+outils de Vigueur et vous montre ce que disent les sources officielles. Vigueur doit être installé
+(voir [Installer Vigueur](../10-setup/02-install.md)), avec vos identifiants PISTE renseignés.
 
 ## 1. Vérifier que Vigueur accède aux sources
 
@@ -20,7 +19,7 @@ Demandez :
 
 > Vérifie que Vigueur est bien configuré. / Check that Vigueur is set up.
 
-Claude lance `vigueur_status`. Les réponses de Vigueur sont en JSON, transmis sur une seule ligne ;
+L'assistant lance `vigueur_status`. Les réponses de Vigueur sont en JSON, transmis sur une seule ligne ;
 ici, la réponse est indentée pour être lisible. Quand tout fonctionne, la réponse ressemble à ceci :
 
 ```
@@ -63,7 +62,7 @@ Demandez :
 
 > Que dit l'article 1240 du Code civil ? / What does article 1240 of the Code civil say?
 
-Claude lance `legifrance_get_article`. La réponse montre ces champs (`…` signale les champs et le texte
+L'assistant lance `legifrance_get_article`. La réponse montre ces champs (`…` signale les champs et le texte
 omis dans l'extrait) :
 
 ```
@@ -114,7 +113,7 @@ Demandez :
 
 > Que disait l'article 1382 du Code civil au 1er janvier 2015 ? / What did article 1382 of the Code civil say on 1 January 2015?
 
-Claude lance `legifrance_get_article` avec cette date. La réponse montre le texte tel qu'il était rédigé à
+L'assistant lance `legifrance_get_article` avec cette date. La réponse montre le texte tel qu'il était rédigé à
 cette date, et un `status` avec les deux bornes : `"state": "in_force"`, `"from": "1804-03-21"`,
 `"until": "2016-10-01"`, ainsi que le libellé propre à Légifrance, `"legifrance_status": "MODIFIE"`.
 L'article 1382 a été renuméroté : la réponse indique donc aussi, dans `relocation`, l'endroit où,
@@ -133,7 +132,7 @@ Demandez :
 
 > Trouve l'arrêt de la Cour de cassation sur le pourvoi 23-20.348. / Find the Cour de cassation decision with pourvoi number 23-20.348.
 
-Claude cherche dans Judilibre (`judilibre_search_decisions`). Cette décision est un rejet non
+L'assistant cherche dans Judilibre (`judilibre_search_decisions`). Cette décision est un rejet non
 spécialement motivé, que Légifrance ne détient pas. Chaque résultat indique la juridiction et la
 chambre, la date de la décision, les numéros, l'ECLI, puis la formation, la publication et la solution,
 puis un sommaire et un extrait s'il y en a, le `link` officiel et `read_with`, l'appel qui permet de
@@ -174,7 +173,7 @@ lire la décision en entier :
 }
 ```
 
-Demandez à Claude de lire la décision, ou seulement sa motivation (la
+Demandez à l'assistant de lire la décision, ou seulement sa motivation (la
 [zone motivations](../00-intro/03-glossary.md#zone)). Voir [Jurisprudence](03-case-law.md).
 
 ## 5. Vérifier ce que la réponse vous apprend
